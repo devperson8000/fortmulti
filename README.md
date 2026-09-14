@@ -30,18 +30,21 @@ Other multiplayer improvements include:
 - The host remains authoritative for movement, building, damage, ammo, storm damage, eliminations, scoring and the drop phase.
 - Late joiners are rejected while a match is in progress and can be invited again from the lobby.
 
-## Drop phase
+## Island and drop phase
 
-Every round begins aboard the **Skyliner**, an original high-detail procedural airborne transport. The route crosses the island for roughly 12 seconds.
+Every round begins aboard the **Skyliner**, an original high-detail procedural airborne transport. Its slower, eased route now crosses the much larger island for roughly 32 seconds, with animated propulsion, slipstream trails, camera drift and altitude movement that make the flight readable.
 
 - Press **Space** (or fire) to jump from the transport.
 - Steer during freefall with **WASD** and the mouse.
-- Press **Space** again to deploy the canopy early.
+- Press **Space** again to begin the canopy deployment sequence. It now opens over time instead of appearing instantly.
 - The canopy automatically deploys near the ground.
+- During deployment the canopy expands from the pack, the character reaches for both risers, the arms settle onto the controls, and the legs trail and sway before the descent stabilizes.
 - Continue steering under canopy until touchdown.
 - Combat begins after all active players land.
 
-The Skyliner includes a rounded coach body, cockpit glazing, window panels, reinforced chassis, roof machinery, suspension gantry, lift envelope, structural ribs, propulsion pods, animated fan blades, navigation lights, cargo rails, service panels and landing hardware. The canopy uses a dense curved multi-panel mesh with reinforced edging, stitched radial ribs, suspension lines, risers, harness straps, control toggles and hardware.
+The Skyliner includes a rounded coach body, cockpit glazing, window panels, reinforced chassis, roof machinery, suspension gantry, lift envelope, structural ribs, propulsion pods, animated fan blades, navigation lights, cargo rails, service panels, landing hardware and moving air trails. The canopy uses a dense curved multi-panel mesh with reinforced edging, stitched radial ribs, suspension lines, risers, harness straps, control toggles and hardware.
+
+The island is now more than three times the playable area of the first drop build. Six named regions—**Suncrest, Harbor Reach, Neon Grove, Crown Citadel, Dusty Depot and Pinewatch**—are linked by cross-island roads. Each region has a distinct skyline and landmark, including a harbor beacon, docks, warehouses, colorful towers, a water tower, a stone clock tower, hangars, silos, cargo yards, timber lodges and a radio lookout. The minimap shows the full island, roads, buildings, region names, storm and nearby players.
 
 ## Match modes
 
