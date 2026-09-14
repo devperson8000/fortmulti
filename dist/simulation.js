@@ -1,6 +1,7 @@
 import {WEAPON_ORDER,createLoadout,weaponForSlot,weaponIdForSlot,isWeaponSlot,isBuildSlot,buildTypeForSlot,currentAmmo,shotSpread,spreadDirection} from './weapon-system.js';
 
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const mix=(a,b,t)=>a+(b-a)*t;
 const dist=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
 const normalize=v=>{const n=Math.hypot(...v)||1;return v.map(x=>x/n);};
 export function cameraAimOrigin(p,input,profile){const yaw=Number.isFinite(input.aimYaw)?input.aimYaw:input.yaw,pitch=Number.isFinite(input.aimPitch)?input.aimPitch:input.pitch,forward=[-Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch)],right=[Math.cos(yaw),0,-Math.sin(yaw)],anchor=[p.p[0],p.p[1]+2.15,p.p[2]],distance=input.aim?(profile.scope ? .16 : 3.15):6.8,shoulder=input.aim?(profile.scope?0:.56):1.05;return anchor.map((v,k)=>v-forward[k]*distance+right[k]*shoulder);}
@@ -14,8 +15,13 @@ export function sanitize(i={}){const num=(v,a,b)=>clamp(Number.isFinite(v)?v:0,a
 
 // A long cross-island route gives the party time to choose between distant POIs.
 export const ISLAND_LIMIT=292,BUS_SECONDS=32;
-const BUS_START=[-312,188],BUS_END=[312,-188],BUS_ALTITUDE=128,DEPLOY_SECONDS=.95;
+export const DROP_TUNING=Object.freeze({neutralFall:17,diveFall:30,neutralSpeed:12,diveSpeed:21,glideFall:5.4,glideSpeed:14,autoDeployBase:42,deploySeconds:.9});
+const BUS_START=[-312,188],BUS_END=[312,-188],BUS_ALTITUDE=128;
 const seatOffset=i=>{const row=Math.floor(i/2),side=i%2?1:-1;return [side*1.15,0,3.2-row*2.05];};
+const damp=(from,to,rate,dt)=>from+(to-from)*(1-Math.exp(-rate*dt));
+const dampAngle=(from,to,rate,dt)=>from+Math.atan2(Math.sin(to-from),Math.cos(to-from))*(1-Math.exp(-rate*dt));
+export function desiredDiveBlend(input={}){const pitch=Number.isFinite(input.pitch)?input.pitch:0,forward=Math.max(0,Number(input.z)||0);return clamp(((-pitch-.08)/.62)+forward*.2+(input.sprint?.72:0),0,1);}
+export function autoDeployClearance(verticalSpeed=0){return DROP_TUNING.autoDeployBase+Math.max(0,-verticalSpeed-DROP_TUNING.neutralFall)*.72;}
 
 export class Match{
  constructor(world,ids,mode='build'){
@@ -27,7 +33,7 @@ export class Match{
   this.round++;this.phase=waiting?'waiting':'bus';this.timer=waiting?0:BUS_SECONDS;this.elapsed=0;this.dropElapsed=0;this.structures=[];this.winner=undefined;
   this.pickups=this.mode==='town'?[{x:0,z:8,type:'shield'},{x:-22,z:20,type:'wood'},{x:25,z:8,type:'health'},{x:36,z:-18,type:'wood'},{x:-38,z:-9,type:'shield'},{x:8,z:38,type:'health'},{x:-205,z:72,type:'shield'},{x:-188,z:91,type:'wood'},{x:176,z:94,type:'health'},{x:198,z:67,type:'wood'},{x:128,z:-188,type:'shield'},{x:-92,z:-178,type:'health'}]:[];
   this.bus=this.busAt(0);
-  this.players=this.ids.map((id,i)=>{const off=seatOffset(i);return {id,p:[this.bus.x+off[0],this.bus.y+.1,this.bus.z+off[2]],yaw:this.bus.yaw,vy:0,hp:100,shield:100,weapons:createLoadout(),slot:1,weapon:'ar',ammo:30,material:150,reload:0,equip:0,cool:0,sustained:0,walk:0,aim:false,input:sanitize(),lastInput:0,air:'bus',deploy:0,jumpLatch:false,fireLatch:false,reloadLatch:false,eliminated:false};});
+  this.players=this.ids.map((id,i)=>{const off=seatOffset(i);return {id,p:[this.bus.x+off[0],this.bus.y+.1,this.bus.z+off[2]],yaw:this.bus.yaw,vy:0,hp:100,shield:100,weapons:createLoadout(),slot:1,weapon:'ar',ammo:30,material:150,reload:0,equip:0,cool:0,sustained:0,walk:0,aim:false,input:sanitize(),lastInput:0,air:'bus',dropState:'bus',airVelocity:[0,0,0],airPitch:0,airRoll:0,diveBlend:0,airSpeed:0,clearance:0,gliderActive:false,deploy:0,jumpLatch:false,fireLatch:false,reloadLatch:false,eliminated:false};});
   this.events=[];
  }
  launchDrop(){if(this.phase!=='waiting')return;this.phase='bus';this.timer=BUS_SECONDS;this.dropElapsed=0;this.bus=this.busAt(0);this.event({type:'drop_start'});}
@@ -42,15 +48,27 @@ export class Match{
    const p=this.players[index];if(p.hp<=0)continue;p.lastInput+=dt;const i=p.lastInput>.75?sanitize():p.input;const edgeJump=i.jump&&!p.jumpLatch;p.jumpLatch=i.jump;
    if(p.air==='bus'){
     const off=seatOffset(index),cy=Math.cos(this.bus.yaw),sy=Math.sin(this.bus.yaw);p.p[0]=this.bus.x+off[0]*cy+off[2]*sy;p.p[1]=this.bus.y+.2;p.p[2]=this.bus.z-off[0]*sy+off[2]*cy;p.yaw=this.bus.yaw;
-    if(edgeJump||i.fire||this.bus.progress>=.995){p.air='freefall';p.yaw=i.yaw||this.bus.yaw;p.vy=-5;this.event({type:'jump',by:p.id});}
+    if(edgeJump||i.fire||this.bus.progress>=.995){const launchYaw=i.yaw||this.bus.yaw;p.air='freefall';p.dropState='neutral';p.yaw=launchYaw;p.vy=-5;p.airVelocity=[-Math.sin(launchYaw)*6,-5,-Math.cos(launchYaw)*6];p.airPitch=-1.34;p.airRoll=0;p.diveBlend=0;p.gliderActive=false;this.event({type:'jump',by:p.id,state:'neutral'});}
    }else if(p.air==='freefall'||p.air==='deploying'||p.air==='glider'){
-    anyDropped=true;p.yaw=i.yaw;const steer=p.air==='glider'?11:p.air==='deploying'?12:15,len=Math.max(1,Math.hypot(i.x,i.z)),dx=(Math.cos(i.yaw)*i.x-Math.sin(i.yaw)*i.z)/len*steer*dt,dz=(-Math.sin(i.yaw)*i.x-Math.cos(i.yaw)*i.z)/len*steer*dt;p.p[0]=clamp(p.p[0]+dx,-ISLAND_LIMIT,ISLAND_LIMIT);p.p[2]=clamp(p.p[2]+dz,-ISLAND_LIMIT,ISLAND_LIMIT);
-    const floor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world),clearance=p.p[1]-floor;
-    if(p.air==='freefall'&&(edgeJump||clearance<=38)){p.air='deploying';p.deploy=0;this.event({type:'deploy',by:p.id});}
-    if(p.air==='deploying'){p.deploy=clamp(p.deploy+dt/DEPLOY_SECONDS,0,1);p.vy=-14+7.8*p.deploy;if(p.deploy>=1)p.air='glider';}
-    else p.vy=p.air==='glider'?-6.2:(i.sprint?-25:-18);
-    p.p[1]+=p.vy*dt;
-    if(p.p[1]<=floor){p.p[1]=floor;p.vy=0;p.air='landed';this.event({type:'land',by:p.id});}
+    anyDropped=true;p.yaw=dampAngle(p.yaw||0,i.yaw,p.air==='glider'?3.7:p.air==='deploying'?4.5:6.5,dt);const velocity=Array.isArray(p.airVelocity)&&p.airVelocity.length===3?p.airVelocity:[0,p.vy||-5,0],inputLength=Math.hypot(i.x,i.z),inputScale=1/Math.max(1,inputLength),worldX=(Math.cos(i.yaw)*i.x-Math.sin(i.yaw)*i.z)*inputScale,worldZ=(-Math.sin(i.yaw)*i.x-Math.cos(i.yaw)*i.z)*inputScale;
+    const floor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world);p.clearance=Math.max(0,p.p[1]-floor);
+    if(p.air==='freefall'){
+     const targetDive=desiredDiveBlend(i);p.diveBlend=damp(p.diveBlend||0,targetDive,targetDive>(p.diveBlend||0)?5.2:3.4,dt);p.dropState=p.diveBlend>.52?'dive':'neutral';
+     const horizontalSpeed=mix(DROP_TUNING.neutralSpeed,DROP_TUNING.diveSpeed,p.diveBlend),response=mix(6.2,3.4,p.diveBlend),fallbackForward=p.diveBlend>.3&&!inputLength?1:0,dirX=inputLength?worldX:-Math.sin(i.yaw)*fallbackForward,dirZ=inputLength?worldZ:-Math.cos(i.yaw)*fallbackForward;
+     velocity[0]=damp(velocity[0],dirX*horizontalSpeed,response,dt);velocity[2]=damp(velocity[2],dirZ*horizontalSpeed,response,dt);velocity[1]=damp(velocity[1],-mix(DROP_TUNING.neutralFall,DROP_TUNING.diveFall,p.diveBlend),mix(4.8,2.8,p.diveBlend),dt);
+     p.airPitch=damp(p.airPitch??-1.34,mix(-1.34,-2.34,p.diveBlend),4.4,dt);p.airRoll=damp(p.airRoll||0,-i.x*mix(.2,.1,p.diveBlend),5,dt);
+     const forced=p.clearance<=autoDeployClearance(velocity[1]);if(edgeJump||forced){p.air='deploying';p.dropState='deploying';p.gliderActive=true;p.deploy=0;this.event({type:'deploy',by:p.id,forced});}
+    }
+    if(p.air==='deploying'){
+     p.deploy=clamp(p.deploy+dt/DROP_TUNING.deploySeconds,0,1);const open=p.deploy*p.deploy*(3-2*p.deploy),forwardX=-Math.sin(i.yaw),forwardZ=-Math.cos(i.yaw),controlX=inputLength?worldX:forwardX,controlZ=inputLength?worldZ:forwardZ;
+     velocity[0]=damp(velocity[0],controlX*DROP_TUNING.glideSpeed,mix(2.2,5.2,open),dt);velocity[2]=damp(velocity[2],controlZ*DROP_TUNING.glideSpeed,mix(2.2,5.2,open),dt);velocity[1]=damp(velocity[1],-DROP_TUNING.glideFall,mix(2.6,7.2,open),dt);p.airPitch=damp(p.airPitch??-1.34,mix(-1.1,.05,open),5.4,dt);p.airRoll=damp(p.airRoll||0,-i.x*.28*open,5.2,dt);
+     if(p.deploy>=1){p.air='glider';p.dropState='glide';p.deploy=1;}
+    }else if(p.air==='glider'){
+     p.dropState='glide';p.gliderActive=true;p.diveBlend=damp(p.diveBlend||0,0,4,dt);const glideZ=Math.abs(i.z)>.05?i.z:.24,len=Math.max(1,Math.hypot(i.x,glideZ)),gx=(Math.cos(i.yaw)*i.x-Math.sin(i.yaw)*glideZ)/len,gz=(-Math.sin(i.yaw)*i.x-Math.cos(i.yaw)*glideZ)/len,targetSpeed=DROP_TUNING.glideSpeed*(i.sprint?1.08:1);
+     velocity[0]=damp(velocity[0],gx*targetSpeed,4.1,dt);velocity[2]=damp(velocity[2],gz*targetSpeed,4.1,dt);velocity[1]=damp(velocity[1],-DROP_TUNING.glideFall,6.4,dt);p.airPitch=damp(p.airPitch||0,.04+Math.max(0,i.z)*.06,5.2,dt);p.airRoll=damp(p.airRoll||0,-i.x*.34,4.8,dt);
+    }
+    p.airVelocity=velocity;p.vy=velocity[1];p.airSpeed=Math.hypot(...velocity);p.p[0]=clamp(p.p[0]+velocity[0]*dt,-ISLAND_LIMIT,ISLAND_LIMIT);p.p[2]=clamp(p.p[2]+velocity[2]*dt,-ISLAND_LIMIT,ISLAND_LIMIT);p.p[1]+=velocity[1]*dt;
+    const landingFloor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world);if(p.p[1]<=landingFloor){p.p[1]=landingFloor;p.vy=0;p.airVelocity=[0,0,0];p.airSpeed=0;p.clearance=0;p.air='landed';p.dropState='landed';p.gliderActive=false;p.airPitch=0;p.airRoll=0;this.event({type:'land',by:p.id});}
    }
   }
   if(anyDropped&&this.phase==='bus')this.phase='drop';

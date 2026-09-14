@@ -59,6 +59,10 @@ Other multiplayer improvements include:
 
 Every round begins aboard the **Skyliner**, an original high-detail procedural airborne transport. Its slower, eased route now crosses the much larger island for roughly 32 seconds, with animated propulsion, slipstream trails, camera drift and altitude movement that make the flight readable.
 
+The v7 aerial rework replaces fixed fall speeds with an authoritative, momentum-based three-stage controller. Neutral skydiving uses a wide stabilized pose and moderate terminal velocity. Looking down while moving forward—or holding Shift—smoothly blends into a tucked steep dive with faster vertical and forward movement. Looking up blends back out without snapping. Space begins a one-way canopy deployment; it cannot be closed again in the same descent. A downward terrain/roof clearance check forces deployment early enough for the full opening animation, with extra safety distance at higher descent speeds.
+
+The procedural rig cross-fades the torso pitch, arm spread, leg tuck, riser reach and glider hanging pose from synchronized `diveBlend`, `airPitch`, `airRoll`, `airVelocity`, `airSpeed`, `clearance` and `gliderActive` fields. The camera widens from 78° toward 96° during a fast dive, eases back to 70° under canopy, adds restrained velocity-scaled shake, and renders hand/boot wind trails plus an edge-speed treatment. Glider steering preserves momentum, turns smoothly and banks both the character and canopy.
+
 - Press **Space** (or fire) to jump from the transport.
 - Steer during freefall with **WASD** and the mouse.
 - Press **Space** again to begin the canopy deployment sequence. It now opens over time instead of appearing instantly.
@@ -87,7 +91,7 @@ Rounds are last-player-standing. The first player to 5 round wins takes the matc
 | Left mouse | Fire / place selected build |
 | Right mouse | ADS / sniper scope |
 | Space | Jump / leave Skyliner / deploy canopy |
-| Shift | Sprint / faster freefall |
+| Shift | Sprint / commit to steep dive |
 | 1 | Striker AR |
 | 2 | Thunder Shotgun |
 | 3 | Burst SMG |
@@ -146,4 +150,4 @@ Party voice uses browser WebRTC and requests microphone permission only after th
 npm run check
 ```
 
-The automated suite covers local multi-client room messaging, targeted signaling metadata, online-player discovery and invite acceptance, drop/freefall/canopy/landing flow, disconnect cleanup, multiplayer elimination rules, four weapon profiles, independent magazines, fire modes, reload timing, spread, shooting, structures, build validation, waiting-state protection and first-to-five completion.
+The automated suite covers local multi-client room messaging, targeted signaling metadata, online-player discovery and invite acceptance, neutral/dive/glide blending, velocity synchronization, terrain-aware forced deployment, one-way canopy state, landing flow, disconnect cleanup, multiplayer elimination rules, four weapon profiles, independent magazines, fire modes, reload timing, spread, shooting, structures, build validation, waiting-state protection and first-to-five completion.

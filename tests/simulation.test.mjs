@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {Match,placement,validBuild,sanitize,ground,BUS_SECONDS,ISLAND_LIMIT} from '../public/simulation.js';
+import test from 'node:test';import assert from 'node:assert/strict';import {Match,placement,validBuild,sanitize,ground,BUS_SECONDS,ISLAND_LIMIT,DROP_TUNING,desiredDiveBlend,autoDeployClearance} from '../public/simulation.js';
 const world={height:()=>0,obstacles:[]};
 const landAll=m=>{for(const p of m.players){p.p[1]=0;p.air='landed';p.vy=0;}m.phase='playing';};
 test('build follows facing in four directions and allows upper-level chains',()=>{const p={p:[0,0,0]};for(const [yaw,x,z] of [[0,0,-5],[Math.PI/2,-5,0],[Math.PI,0,5],[-Math.PI/2,5,0]]){let s=placement(p,{yaw,slot:6},world);assert.ok(Math.abs(s.x-x)<.001&&Math.abs(s.z-z)<.001);assert.equal(validBuild(s,[],[p],world),true);}const ramp={x:0,z:0,y:0,angle:0,type:3};assert.equal(ground(0,2.4,0,[ramp],world)>.05,true);assert.equal(validBuild({x:0,z:-5,y:3.6,type:3,angle:0},[ramp],[],world),true);});
@@ -13,3 +13,18 @@ test('first player to five round wins completes the match',()=>{const m=new Matc
 
 test('disconnected players are removed before the next round and never respawn as ghosts',()=>{const m=new Match(world,['a','b','c']);landAll(m);m.disconnect('c');assert.equal(m.players.find(p=>p.id==='c').hp,0);m.startRound(false);assert.deepEqual(m.ids,['a','b']);assert.equal(m.players.some(p=>p.id==='c'),false);});
 test('a disconnect during pre-drop waiting shrinks the required participant roster',()=>{const m=new Match(world,['a','b','c']);assert.equal(m.phase,'waiting');m.disconnect('c');assert.deepEqual(m.ids,['a','b']);assert.equal(m.players.length,2);});
+
+test('freefall blends from neutral spread into a faster pitch-driven dive and back',()=>{
+ const m=new Match(world,['a','b']);m.launchDrop();m.input('a',{jump:true,yaw:0,pitch:0});m.tick(.05);m.input('a',{jump:false,yaw:0,pitch:0});for(let i=0;i<16;i++)m.tick(.05);const p=m.players[0];assert.equal(p.dropState,'neutral');assert.ok(p.vy< -12&&p.vy> -22);const neutralPitch=p.airPitch;
+ for(let i=0;i<22;i++){m.input('a',{yaw:0,pitch:-.8,z:1,sprint:true});m.tick(.05);}assert.equal(p.dropState,'dive');assert.ok(p.diveBlend>.8);assert.ok(p.vy< -24);assert.ok(p.airPitch<neutralPitch);assert.ok(p.airSpeed>DROP_TUNING.neutralFall);
+ for(let i=0;i<24;i++){m.input('a',{yaw:0,pitch:.55,z:0,sprint:false});m.tick(.05);}assert.equal(p.dropState,'neutral');assert.ok(p.diveBlend<.2);assert.ok(p.airVelocity.every(Number.isFinite));
+});
+
+test('terrain clearance forces a one-way safe glider deployment',()=>{
+ const elevated={height:()=>0,obstacles:[{min:[-5,0,-5],max:[5,20,5]}]},m=new Match(elevated,['a','b']);m.launchDrop();m.input('a',{jump:true,yaw:0,pitch:-.8,sprint:true});m.tick(.05);const p=m.players[0];p.p=[0,48,0];p.airVelocity=[0,-29,0];p.vy=-29;m.input('a',{jump:false,yaw:0,pitch:-.8,sprint:true});m.tick(.05);assert.equal(p.air,'deploying');assert.equal(p.gliderActive,true);assert.ok(m.events.some(e=>e.type==='deploy'&&e.by==='a'&&e.forced));
+ for(let i=0;i<30;i++)m.tick(.05);assert.equal(p.air,'glider');m.input('a',{jump:true,yaw:0});m.tick(.05);m.input('a',{jump:false,yaw:0});m.tick(.05);assert.equal(p.air,'glider');assert.equal(p.dropState,'glide');
+});
+
+test('drop snapshots carry finite lightweight animation and velocity state',()=>{
+ assert.ok(desiredDiveBlend({pitch:-.8,z:1})>.8);assert.ok(autoDeployClearance(-30)>autoDeployClearance(-17));const m=new Match(world,['a','b']);m.launchDrop();m.input('a',{jump:true,yaw:.4,pitch:-.65,z:1});m.tick(.05);for(let i=0;i<8;i++)m.tick(.05);const p=m.snapshot().players[0];assert.ok(['neutral','dive'].includes(p.dropState));assert.equal(p.airVelocity.length,3);assert.ok(p.airVelocity.every(Number.isFinite));for(const key of['airPitch','airRoll','diveBlend','airSpeed','clearance'])assert.ok(Number.isFinite(p[key]),key);
+});

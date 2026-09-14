@@ -31,3 +31,6 @@ body.menu #scope,body.in-lobby #scope,body.dropping #scope{display:none!importan
 
 @media(max-width:980px){.weapon-slots button{width:50px;height:58px}.weapon-slots button>span{font-size:24px}.weapon-slots .wood{min-width:48px}.ammo>span{font-size:34px}}
 @media(max-width:700px){.weapon-slots{max-width:330px;flex-wrap:wrap;justify-content:flex-end}.weapon-slots button{width:44px;height:48px}.weapon-slots button>span{font-size:20px;line-height:22px}.weapon-slots button>small{display:none}.weapon-slots .wood{order:-1;width:100%}.scope-lens{width:94vw;height:94vw}}
+
+/* v7 aerial speed treatment. Geometry supplies the hand/boot contrails; this soft edge pass sells acceleration. */
+body.dropping #vignette:after{content:"";position:absolute;inset:-12%;opacity:0;background:repeating-conic-gradient(from 0deg at 50% 50%,transparent 0 5deg,#d9f8ff18 5.5deg 6deg,transparent 6.5deg 14deg);mask:radial-gradient(circle,transparent 0 24%,#000 57%,transparent 82%);transform:scale(.86);transition:opacity .24s,transform .3s}body.fast-drop #vignette:after{opacity:.72;transform:scale(1.08);animation:dropWind .32s linear infinite}@keyframes dropWind{to{rotate:3deg}}@media(prefers-reduced-motion:reduce){body.fast-drop #vignette:after{animation:none}}
