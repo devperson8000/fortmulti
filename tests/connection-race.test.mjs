@@ -19,12 +19,12 @@ const join=async(conn,index)=>{
  return socket;
 };
 
-test('a stale websocket close cannot disconnect a newer live socket',async()=>{
+test('stale websocket callbacks cannot affect a newer live socket',async()=>{
  const previous=globalThis.WebSocket;
  globalThis.WebSocket=FakeSocket;
  try{
-  const statuses=[];
-  const conn=new Connection(()=>{},message=>statuses.push(message));
+  const statuses=[],received=[];
+  const conn=new Connection(message=>received.push(message),message=>statuses.push(message));
   conn.config={url:'https://example.supabase.co',key:'public-key'};
   conn.session={access_token:'token'};
   conn.room='room-id';
@@ -33,7 +33,12 @@ test('a stale websocket close cannot disconnect a newer live socket',async()=>{
   const second=await join(conn,1);
   assert.equal(conn.socket,second);
   assert.equal(conn.connected,true);
+
+  first.onmessage?.({data:JSON.stringify({event:'broadcast',payload:{event:'duel',payload:{type:'hello',data:{name:'stale'},from:'old-peer'}}})});
+  first.onerror?.(new Error('stale socket error'));
   first.onclose?.();
+
+  assert.deepEqual(received,[]);
   assert.equal(conn.socket,second);
   assert.equal(conn.connected,true);
   assert.equal(statuses.at(-1),'Online · private party');
