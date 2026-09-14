@@ -13,11 +13,16 @@ export function cadenceForPlayers(count=2){
  const n=clamp(Math.round(Number(count)||2),2,8);
  if(n<=2)return {inputMs:80,snapshotMs:100,heartbeatMs:600};
  if(n===3)return {inputMs:110,snapshotMs:125,heartbeatMs:650};
- if(n===4)return {inputMs:200,snapshotMs:200,heartbeatMs:700};
- if(n===5)return {inputMs:300,snapshotMs:250,heartbeatMs:750};
- if(n===6)return {inputMs:500,snapshotMs:333,heartbeatMs:850};
- if(n===7)return {inputMs:600,snapshotMs:400,heartbeatMs:900};
- return {inputMs:800,snapshotMs:500,heartbeatMs:950};
+ if(n===4)return {inputMs:200,snapshotMs:180,heartbeatMs:700};
+ if(n===5)return {inputMs:300,snapshotMs:220,heartbeatMs:750};
+ if(n===6)return {inputMs:500,snapshotMs:250,heartbeatMs:850};
+ if(n===7)return {inputMs:600,snapshotMs:250,heartbeatMs:900};
+ return {inputMs:800,snapshotMs:250,heartbeatMs:950};
+}
+
+export function staleInputGraceSeconds(count=2){
+ const heartbeat=cadenceForPlayers(count).heartbeatMs;
+ return clamp((heartbeat+120-600)/1000,.18,.55);
 }
 
 export function inputTransition(prev,next){
@@ -73,7 +78,7 @@ export function installNetworkStability(){
    if(Array.isArray(data?.state?.events)&&data.state.events.length>10)data={...data,state:{...data.state,events:data.state.events.slice(-10)}};
   }else if(type==='hello'){
    const sig=JSON.stringify([data?.name,data?.color,!!data?.ready,data?.host,data?.mode,data?.match,!!data?.voice,data?.maxPlayers]);
-   if(sig===state.lastHelloSig&&now-state.lastHelloAt<3000)return;
+   if(!this.local&&sig===state.lastHelloSig&&now-state.lastHelloAt<3000)return;
    state.lastHelloSig=sig;state.lastHelloAt=now;
   }else if(type==='ping'){
    const key=String(to||'*'),last=state.pingAt.get(key)||-Infinity;
@@ -89,7 +94,7 @@ export function installSimulationGrace(){
  const originalInput=Match.prototype.input;
  Match.prototype.input=function(id,input){
   const result=originalInput.call(this,id,input),player=this.players?.find?.(p=>p.id===id);
-  if(player)player.lastInput=Math.min(Number(player.lastInput)||0,-2.15);
+  if(player)player.lastInput=Math.min(Number(player.lastInput)||0,-staleInputGraceSeconds(this.players?.length||2));
   return result;
  };
 }
