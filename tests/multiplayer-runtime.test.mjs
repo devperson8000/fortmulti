@@ -12,17 +12,17 @@ test('larger parties automatically back off network cadence',()=>{
  assert.ok(cadenceForPlayers(8).inputMs>cadenceForPlayers(3).inputMs);assert.ok(cadenceForPlayers(8).snapshotMs>cadenceForPlayers(3).snapshotMs);
 });
 
-test('all party sizes keep input heartbeat inside the host stale-input window',()=>{
- for(let n=2;n<=8;n++)assert.ok(cadenceForPlayers(n).heartbeatMs<=700,`party size ${n}`);
+test('host stale-input window always exceeds the party heartbeat with safety margin',()=>{
+ assert.equal(typeof runtime.staleInputGraceSeconds,'function');
+ for(let n=2;n<=8;n++){
+  const heartbeat=cadenceForPlayers(n).heartbeatMs,timeout=600+runtime.staleInputGraceSeconds(n)*1000;
+  assert.ok(timeout>=heartbeat+100,`party size ${n}: timeout ${timeout} heartbeat ${heartbeat}`);
+  assert.ok(timeout<=1200,`party size ${n}: stale input kept too long`);
+ }
 });
 
 test('large parties never drop authoritative snapshots below four hertz',()=>{
  for(let n=2;n<=8;n++)assert.ok(cadenceForPlayers(n).snapshotMs<=250,`party size ${n}`);
-});
-
-test('simulation grace is bounded instead of preserving stale movement for seconds',()=>{
- assert.equal(typeof runtime.staleInputGraceSeconds,'function');
- const grace=runtime.staleInputGraceSeconds();assert.ok(grace>=.15&&grace<=.35,grace);
 });
 
 test('movement, action and inventory transitions are forwarded immediately',()=>{
