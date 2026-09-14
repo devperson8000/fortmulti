@@ -25,6 +25,23 @@ test('large parties never drop authoritative snapshots below four hertz',()=>{
  for(let n=2;n<=8;n++)assert.ok(cadenceForPlayers(n).snapshotMs<=250,`party size ${n}`);
 });
 
+test('snapshot codec omits unchanged heavy collections and hydrates them on receive',()=>{
+ assert.equal(typeof runtime.createSnapshotCodec,'function');
+ const sender=runtime.createSnapshotCodec(2000),receiver=runtime.createSnapshotCodec(2000);
+ const base={phase:'playing',players:[{id:'a',p:[0,0,0]}],structures:[{x:1,z:2,hp:150}],pickups:[{x:2,z:3,type:'shield'}],events:[]};
+ const first=sender.encode(base,0);assert.deepEqual(first.structures,base.structures);assert.deepEqual(first.pickups,base.pickups);
+ const firstDecoded=receiver.decode(first);assert.deepEqual(firstDecoded.structures,base.structures);assert.deepEqual(firstDecoded.pickups,base.pickups);
+ const compact=sender.encode(structuredClone(base),100);assert.equal('structures' in compact,false);assert.equal('pickups' in compact,false);
+ const hydrated=receiver.decode(compact);assert.deepEqual(hydrated.structures,base.structures);assert.deepEqual(hydrated.pickups,base.pickups);
+ const changed=structuredClone(base);changed.structures[0].hp=120;const forced=sender.encode(changed,200);assert.deepEqual(forced.structures,changed.structures);
+});
+
+test('snapshot codec periodically emits a full recovery baseline',()=>{
+ assert.equal(typeof runtime.createSnapshotCodec,'function');
+ const codec=runtime.createSnapshotCodec(2000),state={players:[],structures:[{x:1}],pickups:[],events:[]};
+ codec.encode(state,0);assert.equal('structures' in codec.encode(state,100),false);assert.equal('structures' in codec.encode(state,2100),true);
+});
+
 test('movement, action and inventory transitions are forwarded immediately',()=>{
  const prev={x:0,z:0,slot:1,jump:false,sprint:false,aim:false,fire:false,reload:false,rotation:0,yaw:0,pitch:0,aimYaw:0,aimPitch:0};
  assert.equal(inputTransition(prev,{...prev,x:1}),true);assert.equal(inputTransition(prev,{...prev,slot:5}),true);assert.equal(inputTransition(prev,{...prev,fire:true}),true);
