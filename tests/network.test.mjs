@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {Connection} from '../public/network.js';
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+test('two same-browser connections exchange lobby and chat events',async()=>{let a=[],b=[];const host=new Connection(m=>a.push(m),()=>{}),guest=new Connection(m=>b.push(m),()=>{});await host.open({},'',true,true);await guest.open({},host.code,false,true);host.send('hello',{name:'Host'});guest.send('chat',{text:'Ready'});await delay(30);assert.equal(b[0].type,'hello');assert.equal(b[0].data.name,'Host');assert.equal(a[0].type,'chat');assert.equal(a[0].data.text,'Ready');host.close();guest.close();});
