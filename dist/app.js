@@ -29,7 +29,16 @@ function say(name,text,system=false){
  const row=document.createElement('p'),b=document.createElement('b');b.textContent=name+(system?' · ':': ');row.append(b,document.createTextNode(text));if(system)row.className='system-message';$('messages').append(row);while($('messages').children.length>80)$('messages').firstChild.remove();$('messages').scrollTop=$('messages').scrollHeight;
 }
 
-const voice=new Voice((to,data)=>conn?.send('voice',data,to),t=>$('voice-status').textContent=t);
+let voiceState={message:'Microphone off',tone:'off',connected:0,enabled:false,muted:false,speaking:false};
+function renderVoice(next={}){
+ voiceState={...voiceState,...next};const button=$('voice'),box=$('chatbox');
+ $('voice-status').textContent=voiceState.message||'Microphone off';$('voice-peers').textContent=String(voiceState.connected||0);
+ $('voice-label').textContent=!voiceState.enabled?'VOICE OFF':voiceState.muted?'MIC MUTED':voiceState.speaking?'SPEAKING':'MIC ON';
+ button.setAttribute('aria-pressed',String(!!voiceState.enabled&&!voiceState.muted));button.title=voiceState.enabled?'Click to mute or unmute':'Enable encrypted browser voice chat';
+ for(const c of['voice-on','voice-muted','voice-speaking','voice-warning','voice-connecting'])box.classList.remove(c);
+ if(voiceState.enabled)box.classList.add('voice-on');if(voiceState.muted)box.classList.add('voice-muted');if(voiceState.speaking)box.classList.add('voice-speaking');if(voiceState.tone==='warning')box.classList.add('voice-warning');if(voiceState.tone==='connecting')box.classList.add('voice-connecting');
+}
+const voice=new Voice((to,data)=>conn?.send('voice',data,to),renderVoice);
 const voicePeerIds=()=>activePeers().filter(p=>p.voice).map(p=>p.id);
 function syncVoice(){if(voiceWanted&&conn)voice.sync(conn.id,voicePeerIds());}
 
@@ -124,7 +133,7 @@ async function respondInvite(inv,accept){
 }
 
 function resetMatchState(){match=null;snapshot=null;matchId='';seenEvent=0;showMenu=false;enteredLocal=false;entered=new Set();$('enter-match').hidden=true;$('match-actions').hidden=true;$('round-banner').textContent='';window.Duel.lobby=true;document.body.classList.remove('dropping');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear();document.exitPointerLock?.();}
-function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;$('voice').textContent='VOICE OFF';$('voice-status').textContent='Microphone off';refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
+function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
 function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);matchId=uid();seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;enteredLocal=false;entered=new Set();sendSnapshot();updatePresence();status('Match prepared · everyone must enter the drop.','success');}
 function sendSnapshot(){if(!match||!host)return;const data={id:matchId,state:match.snapshot()};conn.send('snapshot',data);apply(data);}
@@ -160,7 +169,7 @@ function receive(m){
  if(m.type==='lobby'&&m.from===conn.host&&!host){resetToLobby(false);return;}
  if(m.type==='lobby-request'&&host){resetToLobby(true);return;}
  if(m.type==='mode'&&m.from===conn.host&&!host&&['build','town'].includes(d.mode)){if($('mode').value!==d.mode){$('mode').value=d.mode;ready=false;hello();refresh();status('Party leader changed the match mode · ready up again.');}return;}
- if(m.type==='voice'&&peer){if(typeof d.enabled==='boolean'){peer.voice=d.enabled;if(!d.enabled)voice.remove(m.from);syncVoice();refresh();}else voice.receive(m.from,d).catch(e=>$('voice-status').textContent=e.message);return;}
+ if(m.type==='voice'&&peer){if(typeof d.enabled==='boolean'){peer.voice=d.enabled;if(!d.enabled)voice.remove(m.from);syncVoice();refresh();}else voice.receive(m.from,d).catch(e=>renderVoice({message:'Voice connection issue: '+e.message,tone:'warning'}));return;}
  if(m.type==='ping'){conn.send('pong',{time:d.time},m.from);return;}
  if(m.type==='pong'&&Number.isFinite(d.time)){latencies.set(m.from,Math.max(0,Date.now()-d.time));updateNetworkChip();}
 }
@@ -184,10 +193,11 @@ $('enter-match').onclick=()=>{if(!snapshot||snapshot.phase!=='waiting')return;en
 $('resume').onclick=()=>{showMenu=false;$('match-actions').hidden=true;game.capture();};
 $('rematch').onclick=$('back-lobby').onclick=()=>{if(host)resetToLobby(true);else conn?.send('lobby-request');};
 $('chat-form').onsubmit=e=>{e.preventDefault();const text=$('message').value.trim();if(!text||!conn||peers.size<1)return;conn.send('chat',{text});say(profile.name,text);$('message').value='';};
-$('chat-toggle').onclick=()=>{$('chat-content').hidden=!$('chat-content').hidden;$('chat-toggle').textContent=$('chat-content').hidden?'+':'−';};
-$('footer-chat').onclick=()=>{const hidden=$('chat-content').hidden;$('chat-content').hidden=!hidden;$('chat-toggle').textContent=hidden?'−':'+';};
+function toggleChat(force){const content=$('chat-content'),open=force??content.hidden;content.hidden=!open;$('chat-toggle').textContent=open?'−':'+';$('chat-toggle').setAttribute('aria-expanded',String(open));if(open)$('message').focus();}
+$('chat-toggle').onclick=()=>toggleChat();
+$('footer-chat').onclick=()=>toggleChat();
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('social-panel').classList.contains('open')){closeOnline();e.stopPropagation();}else if(e.key==='Escape'&&document.body.classList.contains('profile-open'))toggleProfile(false);},{capture:true});
-$('voice').onclick=async()=>{if(!conn||peers.size<1){status('Invite at least one player before enabling voice.');return;}if(voiceWanted){muted=!muted;voice.mute();$('voice').textContent=muted?'MIC MUTED':'MIC ON';return;}try{await voice.enable(conn.id,voicePeerIds());voiceWanted=true;muted=false;conn.send('voice',{enabled:true});hello();syncVoice();$('voice').textContent='MIC ON';$('voice-status').textContent='Party voice enabled';}catch(e){$('voice-status').textContent='Microphone unavailable: '+e.message;}};
+$('voice').onclick=async()=>{if(!conn||peers.size<1){status('Invite at least one player before enabling voice.');toggleChat(true);return;}if(voiceWanted){muted=voice.mute(!muted);conn.send('voice',{enabled:true,muted});return;}try{renderVoice({message:'Requesting microphone permission…',tone:'connecting'});await voice.enable(conn.id,voicePeerIds());voiceWanted=true;muted=false;conn.send('voice',{enabled:true,muted:false});hello();syncVoice();toggleChat(true);}catch(e){renderVoice({message:'Microphone unavailable: '+e.message,tone:'warning',enabled:false});toggleChat(true);}};
 function openSetup(){$('service-url').value=config.url||'';$('service-key').value=config.key||'';$('setup').showModal();}
 $('settings').onclick=openSetup;$('close-setup').onclick=()=>$('setup').close();
 $('save-setup').onclick=async()=>{const url=$('service-url').value.trim().replace(/\/$/,''),key=$('service-key').value.trim();if(key.startsWith('sb_secret_')){status('Only a publishable key is allowed.','error');return;}if(key.startsWith('eyJ')){try{if(JSON.parse(atob(key.split('.')[1])).role==='service_role'){status('Do not use a service-role key.','error');return;}}catch{}}config={url,key};writeStore('duel-config',config);$('setup').close();status('Online settings saved. Connecting party finder…');await startSocial();};
@@ -208,5 +218,5 @@ setInterval(()=>{
  else if(snapshot&&!host)conn.send('input',{id:matchId,input:showMenu?{}:game.input()},conn.host);
 },33);
 
-refresh();startSocial();
+renderVoice();refresh();startSocial();
 if(!game){const warning=document.createElement('div');warning.id='graphics-warning';warning.textContent='3D graphics are unavailable. Enable graphics acceleration in Chrome and restart it. Lobby, invites and chat are still available.';document.body.append(warning);}

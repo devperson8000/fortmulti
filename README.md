@@ -12,6 +12,8 @@ Lobby characters use a dedicated relaxed idle pose with their arms naturally low
 
 The v5.2 framing pass guarantees that the local player occupies the nearest central hero platform whether they create a party or join somebody else. Other players and empty invite platforms are placed behind the local character, preventing holograms from drawing through the model. A closer lobby camera, smaller moon, collapsed-by-default chat and single-row roster keep attention on the character. Limb joins now overlap with matching skin/outfit materials, with rounded knees, ankles and boots replacing the exposed dark connector shapes from the earlier procedural rig.
 
+The v6.2 presentation pass replaces the remaining block-jointed silhouette with a higher-density capsule-and-ovoid character. Rounded shoulders, elbows, hands, hips, knees, ankles, boots, layered hair and curved outfit panels overlap cleanly during the relaxed lobby pose, combat, freefall and canopy poses. Party members now share consistent natural skin materials instead of receiving the old opponent tint. The lobby chrome uses rounded layered cards, softer controls, a curved slide-out social drawer and a compact voice panel while keeping the local character unobstructed at the front.
+
 ## Combat system v6
 
 The combat pass adds four independent weapon classes: **Striker AR, Thunder Shotgun, Burst SMG and Eagle-Eye Sniper**. Each profile defines damage, cadence, hip/ADS/movement spread, recoil, reload time, magazine size, range, pellet count, automatic mode, equip time and FOV. Magazines persist independently when swapping slots.
@@ -125,7 +127,7 @@ Cross-browser and cross-network parties use Supabase.
 
 ## Voice chat
 
-Party voice uses browser WebRTC and requests microphone permission only after the player presses **Voice**. Each enabled player creates peer connections to other voice-enabled party members. A public STUN server covers ordinary networks. Restrictive networks can still require a TURN relay; optional ICE servers can be provided through `window.SUNNY_CONFIG.iceServers`.
+Party voice uses browser WebRTC and requests microphone permission only after the player presses **Voice**. Each enabled player creates peer connections to other voice-enabled party members, while Supabase Realtime carries only the targeted offer/answer/ICE signaling messages. The v6.2 voice pass adds explicit mute state, connected-peer counts, microphone activity feedback, failed-link retries, playback warnings and complete track/audio cleanup. A public STUN server covers ordinary networks. Restrictive networks can still require a TURN relay; optional ICE servers can be provided through `window.SUNNY_CONFIG.iceServers`.
 
 ## Security model
 

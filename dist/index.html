@@ -92,8 +92,8 @@
 </aside>
 
 <aside id="chatbox">
-  <div class="chat-title"><b>PARTY CHAT</b><button id="voice">VOICE OFF</button><button id="chat-toggle" aria-label="Toggle party chat">+</button></div>
-  <div id="chat-content" hidden><div id="messages" role="log" aria-live="polite"></div><form id="chat-form"><input id="message" placeholder="Message party…" maxlength="200" aria-label="Party message"><button>SEND</button></form><small id="voice-status">Microphone off</small></div>
+  <div class="chat-title"><b>PARTY CHAT</b><button id="voice" type="button" aria-pressed="false"><i class="voice-dot" aria-hidden="true"></i><span id="voice-label">VOICE OFF</span><strong id="voice-peers" aria-label="Connected voice peers">0</strong></button><button id="chat-toggle" type="button" aria-label="Toggle party chat" aria-expanded="false">+</button></div>
+  <div id="chat-content" hidden><div id="messages" role="log" aria-live="polite"></div><form id="chat-form"><input id="message" placeholder="Message party…" maxlength="200" aria-label="Party message"><button>SEND</button></form><small id="voice-status" role="status">Microphone off</small></div>
 </aside>
 
 <div id="round-banner" role="status"></div>
