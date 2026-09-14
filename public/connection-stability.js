@@ -10,6 +10,19 @@ const serial=(owner,key,operation)=>{
  return chained;
 };
 
+const guardSocketCallbacks=(owner,socket)=>{
+ if(!socket||socket.__sunnyLifecycleGuard)return;
+ for(const key of ['onopen','onmessage','onerror','onclose']){
+  const handler=socket[key];
+  if(typeof handler!=='function')continue;
+  socket[key]=(event)=>{
+   if(owner.socket!==socket||owner.closed)return;
+   return handler.call(socket,event);
+  };
+ }
+ socket.__sunnyLifecycleGuard=true;
+};
+
 export function installConnectionStability(){
  if(installed)return;installed=true;
 
@@ -20,14 +33,7 @@ export function installConnectionStability(){
   const run=(async()=>{
    const pending=originalConnect.apply(this,args);
    const socket=this.socket;
-   if(socket&&!socket.__sunnyCloseGuard){
-    const closeHandler=socket.onclose;
-    socket.onclose=(event)=>{
-     if(this.socket!==socket||this.closed)return;
-     closeHandler?.call(socket,event);
-    };
-    socket.__sunnyCloseGuard=true;
-   }
+   guardSocketCallbacks(this,socket);
    const result=await pending;
    clearTimeout(this.reconnect);this.reconnect=null;
    return result;
