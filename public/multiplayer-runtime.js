@@ -126,7 +126,7 @@ function installGameSmoothing(){
     if(!track){track={render:target.slice(),target:target.slice(),previousTarget:target.slice(),estimatedVelocity:[0,0,0],yaw:Number(p.yaw)||0,airPitch:Number(p.airPitch)||0,airRoll:Number(p.airRoll)||0,diveBlend:Number(p.diveBlend)||0,deploy:Number(p.deploy)||0,updatedAt:now,air:p.air};tracks.set(p.id,track);}
     else{
      const previous=track.target.slice(),distance=Math.hypot(target[0]-previous[0],target[1]-previous[1],target[2]-previous[2]);
-     track.previousTarget=previous;track.target=target;track.estimatedVelocity=target.map((v,i)=>(v-previous[i])/snapshotDt);track.updatedAt=now;
+     track.previousTarget=previous;track.target=target;const estimate=target.map((v,i)=>(v-previous[i])/snapshotDt),horizontal=Math.hypot(estimate[0],estimate[2]);if(horizontal>12){const scale=12/horizontal;estimate[0]*=scale;estimate[2]*=scale;}estimate[1]=clamp(estimate[1],-24,24);track.estimatedVelocity=estimate;track.updatedAt=now;
      if(distance>28||p.air==='bus'||(track.air!==p.air&&['landed','bus'].includes(p.air))){track.render=target.slice();track.estimatedVelocity=[0,0,0];}
      track.air=p.air;
     }
