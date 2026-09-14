@@ -8,9 +8,26 @@ The visuals and game code are original procedural assets. The project is not aff
 
 The v5.1 lobby is structured around the playable character instead of covering the 3D scene with large blurred panels. It includes a crisp moonlit resort backdrop, luminous party platforms, a centered foreground lineup for up to eight players, compact top navigation, a lower-left mode/play card, an outfit popover and a slide-out **People Online** drawer. Online discovery stays out of the way until the player opens it from the header, play card, party slot or footer.
 
-Lobby characters use a dedicated relaxed idle pose with their arms naturally lowered. The character rig now has separate idle, combat, freefall, canopy-opening and glider targets, providing the pose foundation for the upcoming equip, aim, weapon-swap and reload animation work.
+Lobby characters use a dedicated relaxed idle pose with their arms naturally lowered. The character rig has separate idle, combat, freefall, canopy-opening, glider, equip, aim and reload targets.
 
 The v5.2 framing pass guarantees that the local player occupies the nearest central hero platform whether they create a party or join somebody else. Other players and empty invite platforms are placed behind the local character, preventing holograms from drawing through the model. A closer lobby camera, smaller moon, collapsed-by-default chat and single-row roster keep attention on the character. Limb joins now overlap with matching skin/outfit materials, with rounded knees, ankles and boots replacing the exposed dark connector shapes from the earlier procedural rig.
+
+The v6.2 presentation pass replaces the remaining block-jointed silhouette with a higher-density capsule-and-ovoid character. Rounded shoulders, elbows, hands, hips, knees, ankles, boots, layered hair and curved outfit panels overlap cleanly during the relaxed lobby pose, combat, freefall and canopy poses. Party members now share consistent natural skin materials instead of receiving the old opponent tint. The lobby chrome uses rounded layered cards, softer controls, a curved slide-out social drawer and a compact voice panel while keeping the local character unobstructed at the front.
+
+## Combat system v6
+
+The combat pass adds four independent weapon classes: **Striker AR, Thunder Shotgun, Burst SMG and Eagle-Eye Sniper**. Each profile defines damage, cadence, hip/ADS/movement spread, recoil, reload time, magazine size, range, pellet count, automatic mode, equip time and FOV. Magazines persist independently when swapping slots.
+
+- Right mouse smoothly blends the chase camera from a 75° field of view into each weapon's ADS FOV.
+- The sniper blends to 15°, removes the local model from the sight picture and opens a dedicated precision optic with a circular vignette and fine reticle.
+- The normal crosshair expands from movement, weapon accuracy, sustained fire and recoil, then settles smoothly.
+- Recoil layers camera pitch/yaw kick, weapon translation and recovery without changing movement physics.
+- Weapon models have distinct procedural silhouettes, rarity styling, muzzle positions and firing audio.
+- Reloads animate the weapon tilt, magazine release/ejection, replacement insertion, action rack and return to aim. The support hand follows the magazine through the sequence.
+- Equip animations lower and rotate the outgoing/incoming weapon. Mouse sway and breathing remain layered over both aiming and reload motion.
+- The party leader remains authoritative: sanitized inputs drive weapon selection, firing, ADS and reloads; snapshots carry weapon/ammo/animation state; shot, reload and switch events carry IDs and timing through the existing private Supabase Realtime channel.
+
+The v6.1 polish pass resolves third-person crosshair offset by reconstructing the same shoulder camera on the authoritative host. Every shot first resolves the world point under the crosshair, then converges from the visible muzzle toward that point. A second muzzle-side collision check still blocks shots when nearby cover obstructs the weapon. Camera recoil is included in the transmitted aim ray, the dynamic crosshair now recovers correctly during multiplayer play, and selecting a build slot replaces the gun with an animated holographic blueprint for both local and remote players.
 
 ## Multiplayer v4
 
@@ -40,7 +57,11 @@ Other multiplayer improvements include:
 
 ## Island and drop phase
 
-Every round begins aboard the **Skyliner**, an original high-detail procedural airborne transport. Its slower, eased route now crosses the much larger island for roughly 32 seconds, with animated propulsion, slipstream trails, camera drift and altitude movement that make the flight readable.
+Every round begins aboard the **Skyliner**, an original high-detail procedural airborne transport. Its slower, eased route now crosses the much larger island for roughly 32 seconds at a 240-unit cruising altitude, with animated propulsion, slipstream trails, camera drift, moving vapor wisps and altitude movement that make the flight readable. The higher route provides at least ten seconds of neutral freefall before automatic deployment on flat terrain. A higher 64-unit deployment buffer and slower 4.6-unit canopy descent preserve at least twelve seconds of steerable glide time after that, while still allowing an earlier manual deployment.
+
+The v7 aerial rework replaces fixed fall speeds with an authoritative, momentum-based three-stage controller. Neutral skydiving uses a wide stabilized pose and moderate terminal velocity. Looking down while moving forward—or holding Shift—smoothly blends into a tucked steep dive with faster vertical and forward movement. Looking up blends back out without snapping. Space begins a one-way canopy deployment; it cannot be closed again in the same descent. A downward terrain/roof clearance check forces deployment early enough for the full opening animation, with extra safety distance at higher descent speeds.
+
+The procedural rig cross-fades the torso pitch, arm spread, leg tuck, riser reach and glider hanging pose from synchronized `diveBlend`, `airPitch`, `airRoll`, `airVelocity`, `airSpeed`, `clearance` and `gliderActive` fields. The camera widens from 78° toward 96° during a fast dive, eases back to 70° under canopy, adds restrained velocity-scaled shake, and renders hand/boot wind trails plus an edge-speed treatment. Glider steering preserves momentum, turns smoothly and banks both the character and canopy.
 
 - Press **Space** (or fire) to jump from the transport.
 - Steer during freefall with **WASD** and the mouse.
@@ -66,14 +87,20 @@ Rounds are last-player-standing. The first player to 5 round wins takes the matc
 | Control | Action |
 | --- | --- |
 | WASD | Move / steer in the air |
-| Mouse | Look / fire |
+| Mouse | Look |
+| Left mouse | Fire / place selected build |
+| Right mouse | ADS / sniper scope |
 | Space | Jump / leave Skyliner / deploy canopy |
-| Shift | Sprint / faster freefall |
-| 1 | Rifle |
-| 2 | Wall |
-| 3 | Ramp |
+| Shift | Sprint / commit to steep dive |
+| 1 | Striker AR |
+| 2 | Thunder Shotgun |
+| 3 | Burst SMG |
+| 4 | Eagle-Eye Sniper |
+| 5 | Wall blueprint |
+| 6 | Ramp blueprint |
 | G | Rotate build |
-| Q | Toggle rifle/wall |
+| Q | Toggle last weapon / last blueprint |
+| Mouse wheel | Cycle inventory |
 | R | Reload |
 | Esc | Match menu |
 
@@ -104,7 +131,7 @@ Cross-browser and cross-network parties use Supabase.
 
 ## Voice chat
 
-Party voice uses browser WebRTC and requests microphone permission only after the player presses **Voice**. Each enabled player creates peer connections to other voice-enabled party members. A public STUN server covers ordinary networks. Restrictive networks can still require a TURN relay; optional ICE servers can be provided through `window.SUNNY_CONFIG.iceServers`.
+Party voice uses browser WebRTC and requests microphone permission only after the player presses **Voice**. Each enabled player creates peer connections to other voice-enabled party members, while Supabase Realtime carries only the targeted offer/answer/ICE signaling messages. The v6.2 voice pass adds explicit mute state, connected-peer counts, microphone activity feedback, failed-link retries, playback warnings and complete track/audio cleanup. A public STUN server covers ordinary networks. Restrictive networks can still require a TURN relay; optional ICE servers can be provided through `window.SUNNY_CONFIG.iceServers`.
 
 ## Security model
 
@@ -123,4 +150,4 @@ Party voice uses browser WebRTC and requests microphone permission only after th
 npm run check
 ```
 
-The automated suite covers local multi-client room messaging, targeted signaling metadata, online-player discovery and invite acceptance, drop/freefall/canopy/landing flow, disconnect cleanup, multiplayer elimination rules, shooting, ammo, structures, build validation, waiting-state protection and first-to-five completion.
+The automated suite covers local multi-client room messaging, targeted signaling metadata, online-player discovery and invite acceptance, neutral/dive/glide blending, velocity synchronization, terrain-aware forced deployment, one-way canopy state, landing flow, disconnect cleanup, multiplayer elimination rules, four weapon profiles, independent magazines, fire modes, reload timing, spread, shooting, structures, build validation, waiting-state protection and first-to-five completion.
