@@ -10,6 +10,8 @@ The v5.1 lobby is structured around the playable character instead of covering t
 
 Lobby characters use a dedicated relaxed idle pose with their arms naturally lowered. The character rig now has separate idle, combat, freefall, canopy-opening and glider targets, providing the pose foundation for the upcoming equip, aim, weapon-swap and reload animation work.
 
+The v5.2 framing pass guarantees that the local player occupies the nearest central hero platform whether they create a party or join somebody else. Other players and empty invite platforms are placed behind the local character, preventing holograms from drawing through the model. A closer lobby camera, smaller moon, collapsed-by-default chat and single-row roster keep attention on the character. Limb joins now overlap with matching skin/outfit materials, with rounded knees, ankles and boots replacing the exposed dark connector shapes from the earlier procedural rig.
+
 ## Multiplayer v4
 
 The normal party flow no longer asks players to type or share room codes:

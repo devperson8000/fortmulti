@@ -1,5 +1,6 @@
 import {Connection,Voice,SocialDirectory,uid} from './network.js';
 import {Match,placement,validBuild} from './simulation.js';
+import {orderPartyProfiles} from './lobby-state.js';
 
 const $=id=>document.getElementById(id),game=window.Game;
 let conn=null,peers=new Map(),host=false,ready=false,match=null,snapshot=null,matchId='',seenEvent=0,lastHello=0,lastSnap=0,busy=false,voiceWanted=false,muted=false,showMenu=false,enteredLocal=false,entered=new Set();
@@ -34,7 +35,8 @@ function syncVoice(){if(voiceWanted&&conn)voice.sync(conn.id,voicePeerIds());}
 function partyProfiles(){
  if(!conn)return[{id:'local-preview',name:profile.name,color:profile.color,ready:false,self:true,host:true}];
  const all=[{id:conn.id,name:profile.name,color:profile.color,ready,self:true,host:conn.host===conn.id},...activePeers().map(p=>({...p,self:false,host:p.id===conn.host}))];
- return all.sort((a,b)=>(Number(b.host)-Number(a.host))||(Number(b.self)-Number(a.self))||a.name.localeCompare(b.name));
+ // The local player always owns the central hero platform, even when joining somebody else's party.
+ return orderPartyProfiles(all);
 }
 function drawPartyCards(){
  const grid=$('party-grid');grid.textContent='';const party=partyProfiles(),max=conn?.maxPlayers||8;$('party-count').textContent=`${party.length} / ${max}`;
@@ -72,6 +74,7 @@ function updateNetworkChip(){
 }
 function refresh(){
  const party=partyProfiles();window.Duel.myColor=profile.color;window.Duel.party=party;window.Duel.peerColors=colors();
+ $('hero-name').textContent=profile.name;$('hero-state').textContent=ready?'READY':'NOT READY';$('hero-state').classList.toggle('ready',ready);
  $('ready').textContent=ready?'CANCEL READY':'READY UP';$('ready').disabled=!conn||party.length<2||!game||!!match;$('mode').disabled=(!!conn&&!host)||!!match;$('room-actions').hidden=!conn;$('connect').hidden=!!conn;
  if(conn){$('room-code').textContent=host?'PRIVATE PARTY · YOU ARE LEADER':'PRIVATE PARTY · MEMBER';$('invite-more').disabled=inMatch()||party.length>=(conn.maxPlayers||8);}
  $('outfit').disabled=inMatch();$('name').disabled=inMatch();$('local').disabled=!!conn;drawPartyCards();renderOnlinePlayers();renderInvites();updateNetworkChip();

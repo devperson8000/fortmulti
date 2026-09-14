@@ -69,6 +69,7 @@
     <div id="party-grid" aria-label="Party members"></div>
     <p id="party-summary">Create a party or invite someone who is online.</p>
   </section>
+  <div id="hero-label"><b id="hero-name">Ranger</b><span id="hero-state">NOT READY</span></div>
 
   <div id="social-scrim" hidden></div>
   <aside class="social-panel" id="social-panel" aria-hidden="true">
@@ -85,8 +86,8 @@
 </aside>
 
 <aside id="chatbox">
-  <div class="chat-title"><b>PARTY CHAT</b><button id="voice">VOICE OFF</button><button id="chat-toggle" aria-label="Toggle party chat">−</button></div>
-  <div id="chat-content"><div id="messages" role="log" aria-live="polite"></div><form id="chat-form"><input id="message" placeholder="Message party…" maxlength="200" aria-label="Party message"><button>SEND</button></form><small id="voice-status">Microphone off</small></div>
+  <div class="chat-title"><b>PARTY CHAT</b><button id="voice">VOICE OFF</button><button id="chat-toggle" aria-label="Toggle party chat">+</button></div>
+  <div id="chat-content" hidden><div id="messages" role="log" aria-live="polite"></div><form id="chat-form"><input id="message" placeholder="Message party…" maxlength="200" aria-label="Party message"><button>SEND</button></form><small id="voice-status">Microphone off</small></div>
 </aside>
 
 <div id="round-banner" role="status"></div>
