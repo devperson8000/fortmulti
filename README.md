@@ -1,6 +1,6 @@
 # Sunny Duel
 
-A static, browser-based third-person 1v1 game built for Vercel. It includes a Fortnite-inspired party lobby, private invite codes, two match modes, ready-up, first-to-five rounds, shared building, party text chat, voice chat, outfit colors, reconnect handling, and rematches.
+A static, browser-based third-person 1v1 game built for Vercel. It includes a Fortnite-inspired party lobby, private invite codes, two match modes, ready-up, first-to-five rounds, synchronized round entry, shared building, party text chat, voice chat, outfit colors, reconnect handling, and rematches.
 
 The game is original and is not affiliated with or endorsed by Epic Games.
 
@@ -27,7 +27,7 @@ The game is original and is not affiliated with or endorsed by Epic Games.
 | R | Reload |
 | Esc | Match menu |
 
-Build previews snap to the direction the player is facing. The host browser runs the authoritative match simulation, validates build placement, resolves hits and structure damage, and sends snapshots to the guest.
+Build previews snap to the direction the player is facing. After both players ready up, each browser must click **Enter Round** before the countdown starts, so nobody loads in late. The host browser runs the authoritative match simulation, validates build placement, resolves hits and structure damage, and sends snapshots to the guest.
 
 ## Deploy to Vercel
 
@@ -80,8 +80,7 @@ Voice chat uses browser WebRTC and asks each player for microphone permission on
 ## Verification
 
 ```bash
-npm test
-npm run build
+npm run check
 ```
 
-The tests cover facing-based builds, upper-level structures, hits, structure blocking, ammo, round wins, invalid input filtering, and two-client local message delivery.
+The tests cover facing-based builds, upper-level structures, hits, structure blocking, ammo, round wins, invalid input filtering, and two-client local message delivery, and prevention of movement, firing, or building before both players enter the round.
