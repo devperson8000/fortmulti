@@ -2,13 +2,15 @@ import {WEAPON_ORDER,createLoadout,weaponForSlot,weaponIdForSlot,isWeaponSlot,is
 
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const dist=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
+const normalize=v=>{const n=Math.hypot(...v)||1;return v.map(x=>x/n);};
+export function cameraAimOrigin(p,input,profile){const yaw=Number.isFinite(input.aimYaw)?input.aimYaw:input.yaw,pitch=Number.isFinite(input.aimPitch)?input.aimPitch:input.pitch,forward=[-Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch)],right=[Math.cos(yaw),0,-Math.sin(yaw)],anchor=[p.p[0],p.p[1]+2.15,p.p[2]],distance=input.aim?(profile.scope ? .16 : 3.15):6.8,shoulder=input.aim?(profile.scope?0:.56):1.05;return anchor.map((v,k)=>v-forward[k]*distance+right[k]*shoulder);}
 export function placement(p,input,world){const angle=Math.round(input.yaw/(Math.PI/2))*Math.PI/2+(input.rotation||0),dx=-Math.sin(angle),dz=-Math.cos(angle),x=Math.round((p.p[0]+dx*5)/5)*5,z=Math.round((p.p[2]+dz*5)/5)*5;return {x,z,y:Math.max(world.height(x,z),Math.floor((p.p[1]+.25)/3.6)*3.6),angle,type:buildTypeForSlot(input.slot),hp:150};}
 export function bounds(s){const r=Math.abs(Math.sin(s.angle))>.5;return {min:[s.x-(r?.22:2.5),s.y,s.z-(r?2.5:.22)],max:[s.x+(r?.22:2.5),s.y+3.6,s.z+(r?2.5:.22)]};}
 function overlap(a,b){return a.min.every((v,i)=>v<b.max[i]&&a.max[i]>b.min[i]);}
 export function validBuild(s,structures,players,world){if(structures.length>=260||s.y>42)return false;if(structures.some(v=>Math.abs(v.x-s.x)<.1&&Math.abs(v.z-s.z)<.1&&Math.abs(v.y-s.y)<.2&&v.type===s.type&&(s.type!==2||Math.abs(Math.sin(v.angle-s.angle))<.1)))return false;const b=s.type===2?bounds(s):{min:[s.x-2.4,s.y+.15,s.z-2.4],max:[s.x+2.4,s.y+3.5,s.z+2.4]};if(world.obstacles.some(v=>overlap(b,v)))return false;if(s.type===2&&players.some(p=>p.hp>0&&p.air==='landed'&&overlap(b,{min:[p.p[0]-.38,p.p[1],p.p[2]-.38],max:[p.p[0]+.38,p.p[1]+2.3,p.p[2]+.38]})))return false;const floor=world.height(s.x,s.z);return s.y<=floor+.5||structures.some(v=>Math.hypot(v.x-s.x,v.z-s.z)<=5.1&&Math.abs(v.y+3.6-s.y)<.3);}
 export function ground(x,z,foot,structures,world){let h=world.height(x,z);for(const b of world.obstacles||[]){if(x>b.min[0]+.08&&x<b.max[0]-.08&&z>b.min[2]+.08&&z<b.max[2]-.08&&b.max[1]<=foot+.55)h=Math.max(h,b.max[1]);}for(const s of structures){if(s.type!==3)continue;const dx=x-s.x,dz=z-s.z,localX=dx*Math.cos(s.angle)-dz*Math.sin(s.angle),localZ=dx*Math.sin(s.angle)+dz*Math.cos(s.angle);if(Math.abs(localX)<=2.48&&Math.abs(localZ)<=2.5){let v=s.y+(2.5-localZ)*.72;if(v<=foot+.48)h=Math.max(h,v);}}return h;}
 export function rayBox(o,d,b){let lo=0,hi=500;for(let i=0;i<3;i++){if(Math.abs(d[i])<1e-7){if(o[i]<b.min[i]||o[i]>b.max[i])return Infinity;continue;}let a=(b.min[i]-o[i])/d[i],c=(b.max[i]-o[i])/d[i];if(a>c)[a,c]=[c,a];lo=Math.max(lo,a);hi=Math.min(hi,c);if(hi<lo)return Infinity;}return lo;}
-export function sanitize(i={}){const num=(v,a,b)=>clamp(Number.isFinite(v)?v:0,a,b);return {x:num(i.x,-1,1),z:num(i.z,-1,1),yaw:num(i.yaw,-10000,10000),pitch:num(i.pitch,-.9,.7),rotation:num(i.rotation,-10000,10000),slot:[1,2,3,4,5,6].includes(i.slot)?i.slot:1,jump:!!i.jump,sprint:!!i.sprint,aim:!!i.aim,fire:!!i.fire,reload:!!i.reload};}
+export function sanitize(i={}){const num=(v,a,b)=>clamp(Number.isFinite(v)?v:0,a,b),yaw=num(i.yaw,-10000,10000),pitch=num(i.pitch,-.9,.7);return {x:num(i.x,-1,1),z:num(i.z,-1,1),yaw,pitch,aimYaw:Number.isFinite(i.aimYaw)?num(i.aimYaw,-10000,10000):yaw,aimPitch:Number.isFinite(i.aimPitch)?num(i.aimPitch,-.9,.7):pitch,rotation:num(i.rotation,-10000,10000),slot:[1,2,3,4,5,6].includes(i.slot)?i.slot:1,jump:!!i.jump,sprint:!!i.sprint,aim:!!i.aim,fire:!!i.fire,reload:!!i.reload};}
 
 // A long cross-island route gives the party time to choose between distant POIs.
 export const ISLAND_LIMIT=292,BUS_SECONDS=32;
@@ -67,8 +69,15 @@ export class Match{
   p.reload=profile.reloadDuration;p.reloadWeapon=profile.id;p.cool=Math.max(p.cool,.12);
   this.event({type:'reload',by:p.id,weapon:profile.id,duration:profile.reloadDuration});return true;
  }
- traceShot(p,d,range){
-  const o=[p.p[0],p.p[1]+1.7,p.p[2]];let nearest=range,target=null,structure=null;
+ cameraOrigin(p,i,profile){
+  const desired=cameraAimOrigin(p,i,profile),anchor=[p.p[0],p.p[1]+2.15,p.p[2]],delta=desired.map((v,k)=>v-anchor[k]),distance=Math.hypot(...delta),direction=normalize(delta);let nearest=distance;
+  for(const b of this.world.obstacles)nearest=Math.min(nearest,rayBox(anchor,direction,b));
+  for(const structure of this.structures){const b=structure.type===2?bounds(structure):{min:[structure.x-2.5,structure.y,structure.z-2.5],max:[structure.x+2.5,structure.y+3.6,structure.z+2.5]};nearest=Math.min(nearest,rayBox(anchor,direction,b));}
+  for(let t=.4;t<nearest;t+=.5)if(anchor[1]+direction[1]*t<this.world.height(anchor[0]+direction[0]*t,anchor[2]+direction[2]*t)){nearest=t;break;}
+  const eye=nearest<distance?anchor.map((v,k)=>v+direction[k]*Math.max(.16,nearest-.3)):desired;eye[1]=Math.max(eye[1],this.world.height(eye[0],eye[2])+.55);return eye;
+ }
+ traceShot(p,d,range,origin){
+  const o=origin||[p.p[0],p.p[1]+1.7,p.p[2]];let nearest=range,target=null,structure=null;
   for(const b of this.world.obstacles){const t=rayBox(o,d,b);if(t<nearest)nearest=t;}
   for(let t=.5;t<nearest;t+=.5){if(o[1]+d[1]*t<this.world.height(o[0]+d[0]*t,o[2]+d[2]*t)){nearest=t;break;}}
   for(const b of this.structures){const bb=b.type===2?bounds(b):{min:[b.x-2.5,b.y,b.z-2.5],max:[b.x+2.5,b.y+3.6,b.z+2.5]},t=rayBox(o,d,bb);if(t<nearest){nearest=t;structure=b;target=null;}}
@@ -84,16 +93,16 @@ export class Match{
   const profile=weaponForSlot(p.slot),state=p.weapons[profile.id];
   if(!state?.ammo){this.reloadWeapon(p);return;}
   state.ammo--;p.ammo=state.ammo;p.cool+=profile.fireInterval;p.sustained=Math.min(5,p.sustained+1);
-  const spread=shotSpread(profile,{aim:i.aim,moving,sustained:p.sustained}),traces=[],hitTotals=new Map(),structureHits=new Map();
+  const spread=shotSpread(profile,{aim:i.aim,moving,sustained:p.sustained}),traces=[],hitTotals=new Map(),structureHits=new Map(),camera=this.cameraOrigin(p,i,profile),muzzleZ=profile.id==='sniper'?-1.95:profile.id==='shotgun'?-1.72:-1.48,muzzle=[p.p[0]+.24*Math.cos(i.yaw)+muzzleZ*Math.sin(i.yaw),p.p[1]+1.59,p.p[2]-.24*Math.sin(i.yaw)+muzzleZ*Math.cos(i.yaw)];
   for(let pellet=0;pellet<profile.pellets;pellet++){
-   const d=spreadDirection(i.yaw,i.pitch,spread),trace=this.traceShot(p,d,profile.range);traces.push(trace.end);
+   const viewDirection=spreadDirection(i.aimYaw,i.aimPitch,spread),crosshairTrace=this.traceShot(p,viewDirection,profile.range,camera),toAim=crosshairTrace.end.map((v,k)=>v-muzzle[k]),aimDistance=Math.hypot(...toAim),muzzleDirection=normalize(toAim),trace=this.traceShot(p,muzzleDirection,Math.min(profile.range,aimDistance+.35),muzzle);traces.push(trace.end);
    if(trace.target){const multiplier=trace.critical?1.65:1,damage=Math.round(profile.damage*multiplier),prior=hitTotals.get(trace.target)||{damage:0,critical:false};prior.damage+=damage;prior.critical||=trace.critical;hitTotals.set(trace.target,prior);}
    if(trace.structure)structureHits.set(trace.structure,(structureHits.get(trace.structure)||0)+profile.damage);
   }
   for(const [target,hit] of hitTotals){this.hit(target,hit.damage);if(target.hp<=0&&!target.eliminated){target.eliminated=true;this.event({type:'elimination',by:p.id,hit:target.id,weapon:profile.id});}}
   for(const [structure,damage] of structureHits){structure.hp-=damage;if(structure.hp<=0)this.structures=this.structures.filter(s=>s!==structure);}
   const hits=[...hitTotals].map(([target,hit])=>({id:target.id,...hit}));
-  this.event({type:'shot',by:p.id,weapon:profile.id,a:[p.p[0],p.p[1]+1.7,p.p[2]],b:traces[0],traces,hits,hit:hits[0]?.id||null,damage:hits.reduce((n,h)=>n+h.damage,0)});
+  this.event({type:'shot',by:p.id,weapon:profile.id,a:muzzle,b:traces[0],traces,hits,hit:hits[0]?.id||null,damage:hits.reduce((n,h)=>n+h.damage,0)});
  }
  tick(dt){
   dt=clamp(dt,0,.05);if(this.phase==='done'||this.phase==='paused'||this.phase==='waiting')return;
@@ -105,7 +114,7 @@ export class Match{
    p.lastInput+=dt;const i=p.lastInput>.6?sanitize():p.input,edgeFire=i.fire&&!p.fireLatch,edgeReload=i.reload&&!p.reloadLatch;
    p.fireLatch=i.fire;p.reloadLatch=i.reload;p.cool=Math.max(-.05,p.cool-dt);p.equip=Math.max(0,p.equip-dt);p.sustained=Math.max(0,p.sustained-dt*3.4);
    if(i.slot!==p.slot&&(isWeaponSlot(i.slot)||isBuildSlot(i.slot))){
-    p.slot=i.slot;p.weapon=weaponIdForSlot(i.slot);p.reload=0;p.reloadWeapon=null;p.equip=isWeaponSlot(i.slot)?weaponForSlot(i.slot).equipDuration:.22;if(isWeaponSlot(i.slot))p.cool=Math.max(p.cool,p.equip*.45);this.event({type:'switch',by:p.id,slot:p.slot,weapon:p.weapon});
+    p.slot=i.slot;if(isWeaponSlot(i.slot))p.weapon=weaponIdForSlot(i.slot);p.building=isBuildSlot(i.slot);p.reload=0;p.reloadWeapon=null;p.equip=isWeaponSlot(i.slot)?weaponForSlot(i.slot).equipDuration:.22;if(isWeaponSlot(i.slot))p.cool=Math.max(p.cool,p.equip*.45);this.event({type:'switch',by:p.id,slot:p.slot,weapon:p.weapon,building:p.building});
    }
    if(p.reload>0){p.reload=Math.max(0,p.reload-dt);if(!p.reload&&p.reloadWeapon){const profile=weaponForSlot(WEAPON_ORDER.indexOf(p.reloadWeapon)+1);p.weapons[p.reloadWeapon].ammo=profile.magazineCapacity;p.reloadWeapon=null;}}
    if(edgeReload)this.reloadWeapon(p);p.yaw=i.yaw;p.aim=Boolean(i.aim&&isWeaponSlot(p.slot)&&!p.reload);
@@ -116,7 +125,7 @@ export class Match{
     if(isBuildSlot(p.slot)){p.cool=.22;const b=placement(p,{...i,slot:p.slot},this.world);if((this.mode==='build'||p.material>=10)&&validBuild(b,this.structures,this.players,this.world)){this.structures.push(b);if(this.mode!=='build')p.material-=10;this.event({type:'build',by:p.id,structure:b});}}
     else{const profile=weaponForSlot(p.slot);if(!p.reload&&(profile.automatic||edgeFire))this.fireWeapon(p,i,Math.min(1,inputLength));}
    }
-   p.weapon=weaponIdForSlot(p.slot);p.ammo=currentAmmo(p.weapons,p.slot);
+   if(isWeaponSlot(p.slot))p.weapon=weaponIdForSlot(p.slot);p.building=isBuildSlot(p.slot);p.ammo=currentAmmo(p.weapons,p.slot);
    if(this.mode==='town'){const radius=Math.max(18,255-this.elapsed*.58);if(Math.hypot(p.p[0],p.p[2])>radius)this.hit(p,7*dt);for(const item of [...this.pickups]){if(Math.hypot(item.x-p.p[0],item.z-p.p[2])<2){if(item.type==='shield'&&p.shield<100)p.shield=Math.min(100,p.shield+40);else if(item.type==='health'&&p.hp<100)p.hp=Math.min(100,p.hp+40);else if(item.type==='wood')p.material+=50;else continue;this.pickups=this.pickups.filter(v=>v!==item);}}}
   }
   for(const p of this.players)if(p.hp<=0&&!p.eliminated){p.eliminated=true;this.event({type:'elimination',by:null,hit:p.id,reason:'storm'});}this.checkRoundEnd();

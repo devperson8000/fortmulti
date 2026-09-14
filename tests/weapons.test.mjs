@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {WEAPON_ORDER,WEAPON_PROFILES,createLoadout,currentAmmo,shotSpread} from '../public/weapon-system.js';
-import {Match} from '../public/simulation.js';
+import {Match,cameraAimOrigin} from '../public/simulation.js';
 
 const world={height:()=>0,obstacles:[]};
 const playing=()=>{const match=new Match(world,['a','b']);match.phase='playing';for(const p of match.players){p.air='landed';p.p[1]=0;}match.players[0].p=[0,0,0];match.players[1].p=[0,0,-20];return match;};
@@ -31,4 +31,10 @@ test('movement and sustained fire widen the simulated crosshair spread',()=>{
 
 test('snapshots expose ADS, weapon animation state and versioned shot payloads',()=>{
  const m=playing(),p=m.players[0];m.input('a',{slot:4,yaw:0});for(let i=0;i<11;i++)m.tick(.05);m.input('a',{slot:4,yaw:0,pitch:0,aim:true,fire:true});m.tick(.05);const snap=m.snapshot(),me=snap.players[0],shot=snap.events.findLast(e=>e.type==='shot');assert.equal(me.weapon,'sniper');assert.equal(me.aim,true);assert.equal(me.slot,4);assert.equal(me.weapons.sniper.ammo,3);assert.equal(shot.weapon,'sniper');assert.equal(shot.traces.length,1);assert.ok(Array.isArray(shot.hits));assert.ok(Number.isFinite(shot.damage));
+});
+
+test('the authoritative shot ray converges on the shoulder-camera crosshair',()=>{
+ const m=playing(),p=m.players[0],target=m.players[1],profile=WEAPON_PROFILES.sniper;target.p=[0,0,-20];let aim={slot:4,yaw:0,pitch:0,aimYaw:0,aimPitch:0,aim:true};
+ for(let n=0;n<12;n++){const eye=cameraAimOrigin(p,aim,profile),dx=target.p[0]-eye[0],dy=target.p[1]+1.25-eye[1],dz=target.p[2]-eye[2];aim.yaw=aim.aimYaw=Math.atan2(-dx,-dz);aim.pitch=aim.aimPitch=Math.atan2(dy,Math.hypot(dx,dz));}
+ m.input('a',aim);for(let i=0;i<11;i++)m.tick(.05);m.input('a',{...aim,fire:true});m.tick(.05);const shot=m.events.findLast(e=>e.type==='shot');assert.equal(shot.hit,'b');assert.ok(shot.damage>=profile.damage);assert.ok(target.shield<100);
 });

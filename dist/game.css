@@ -10,7 +10,7 @@
 #crosshair i:nth-child(2){width:2px;height:7px;transform:translate(-50%,var(--gap))}
 #crosshair i:nth-child(3){width:7px;height:2px;transform:translate(calc(-1 * var(--gap) - 100%),-50%)}
 #crosshair i:nth-child(4){width:7px;height:2px;transform:translate(var(--gap),-50%)}
-#crosshair.ads{--gap:3px!important}
+#crosshair.ads::after{width:2px;height:2px;box-shadow:0 0 5px #dffbff}
 #crosshair.shotgun::before{content:"";position:absolute;inset:12px;border:1px solid #ffffff80;border-radius:50%;transform:scale(1.05);transition:transform .08s}
 
 #scope{position:fixed;inset:0;z-index:18;pointer-events:none;display:grid;place-items:center;opacity:0;visibility:hidden;transition:opacity .14s ease;background:radial-gradient(circle at 50% 50%,transparent 0 30vh,#02060ab8 38vh,#000 54vh);backdrop-filter:blur(1.4px)}
