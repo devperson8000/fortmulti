@@ -29,35 +29,39 @@
 <section id="lobby">
   <nav>
     <strong>SUNNY <i>SKIRMISH</i></strong>
-    <span>PRIVATE PARTIES · UP TO 8 PLAYERS</span>
-    <button id="settings">SETUP</button>
+    <div class="lobby-tabs"><button class="active" type="button">PLAY</button><button id="profile-toggle" type="button">OUTFIT</button><button type="button" disabled>QUESTS</button><button type="button" disabled>CAREER</button></div>
+    <button id="social-toggle" type="button"><span>PEOPLE ONLINE</span><b id="online-count">0</b></button>
+    <button id="settings" type="button" aria-label="Open multiplayer setup">⚙</button>
   </nav>
 
   <div class="left-panel">
-    <small>YOUR PARTY. YOUR DROP.</small>
-    <h1>DROP IN<br>TOGETHER.</h1>
-    <label>Display name<input id="name" maxlength="20" value="Ranger" autocomplete="off"></label>
-    <label>Outfit<select id="outfit"><option value="408faf">Azure Ranger</option><option value="dc8255">Ember Scout</option><option value="8668bb">Violet Vanguard</option><option value="557959">Forest Sentinel</option><option value="d7b65c">Solar Striker</option><option value="5eb2a8">Tide Runner</option></select></label>
-    <label>Match mode<select id="mode"><option value="build">Build skirmish · unlimited material</option><option value="town">Town royale · loot & storm</option></select></label>
-    <p>Invite players who are online, ride the Skyliner together, choose your drop, deploy your canopy and fight until one player remains.</p>
-
-    <div id="connect">
-      <button class="primary" id="create">CREATE PARTY</button>
-      <p class="helper">You do not need a join code. Create a party, then invite anyone shown as online.</p>
-      <details class="test-tools">
-        <summary>Developer / fallback tools</summary>
-        <label class="test"><input type="checkbox" id="local"> Same-browser test</label>
-        <div class="join"><input id="code" placeholder="Fallback party code" aria-label="Fallback party code" maxlength="12"><button id="join">JOIN CODE</button></div>
-      </details>
+    <div id="identity-card">
+      <div><small>PLAYER PROFILE</small><button id="profile-close" type="button" aria-label="Close outfit settings">×</button></div>
+      <label>Display name<input id="name" maxlength="20" value="Ranger" autocomplete="off"></label>
+      <label>Outfit<select id="outfit"><option value="408faf">Azure Ranger</option><option value="dc8255">Ember Scout</option><option value="8668bb">Violet Vanguard</option><option value="557959">Forest Sentinel</option><option value="d7b65c">Solar Striker</option><option value="5eb2a8">Tide Runner</option></select></label>
     </div>
-
-    <div id="room-actions" hidden>
-      <b id="room-code">PRIVATE PARTY</b>
-      <div class="join party-buttons"><button id="invite-more">INVITE PLAYERS</button><button id="leave">LEAVE PARTY</button></div>
-      <button class="primary" id="ready">READY UP</button>
-      <details class="test-tools compact"><summary>Fallback code</summary><button id="copy">COPY FALLBACK CODE</button></details>
+    <div class="mode-card">
+      <small>SELECTED EXPERIENCE</small>
+      <h1>BATTLE<br>ROYALE</h1>
+      <label>Mode<select id="mode"><option value="build">Build skirmish · unlimited material</option><option value="town">Town royale · loot & storm</option></select></label>
+      <div class="mode-meta"><span>PRIVATE PARTY</span><b>2–8 PLAYERS</b></div>
+      <div id="connect">
+        <button class="primary" id="create">CREATE PARTY</button>
+        <button class="secondary-social" id="open-online" type="button">FIND ONLINE PLAYERS</button>
+        <details class="test-tools">
+          <summary>Developer / fallback tools</summary>
+          <label class="test"><input type="checkbox" id="local"> Same-browser test</label>
+          <div class="join"><input id="code" placeholder="Fallback party code" aria-label="Fallback party code" maxlength="12"><button id="join">JOIN</button></div>
+        </details>
+      </div>
+      <div id="room-actions" hidden>
+        <b id="room-code">PRIVATE PARTY</b>
+        <div class="join party-buttons"><button id="invite-more">INVITE</button><button id="leave">LEAVE</button></div>
+        <button class="primary" id="ready">READY UP</button>
+        <details class="test-tools compact"><summary>Fallback code</summary><button id="copy">COPY CODE</button></details>
+      </div>
+      <p id="connection" role="status">Connecting party finder…</p>
     </div>
-    <p id="connection" role="status">Connecting party finder…</p>
   </div>
 
   <section class="party-panel">
@@ -66,12 +70,13 @@
     <p id="party-summary">Create a party or invite someone who is online.</p>
   </section>
 
-  <aside class="social-panel" id="social-panel">
-    <div class="social-heading"><span><b>ONLINE PLAYERS</b><small>Invite directly</small></span><button id="online-refresh" aria-label="Refresh online players">↻</button></div>
+  <div id="social-scrim" hidden></div>
+  <aside class="social-panel" id="social-panel" aria-hidden="true">
+    <div class="social-heading"><span><b>PEOPLE ONLINE</b><small>Invite players directly to your party</small></span><div><button id="online-refresh" aria-label="Refresh online players">↻</button><button id="social-close" aria-label="Close online players">×</button></div></div>
     <div id="online-list" aria-live="polite"></div>
   </aside>
 
-  <div class="lobby-footer"><b>2–8 PLAYERS</b><span>Invite. Ride. Drop. Build. Battle.</span></div>
+  <div class="lobby-footer"><button type="button" id="footer-social">SOCIAL</button><button type="button" id="footer-chat">CHAT</button><span>Private multiplayer · up to eight players</span></div>
 </section>
 
 <aside id="invite-tray" hidden aria-live="polite">

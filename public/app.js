@@ -49,7 +49,7 @@ function drawPartyCards(){
  $('party-summary').textContent=conn?(partyCount<2?'Invite at least one player to begin.':`${readyCount}/${partyCount} ready · ${host?'You are party leader':'Waiting for party leader'}`):'Create a party or invite someone who is online.';
 }
 function renderOnlinePlayers(){
- const list=$('online-list');list.textContent='';
+ const list=$('online-list');list.textContent='';$('online-count').textContent=String(onlinePlayers.filter(p=>p&&p.id).length);
  if(socialError){list.innerHTML='<div class="empty-online"><b>Party finder unavailable</b><span></span><button id="open-setup-inline">OPEN SETUP</button></div>';list.querySelector('span').textContent=socialError;$('open-setup-inline').onclick=openSetup;return;}
  if($('local').checked&&social&&!onlinePlayers.length){list.innerHTML='<div class="empty-online"><b>Waiting for another tab…</b><span>Open this game in another tab with Same-browser test enabled.</span></div>';return;}
  if(!$('local').checked&&!validOnlineConfig()){list.innerHTML='<div class="empty-online"><b>Online play needs setup</b><span>Add your Supabase URL and publishable key, then run the latest supabase.sql.</span><button id="open-setup-inline">OPEN SETUP</button></div>';$('open-setup-inline').onclick=openSetup;return;}
@@ -76,7 +76,9 @@ function refresh(){
  if(conn){$('room-code').textContent=host?'PRIVATE PARTY · YOU ARE LEADER':'PRIVATE PARTY · MEMBER';$('invite-more').disabled=inMatch()||party.length>=(conn.maxPlayers||8);}
  $('outfit').disabled=inMatch();$('name').disabled=inMatch();$('local').disabled=!!conn;drawPartyCards();renderOnlinePlayers();renderInvites();updateNetworkChip();
 }
-function focusOnline(){const panel=$('social-panel');panel.classList.add('attention');panel.scrollIntoView?.({behavior:'smooth',block:'nearest'});setTimeout(()=>panel.classList.remove('attention'),800);}
+function focusOnline(){const panel=$('social-panel');panel.classList.add('open','attention');panel.setAttribute('aria-hidden','false');$('social-scrim').hidden=false;setTimeout(()=>panel.classList.remove('attention'),800);}
+function closeOnline(){const panel=$('social-panel');panel.classList.remove('open','attention');panel.setAttribute('aria-hidden','true');$('social-scrim').hidden=true;}
+function toggleProfile(force){const open=force??!document.body.classList.contains('profile-open');document.body.classList.toggle('profile-open',open);$('profile-toggle').classList.toggle('active',open);}
 function hello(){conn?.send('hello',{name:profile.name,color:profile.color,ready,host:conn.host||null,mode:$('mode').value,match:matchId,voice:voiceWanted,maxPlayers:conn.maxPlayers||8});}
 function everyoneReady(){const party=partyProfiles();return party.length>=2&&party.every(p=>p.ready);}
 function beginIfEntered(){if(host&&match?.phase==='waiting'&&match.ids.length>=2&&match.ids.every(id=>entered.has(id))){match.launchDrop();sendSnapshot();}}
@@ -165,6 +167,9 @@ $('create').onclick=()=>connect(true);
 $('join').onclick=()=>connect(false);
 $('leave').onclick=$('forfeit').onclick=()=>leave();
 $('invite-more').onclick=focusOnline;
+$('open-online').onclick=$('social-toggle').onclick=$('footer-social').onclick=focusOnline;
+$('social-close').onclick=$('social-scrim').onclick=closeOnline;
+$('profile-toggle').onclick=()=>toggleProfile();$('profile-close').onclick=()=>toggleProfile(false);
 $('online-refresh').onclick=()=>social?pollSocial():startSocial();
 $('ready').onclick=()=>{if(!conn||match)return;ready=!ready;game?.startAudio();hello();refresh();if(host)start();};
 $('name').onchange=$('name').onblur=()=>{profile.name=cleanName($('name').value);$('name').value=profile.name;writeStore('duel-profile',profile);ready=false;hello();refresh();updatePresence();};
@@ -176,6 +181,8 @@ $('resume').onclick=()=>{showMenu=false;$('match-actions').hidden=true;game.capt
 $('rematch').onclick=$('back-lobby').onclick=()=>{if(host)resetToLobby(true);else conn?.send('lobby-request');};
 $('chat-form').onsubmit=e=>{e.preventDefault();const text=$('message').value.trim();if(!text||!conn||peers.size<1)return;conn.send('chat',{text});say(profile.name,text);$('message').value='';};
 $('chat-toggle').onclick=()=>{$('chat-content').hidden=!$('chat-content').hidden;$('chat-toggle').textContent=$('chat-content').hidden?'+':'−';};
+$('footer-chat').onclick=()=>{const hidden=$('chat-content').hidden;$('chat-content').hidden=!hidden;$('chat-toggle').textContent=hidden?'−':'+';};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('social-panel').classList.contains('open')){closeOnline();e.stopPropagation();}else if(e.key==='Escape'&&document.body.classList.contains('profile-open'))toggleProfile(false);},{capture:true});
 $('voice').onclick=async()=>{if(!conn||peers.size<1){status('Invite at least one player before enabling voice.');return;}if(voiceWanted){muted=!muted;voice.mute();$('voice').textContent=muted?'MIC MUTED':'MIC ON';return;}try{await voice.enable(conn.id,voicePeerIds());voiceWanted=true;muted=false;conn.send('voice',{enabled:true});hello();syncVoice();$('voice').textContent='MIC ON';$('voice-status').textContent='Party voice enabled';}catch(e){$('voice-status').textContent='Microphone unavailable: '+e.message;}};
 function openSetup(){$('service-url').value=config.url||'';$('service-key').value=config.key||'';$('setup').showModal();}
 $('settings').onclick=openSetup;$('close-setup').onclick=()=>$('setup').close();

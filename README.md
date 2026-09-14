@@ -4,6 +4,12 @@ Sunny Skirmish is a static, browser-based third-person multiplayer prototype bui
 
 The visuals and game code are original procedural assets. The project is not affiliated with or endorsed by Epic Games.
 
+## Foreground party lobby
+
+The v5.1 lobby is structured around the playable character instead of covering the 3D scene with large blurred panels. It includes a crisp moonlit resort backdrop, luminous party platforms, a centered foreground lineup for up to eight players, compact top navigation, a lower-left mode/play card, an outfit popover and a slide-out **People Online** drawer. Online discovery stays out of the way until the player opens it from the header, play card, party slot or footer.
+
+Lobby characters use a dedicated relaxed idle pose with their arms naturally lowered. The character rig now has separate idle, combat, freefall, canopy-opening and glider targets, providing the pose foundation for the upcoming equip, aim, weapon-swap and reload animation work.
+
 ## Multiplayer v4
 
 The normal party flow no longer asks players to type or share room codes:
