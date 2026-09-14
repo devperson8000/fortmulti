@@ -8,9 +8,22 @@ The visuals and game code are original procedural assets. The project is not aff
 
 The v5.1 lobby is structured around the playable character instead of covering the 3D scene with large blurred panels. It includes a crisp moonlit resort backdrop, luminous party platforms, a centered foreground lineup for up to eight players, compact top navigation, a lower-left mode/play card, an outfit popover and a slide-out **People Online** drawer. Online discovery stays out of the way until the player opens it from the header, play card, party slot or footer.
 
-Lobby characters use a dedicated relaxed idle pose with their arms naturally lowered. The character rig now has separate idle, combat, freefall, canopy-opening and glider targets, providing the pose foundation for the upcoming equip, aim, weapon-swap and reload animation work.
+Lobby characters use a dedicated relaxed idle pose with their arms naturally lowered. The character rig has separate idle, combat, freefall, canopy-opening, glider, equip, aim and reload targets.
 
 The v5.2 framing pass guarantees that the local player occupies the nearest central hero platform whether they create a party or join somebody else. Other players and empty invite platforms are placed behind the local character, preventing holograms from drawing through the model. A closer lobby camera, smaller moon, collapsed-by-default chat and single-row roster keep attention on the character. Limb joins now overlap with matching skin/outfit materials, with rounded knees, ankles and boots replacing the exposed dark connector shapes from the earlier procedural rig.
+
+## Combat system v6
+
+The combat pass adds four independent weapon classes: **Striker AR, Thunder Shotgun, Burst SMG and Eagle-Eye Sniper**. Each profile defines damage, cadence, hip/ADS/movement spread, recoil, reload time, magazine size, range, pellet count, automatic mode, equip time and FOV. Magazines persist independently when swapping slots.
+
+- Right mouse smoothly blends the chase camera from a 75° field of view into each weapon's ADS FOV.
+- The sniper blends to 15°, removes the local model from the sight picture and opens a dedicated precision optic with a circular vignette and fine reticle.
+- The normal crosshair expands from movement, weapon accuracy, sustained fire and recoil, then settles smoothly.
+- Recoil layers camera pitch/yaw kick, weapon translation and recovery without changing movement physics.
+- Weapon models have distinct procedural silhouettes, rarity styling, muzzle positions and firing audio.
+- Reloads animate the weapon tilt, magazine release/ejection, replacement insertion, action rack and return to aim. The support hand follows the magazine through the sequence.
+- Equip animations lower and rotate the outgoing/incoming weapon. Mouse sway and breathing remain layered over both aiming and reload motion.
+- The party leader remains authoritative: sanitized inputs drive weapon selection, firing, ADS and reloads; snapshots carry weapon/ammo/animation state; shot, reload and switch events carry IDs and timing through the existing private Supabase Realtime channel.
 
 ## Multiplayer v4
 
@@ -66,14 +79,20 @@ Rounds are last-player-standing. The first player to 5 round wins takes the matc
 | Control | Action |
 | --- | --- |
 | WASD | Move / steer in the air |
-| Mouse | Look / fire |
+| Mouse | Look |
+| Left mouse | Fire / place selected build |
+| Right mouse | ADS / sniper scope |
 | Space | Jump / leave Skyliner / deploy canopy |
 | Shift | Sprint / faster freefall |
-| 1 | Rifle |
-| 2 | Wall |
-| 3 | Ramp |
+| 1 | Striker AR |
+| 2 | Thunder Shotgun |
+| 3 | Burst SMG |
+| 4 | Eagle-Eye Sniper |
+| 5 | Wall blueprint |
+| 6 | Ramp blueprint |
 | G | Rotate build |
-| Q | Toggle rifle/wall |
+| Q | Toggle last weapon / last blueprint |
+| Mouse wheel | Cycle inventory |
 | R | Reload |
 | Esc | Match menu |
 
@@ -123,4 +142,4 @@ Party voice uses browser WebRTC and requests microphone permission only after th
 npm run check
 ```
 
-The automated suite covers local multi-client room messaging, targeted signaling metadata, online-player discovery and invite acceptance, drop/freefall/canopy/landing flow, disconnect cleanup, multiplayer elimination rules, shooting, ammo, structures, build validation, waiting-state protection and first-to-five completion.
+The automated suite covers local multi-client room messaging, targeted signaling metadata, online-player discovery and invite acceptance, drop/freefall/canopy/landing flow, disconnect cleanup, multiplayer elimination rules, four weapon profiles, independent magazines, fire modes, reload timing, spread, shooting, structures, build validation, waiting-state protection and first-to-five completion.
