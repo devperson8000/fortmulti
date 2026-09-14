@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {existsSync} from 'node:fs';
+import {existsSync,readFileSync} from 'node:fs';
 
 async function loadRuntime(){
  const url=new URL('../public/bootstrap-runtime.js',import.meta.url);
@@ -26,4 +26,17 @@ test('high DPR laptops receive a conservative pixel budget without lowering mode
 test('normal DPR devices keep native resolution',async()=>{
  const {renderBudget}=await loadRuntime();
  assert.equal(renderBudget(1,8).pixelRatio,1);
+});
+
+test('bootstrap runs before the app and replaces the old dynamic runtime loader',()=>{
+ const html=readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
+ const config=readFileSync(new URL('../public/config.js',import.meta.url),'utf8');
+ const bootstrapIndex=html.indexOf('bootstrap-runtime.js'),appIndex=html.indexOf('app.js');
+ assert.ok(bootstrapIndex>=0&&appIndex>bootstrapIndex,'bootstrap module must load before app.js');
+ assert.equal(config.includes('multiplayer-runtime.js'),false,'config.js should only provide config data');
+});
+
+test('syntax verification includes the bootstrap runtime',()=>{
+ const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
+ assert.match(pkg.scripts.syntax,/bootstrap-runtime\.js/);
 });
