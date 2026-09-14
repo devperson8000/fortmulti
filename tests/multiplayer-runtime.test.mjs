@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cadenceForPlayers,inputTransition,aimChanged,shouldForwardInput,smoothPoint} from '../public/multiplayer-runtime.js';
+import * as runtime from '../public/multiplayer-runtime.js';
+
+const {cadenceForPlayers,inputTransition,aimChanged,shouldForwardInput,smoothPoint}=runtime;
 
 test('three-player cadence stays below the previous high-frequency input flood',()=>{
  const c=cadenceForPlayers(3);assert.ok(c.inputMs>=100);assert.ok(c.snapshotMs>=120);assert.ok(c.heartbeatMs<1000);
@@ -8,6 +10,19 @@ test('three-player cadence stays below the previous high-frequency input flood',
 
 test('larger parties automatically back off network cadence',()=>{
  assert.ok(cadenceForPlayers(8).inputMs>cadenceForPlayers(3).inputMs);assert.ok(cadenceForPlayers(8).snapshotMs>cadenceForPlayers(3).snapshotMs);
+});
+
+test('all party sizes keep input heartbeat inside the host stale-input window',()=>{
+ for(let n=2;n<=8;n++)assert.ok(cadenceForPlayers(n).heartbeatMs<=700,`party size ${n}`);
+});
+
+test('large parties never drop authoritative snapshots below four hertz',()=>{
+ for(let n=2;n<=8;n++)assert.ok(cadenceForPlayers(n).snapshotMs<=250,`party size ${n}`);
+});
+
+test('simulation grace is bounded instead of preserving stale movement for seconds',()=>{
+ assert.equal(typeof runtime.staleInputGraceSeconds,'function');
+ const grace=runtime.staleInputGraceSeconds();assert.ok(grace>=.15&&grace<=.35,grace);
 });
 
 test('movement, action and inventory transitions are forwarded immediately',()=>{
