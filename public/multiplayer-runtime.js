@@ -50,9 +50,38 @@ export function smoothPoint(current,target,rate,dt){
  return current.map((v,i)=>v+(target[i]-v)*t);
 }
 
+const collectionSignature=value=>JSON.stringify(Array.isArray(value)?value:[]);
+export function createSnapshotCodec(fullEveryMs=2000){
+ const fullInterval=Math.max(500,Number(fullEveryMs)||2000);
+ let lastStructures='',lastPickups='',lastFullAt=-Infinity,forceFull=true;
+ let receivedStructures=null,receivedPickups=null;
+ return {
+  forceFull(){forceFull=true;},
+  encode(state,now=Date.now()){
+   if(!state||typeof state!=='object')return state;
+   const structures=Array.isArray(state.structures)?state.structures:[],pickups=Array.isArray(state.pickups)?state.pickups:[];
+   const structuresSig=collectionSignature(structures),pickupsSig=collectionSignature(pickups);
+   const full=forceFull||now-lastFullAt>=fullInterval||structuresSig!==lastStructures||pickupsSig!==lastPickups;
+   const out={...state};
+   if(!full){delete out.structures;delete out.pickups;}else{lastFullAt=now;forceFull=false;}
+   lastStructures=structuresSig;lastPickups=pickupsSig;
+   return out;
+  },
+  decode(state){
+   if(!state||typeof state!=='object')return state;
+   const hasStructures=Array.isArray(state.structures),hasPickups=Array.isArray(state.pickups);
+   if(hasStructures)receivedStructures=state.structures;
+   if(hasPickups)receivedPickups=state.pickups;
+   if(!hasStructures&&receivedStructures===null)return null;
+   if(!hasPickups&&receivedPickups===null)return null;
+   return {...state,structures:hasStructures?state.structures:receivedStructures,pickups:hasPickups?state.pickups:receivedPickups};
+  }
+ };
+}
+
 function connectionState(conn){
  let state=stateByConnection.get(conn);
- if(!state){state={lastInput:null,lastInputAt:-Infinity,lastSnapshotAt:-Infinity,lastHelloAt:-Infinity,lastHelloSig:'',pingAt:new Map()};stateByConnection.set(conn,state);}
+ if(!state){state={lastInput:null,lastInputAt:-Infinity,lastSnapshotAt:-Infinity,lastHelloAt:-Infinity,lastHelloSig:'',pingAt:new Map(),outCodec:createSnapshotCodec(),inCodec:createSnapshotCodec(),receiveWrapped:false};stateByConnection.set(conn,state);}
  return state;
 }
 
@@ -65,7 +94,23 @@ function partySize(conn,data){
 let networkInstalled=false;
 export function installNetworkStability(){
  if(networkInstalled)return;networkInstalled=true;
- const originalSend=Connection.prototype.send;
+ const originalSend=Connection.prototype.send,originalOpen=Connection.prototype.open;
+ Connection.prototype.open=function(...args){
+  const state=connectionState(this);
+  if(!state.receiveWrapped){
+   const receive=this.onmessage;
+   this.onmessage=message=>{
+    if(message?.type==='hello'&&this.host===this.id)state.outCodec.forceFull();
+    if(message?.type==='snapshot'&&message?.data?.state){
+     const hydrated=state.inCodec.decode(message.data.state);if(!hydrated)return;
+     message={...message,data:{...message.data,state:hydrated}};
+    }
+    receive?.(message);
+   };
+   state.receiveWrapped=true;
+  }
+  return originalOpen.apply(this,args);
+ };
  Connection.prototype.send=function(type,data={},to=null){
   const state=connectionState(this),now=nowMs(),cadence=cadenceForPlayers(partySize(this,data));
   if(type==='input'){
@@ -75,7 +120,10 @@ export function installNetworkStability(){
   }else if(type==='snapshot'){
    if(now-state.lastSnapshotAt<cadence.snapshotMs)return;
    state.lastSnapshotAt=now;
-   if(Array.isArray(data?.state?.events)&&data.state.events.length>10)data={...data,state:{...data.state,events:data.state.events.slice(-10)}};
+   let nextState=data?.state;
+   if(Array.isArray(nextState?.events)&&nextState.events.length>10)nextState={...nextState,events:nextState.events.slice(-10)};
+   if(nextState)nextState=state.outCodec.encode(nextState,Date.now());
+   data={...data,state:nextState};
   }else if(type==='hello'){
    const sig=JSON.stringify([data?.name,data?.color,!!data?.ready,data?.host,data?.mode,data?.match,!!data?.voice,data?.maxPlayers]);
    if(!this.local&&sig===state.lastHelloSig&&now-state.lastHelloAt<3000)return;
