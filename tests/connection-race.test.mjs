@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {Connection} from '../public/network.js';
+import {Connection,SocialDirectory} from '../public/network.js';
 import '../public/connection-stability.js';
 
 class FakeSocket{
@@ -10,6 +10,7 @@ class FakeSocket{
  close(){this.readyState=3;}
 }
 
+const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const join=async(conn,index)=>{
  const promise=conn.connect();
  const socket=FakeSocket.instances[index];
@@ -33,11 +34,9 @@ test('stale websocket callbacks cannot affect a newer live socket',async()=>{
   const second=await join(conn,1);
   assert.equal(conn.socket,second);
   assert.equal(conn.connected,true);
-
   first.onmessage?.({data:JSON.stringify({event:'broadcast',payload:{event:'duel',payload:{type:'hello',data:{name:'stale'},from:'old-peer'}}})});
   first.onerror?.(new Error('stale socket error'));
   first.onclose?.();
-
   assert.deepEqual(received,[]);
   assert.equal(conn.socket,second);
   assert.equal(conn.connected,true);
@@ -47,4 +46,16 @@ test('stale websocket callbacks cannot affect a newer live socket',async()=>{
   globalThis.WebSocket=previous;
   FakeSocket.instances.length=0;
  }
+});
+
+test('social offline and presence writes stay ordered across directory replacement',async()=>{
+ const order=[],oldDirectory=new SocialDirectory(()=>{}),newDirectory=new SocialDirectory(()=>{});
+ oldDirectory.session={access_token:'token'};newDirectory.session={access_token:'token'};
+ oldDirectory.api=async()=>{await delay(20);order.push('offline');return true;};
+ newDirectory.api=async()=>{order.push('presence');return {ok:true};};
+ await Promise.all([
+  oldDirectory.offline(),
+  newDirectory.presence('Ranger','408faf','online',null)
+ ]);
+ assert.deepEqual(order,['offline','presence']);
 });
