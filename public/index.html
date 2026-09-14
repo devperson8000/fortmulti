@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="theme-color" content="#081a31">
+<meta name="description" content="A browser-based multiplayer battle game for up to eight players with online invites, an airborne drop phase, building, voice chat and private parties.">
+<title>Sunny Skirmish · Multiplayer</title>
+<link rel="stylesheet" href="game.css">
+<link rel="stylesheet" href="lobby.css">
+</head>
+<body class="in-lobby">
+<canvas id="game" aria-label="Third-person 3D multiplayer game"></canvas>
+<div id="vignette"></div><div id="damage"></div>
+<header>
+  <div class="brand"><b>SUNNY<span>SKIRMISH</span></b><small>MULTIPLAYER / 03</small></div>
+  <div id="compass">W &nbsp; · &nbsp; NW &nbsp; · &nbsp; <strong>N</strong> &nbsp; · &nbsp; NE &nbsp; · &nbsp; E</div>
+  <button id="pause" aria-label="Pause game">Ⅱ</button>
+</header>
+<aside id="mapbox"><canvas id="map" width="180" height="180" aria-label="Minimap"></canvas><b>SUNCREST</b><div><span id="time">DROP</span><span id="remaining">1 LEFT</span><span id="score">◎ 0</span></div></aside>
+<div id="mission" style="display:none"><small>PRIVATE PARTY</small><b>Own the island.</b><span>Drop, build and be the last player standing.</span></div>
+<div id="notice" role="status"></div><div id="crosshair"><i></i><i></i><i></i><i></i></div><div id="hitmarker">×</div><div id="damagevalue"></div><div id="buildhelp"></div>
+<section id="health"><div><span>▰ SHIELD</span><b id="shieldtext">100</b></div><div class="bar"><i id="shieldbar"></i></div><div><span>✚ HEALTH</span><b id="hptext">100</b></div><div class="bar green"><i id="hpbar"></i></div></section>
+<section id="inventory"><div class="ammo"><span id="ammotext">30</span><small>/ ∞</small><b id="weaponlabel">RANGER RIFLE</b></div><div class="slots"><button class="selected" data-slot="1"><kbd>1</kbd><span>⌁</span><small>RIFLE</small></button><button data-slot="2"><kbd>2</kbd><span>▥</span><small>WALL</small></button><button data-slot="3"><kbd>3</kbd><span>◩</span><small>RAMP</small></button><div class="wood"><b id="wood">150</b><small>MATERIAL</small></div></div></section>
+<footer>W A S D <span>move / steer</span> &nbsp; MOUSE <span>look / fire</span> &nbsp; SPACE <span>jump / deploy canopy</span> &nbsp; SHIFT <span>sprint / dive</span> &nbsp; R <span>reload</span> &nbsp; 1–3 <span>equip</span> &nbsp; Q <span>build</span> &nbsp; G <span>rotate</span> &nbsp; ESC <span>menu</span></footer>
+<div hidden id="overlay"><button id="play"></button><p id="eyebrow"></p><p id="heading"></p><p id="intro"></p></div>
+<div id="touch"><div><button data-key="KeyW">▲</button><br><button data-key="KeyA">◀</button><button data-key="KeyS">▼</button><button data-key="KeyD">▶</button></div><div><button id="touchjump">JUMP</button><button id="touchfire">FIRE</button></div></div>
+
+<section id="lobby">
+  <nav>
+    <strong>SUNNY <i>SKIRMISH</i></strong>
+    <span>PRIVATE PARTIES · UP TO 8 PLAYERS</span>
+    <button id="settings">SETUP</button>
+  </nav>
+
+  <div class="left-panel">
+    <small>YOUR PARTY. YOUR DROP.</small>
+    <h1>DROP IN<br>TOGETHER.</h1>
+    <label>Display name<input id="name" maxlength="20" value="Ranger" autocomplete="off"></label>
+    <label>Outfit<select id="outfit"><option value="408faf">Azure Ranger</option><option value="dc8255">Ember Scout</option><option value="8668bb">Violet Vanguard</option><option value="557959">Forest Sentinel</option><option value="d7b65c">Solar Striker</option><option value="5eb2a8">Tide Runner</option></select></label>
+    <label>Match mode<select id="mode"><option value="build">Build skirmish · unlimited material</option><option value="town">Town royale · loot & storm</option></select></label>
+    <p>Invite players who are online, ride the Skyliner together, choose your drop, deploy your canopy and fight until one player remains.</p>
+
+    <div id="connect">
+      <button class="primary" id="create">CREATE PARTY</button>
+      <p class="helper">You do not need a join code. Create a party, then invite anyone shown as online.</p>
+      <details class="test-tools">
+        <summary>Developer / fallback tools</summary>
+        <label class="test"><input type="checkbox" id="local"> Same-browser test</label>
+        <div class="join"><input id="code" placeholder="Fallback party code" aria-label="Fallback party code" maxlength="12"><button id="join">JOIN CODE</button></div>
+      </details>
+    </div>
+
+    <div id="room-actions" hidden>
+      <b id="room-code">PRIVATE PARTY</b>
+      <div class="join party-buttons"><button id="invite-more">INVITE PLAYERS</button><button id="leave">LEAVE PARTY</button></div>
+      <button class="primary" id="ready">READY UP</button>
+      <details class="test-tools compact"><summary>Fallback code</summary><button id="copy">COPY FALLBACK CODE</button></details>
+    </div>
+    <p id="connection" role="status">Connecting party finder…</p>
+  </div>
+
+  <section class="party-panel">
+    <div class="party-heading"><span>YOUR PARTY</span><b id="party-count">1 / 8</b></div>
+    <div id="party-grid" aria-label="Party members"></div>
+    <p id="party-summary">Create a party or invite someone who is online.</p>
+  </section>
+
+  <aside class="social-panel" id="social-panel">
+    <div class="social-heading"><span><b>ONLINE PLAYERS</b><small>Invite directly</small></span><button id="online-refresh" aria-label="Refresh online players">↻</button></div>
+    <div id="online-list" aria-live="polite"></div>
+  </aside>
+
+  <div class="lobby-footer"><b>2–8 PLAYERS</b><span>Invite. Ride. Drop. Build. Battle.</span></div>
+</section>
+
+<aside id="invite-tray" hidden aria-live="polite">
+  <div class="invite-heading"><b>PARTY INVITES</b><span>Accept to join instantly</span></div>
+  <div id="invite-list"></div>
+</aside>
+
+<aside id="chatbox">
+  <div class="chat-title"><b>PARTY CHAT</b><button id="voice">VOICE OFF</button><button id="chat-toggle" aria-label="Toggle party chat">−</button></div>
+  <div id="chat-content"><div id="messages" role="log" aria-live="polite"></div><form id="chat-form"><input id="message" placeholder="Message party…" maxlength="200" aria-label="Party message"><button>SEND</button></form><small id="voice-status">Microphone off</small></div>
+</aside>
+
+<div id="round-banner" role="status"></div>
+<button id="enter-match" hidden>ENTER THE DROP</button>
+<div id="match-actions" hidden><button id="resume">RETURN TO MATCH</button><button id="rematch">RETURN PARTY TO LOBBY</button><button id="back-lobby">BACK TO PARTY LOBBY</button><button id="forfeit">LEAVE PARTY</button><small>Esc opens this menu. The party leader runs the authoritative match simulation.</small></div>
+
+<dialog id="setup">
+  <h2>Online multiplayer setup</h2>
+  <p>Sunny Skirmish uses Supabase for presence, party invites and private Realtime rooms. Add these public values in Vercel, or save them here for this browser.</p>
+  <label>Supabase project URL<input id="service-url" placeholder="https://your-project.supabase.co"></label>
+  <label>Publishable key<input id="service-key" placeholder="sb_publishable_…"></label>
+  <div class="setup-note"><b>Required once per Supabase project</b><span>Run the latest <code>supabase.sql</code> and enable Anonymous Sign-Ins in Authentication settings. Never use a service-role or secret key in the browser.</span></div>
+  <button class="primary" id="save-setup">SAVE & CONNECT</button><button id="close-setup">CLOSE</button>
+</dialog>
+
+<script src="config.js"></script><script src="engine.js"></script><script type="module" src="app.js"></script>
+</body>
+</html>
