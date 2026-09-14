@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Connection} from '../public/network.js';
+import '../public/connection-stability.js';
 
 class FakeSocket{
  static instances=[];
