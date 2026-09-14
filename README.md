@@ -57,7 +57,7 @@ Other multiplayer improvements include:
 
 ## Island and drop phase
 
-Every round begins aboard the **Skyliner**, an original high-detail procedural airborne transport. Its slower, eased route now crosses the much larger island for roughly 32 seconds, with animated propulsion, slipstream trails, camera drift and altitude movement that make the flight readable.
+Every round begins aboard the **Skyliner**, an original high-detail procedural airborne transport. Its slower, eased route now crosses the much larger island for roughly 32 seconds at a 240-unit cruising altitude, with animated propulsion, slipstream trails, camera drift and altitude movement that make the flight readable. The higher route provides at least ten seconds of neutral freefall before the automatic canopy threshold on flat terrain, with substantially longer total airtime once the glide begins.
 
 The v7 aerial rework replaces fixed fall speeds with an authoritative, momentum-based three-stage controller. Neutral skydiving uses a wide stabilized pose and moderate terminal velocity. Looking down while moving forward—or holding Shift—smoothly blends into a tucked steep dive with faster vertical and forward movement. Looking up blends back out without snapping. Space begins a one-way canopy deployment; it cannot be closed again in the same descent. A downward terrain/roof clearance check forces deployment early enough for the full opening animation, with extra safety distance at higher descent speeds.
 

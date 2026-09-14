@@ -14,9 +14,9 @@ export function rayBox(o,d,b){let lo=0,hi=500;for(let i=0;i<3;i++){if(Math.abs(d
 export function sanitize(i={}){const num=(v,a,b)=>clamp(Number.isFinite(v)?v:0,a,b),yaw=num(i.yaw,-10000,10000),pitch=num(i.pitch,-.9,.7);return {x:num(i.x,-1,1),z:num(i.z,-1,1),yaw,pitch,aimYaw:Number.isFinite(i.aimYaw)?num(i.aimYaw,-10000,10000):yaw,aimPitch:Number.isFinite(i.aimPitch)?num(i.aimPitch,-.9,.7):pitch,rotation:num(i.rotation,-10000,10000),slot:[1,2,3,4,5,6].includes(i.slot)?i.slot:1,jump:!!i.jump,sprint:!!i.sprint,aim:!!i.aim,fire:!!i.fire,reload:!!i.reload};}
 
 // A long cross-island route gives the party time to choose between distant POIs.
-export const ISLAND_LIMIT=292,BUS_SECONDS=32;
+export const ISLAND_LIMIT=292,BUS_SECONDS=32,BUS_ALTITUDE=240;
 export const DROP_TUNING=Object.freeze({neutralFall:17,diveFall:30,neutralSpeed:12,diveSpeed:21,glideFall:5.4,glideSpeed:14,autoDeployBase:42,deploySeconds:.9});
-const BUS_START=[-312,188],BUS_END=[312,-188],BUS_ALTITUDE=128;
+const BUS_START=[-312,188],BUS_END=[312,-188];
 const seatOffset=i=>{const row=Math.floor(i/2),side=i%2?1:-1;return [side*1.15,0,3.2-row*2.05];};
 const damp=(from,to,rate,dt)=>from+(to-from)*(1-Math.exp(-rate*dt));
 const dampAngle=(from,to,rate,dt)=>from+Math.atan2(Math.sin(to-from),Math.cos(to-from))*(1-Math.exp(-rate*dt));
