@@ -5,8 +5,9 @@ let installed=false;
 const serial=(owner,key,operation)=>{
  const previous=owner[key]||Promise.resolve();
  const next=previous.catch(()=>{}).then(operation);
- owner[key]=next.finally(()=>{if(owner[key]===next)owner[key]=null;});
- return owner[key];
+ const chained=next.finally(()=>{if(owner[key]===chained)owner[key]=null;});
+ owner[key]=chained;
+ return chained;
 };
 
 export function installConnectionStability(){
