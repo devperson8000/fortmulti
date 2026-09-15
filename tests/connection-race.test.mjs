@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Connection,SocialDirectory} from '../public/network.js';
-import '../public/connection-stability.js';
+import {sessionRefreshDelay} from '../public/connection-stability.js';
 
 class FakeSocket{
  static instances=[];
@@ -58,4 +58,14 @@ test('social offline and presence writes stay ordered across directory replaceme
   newDirectory.presence('Ranger','408faf','online',null)
  ]);
  assert.deepEqual(order,['offline','presence']);
+});
+
+test('session refresh is scheduled before expiry and retries quickly after a failure',()=>{
+ const now=1_000_000;
+ const expiresAtSeconds=(now+60*60*1000)/1000;
+ const normal=sessionRefreshDelay({expires_at:expiresAtSeconds},now,0);
+ assert.ok(normal>=30*60*1000&&normal<=35*60*1000);
+ assert.equal(sessionRefreshDelay({expires_at:expiresAtSeconds},now,1),15_000);
+ assert.equal(sessionRefreshDelay({expires_at:expiresAtSeconds},now,2),30_000);
+ assert.equal(sessionRefreshDelay({expires_at:expiresAtSeconds},now,5),120_000);
 });
