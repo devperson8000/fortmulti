@@ -4,6 +4,8 @@ Sunny Skirmish is a static, browser-based third-person multiplayer prototype bui
 
 The v7.1 playability pass keeps the authoritative 30 Hz host simulation while adapting guest input and snapshot traffic to party size. Host-only latency probes, queued action taps, render-side position/rotation interpolation, stale-socket protection and reconnect cleanup keep larger parties below the Supabase Free Realtime event ceiling without making two-player combat feel delayed. Glider descent is faster and more directed, shortening the final landing phase while preserving a useful steering window.
 
+The v7.2 smooth-motion pass adds short, bounded render prediction for grounded movement and synchronized air velocity, so players keep moving between authoritative snapshots without changing host-owned collisions or hit results. Dynamic geometry now reuses CPU and GPU storage across frames to prevent allocation-related pauses. Automatic canopy deployment happens lower, and the final glide descends faster for a shorter, more responsive landing phase.
+
 The visuals and game code are original procedural assets. The project is not affiliated with or endorsed by Epic Games.
 
 ## Foreground party lobby

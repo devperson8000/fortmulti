@@ -15,7 +15,7 @@ export function sanitize(i={}){const num=(v,a,b)=>clamp(Number.isFinite(v)?v:0,a
 
 // A long cross-island route gives the party time to choose between distant POIs.
 export const ISLAND_LIMIT=292,BUS_SECONDS=32,BUS_ALTITUDE=240;
-export const DROP_TUNING=Object.freeze({neutralFall:17,diveFall:30,neutralSpeed:12,diveSpeed:21,glideFall:6.3,glideSpeed:14.6,autoDeployBase:64,deploySeconds:.9});
+export const DROP_TUNING=Object.freeze({neutralFall:17,diveFall:30,neutralSpeed:12,diveSpeed:21,glideFall:7.2,glideSpeed:14.6,autoDeployBase:44,deploySeconds:.9});
 export const INPUT_STALE_SECONDS=1.6;
 const BUS_START=[-312,188],BUS_END=[312,-188];
 const seatOffset=i=>{const row=Math.floor(i/2),side=i%2?1:-1;return [side*1.15,0,3.2-row*2.05];};

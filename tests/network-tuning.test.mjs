@@ -28,6 +28,41 @@ test('network position smoothing blends normal updates and snaps teleports',()=>
  assert.deepEqual(tuning.smoothPosition(null,[4,5,6],.05),[4,5,6]);
 });
 
+test('motion prediction keeps airborne movement advancing between snapshots',()=>{
+ assert.equal(typeof tuning.advanceMotionTrack,'function');
+ let track=tuning.advanceMotionTrack(null,[0,120,0],{dt:.016,state:'glider',velocity:[0,-6.3,-14.6]});
+ const first=track.position.slice();
+ for(let i=0;i<4;i++)track=tuning.advanceMotionTrack(track,[0,120,0],{dt:.016,state:'glider',velocity:[0,-6.3,-14.6]});
+ assert.ok(track.position[1]<first[1],`expected continuous descent, got ${track.position[1]}`);
+ assert.ok(track.position[2]<first[2],`expected continuous forward glide, got ${track.position[2]}`);
+ assert.ok(track.position.every(Number.isFinite));
+});
+
+test('motion prediction learns grounded velocity but never runs away during a network stall',()=>{
+ let track=tuning.advanceMotionTrack(null,[0,0,0],{dt:.016,state:'landed'});
+ track=tuning.advanceMotionTrack(track,[.48,0,0],{dt:.08,state:'landed'});
+ const afterPacket=track.position[0];
+ for(let i=0;i<30;i++)track=tuning.advanceMotionTrack(track,[.48,0,0],{dt:.016,state:'landed'});
+ assert.ok(track.position[0]>afterPacket,'grounded motion should continue briefly between packets');
+ assert.ok(track.position[0]<2,'prediction horizon must stay bounded during a stalled connection');
+});
+
+test('a fresh stationary snapshot clears grounded prediction momentum',()=>{
+ let track=tuning.advanceMotionTrack(null,[0,0,0],{dt:.016,state:'landed',sampleId:1});
+ track=tuning.advanceMotionTrack(track,[.48,0,0],{dt:.08,state:'landed',sampleId:2});
+ for(let i=0;i<4;i++)track=tuning.advanceMotionTrack(track,[.48,0,0],{dt:.016,state:'landed',sampleId:2});
+ assert.ok(track.position[0]>.48);
+ track=tuning.advanceMotionTrack(track,[.48,0,0],{dt:.08,state:'landed',sampleId:3});
+ assert.deepEqual(track.velocity,[0,0,0]);
+});
+
+test('motion prediction snaps genuine teleports and resets stale momentum on landing',()=>{
+ let track=tuning.advanceMotionTrack(null,[0,90,0],{dt:.016,state:'glider',velocity:[10,-6.3,0]});
+ track=tuning.advanceMotionTrack(track,[120,5,120],{dt:.08,state:'landed'});
+ assert.deepEqual(track.position,[120,5,120]);
+ assert.deepEqual(track.velocity,[0,0,0]);
+});
+
 test('angle smoothing takes the shortest path across the wrap boundary',()=>{
  assert.equal(typeof tuning.smoothAngle,'function');
  const from=Math.PI-.05,target=-Math.PI+.05,next=tuning.smoothAngle(from,target,.05);
