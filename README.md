@@ -2,6 +2,8 @@
 
 Sunny Skirmish is a static, browser-based third-person multiplayer prototype built for Vercel. Private parties support **2–8 players** with an authoritative leader simulation, online presence and party invites, ready-up, shared building, text chat, optional party voice, reconnect handling, a detailed airborne drop route, freefall, steerable canopy deployment, and last-player-standing rounds.
 
+The v7.1 playability pass keeps the authoritative 30 Hz host simulation while adapting guest input and snapshot traffic to party size. Host-only latency probes, queued action taps, render-side position/rotation interpolation, stale-socket protection and reconnect cleanup keep larger parties below the Supabase Free Realtime event ceiling without making two-player combat feel delayed. Glider descent is faster and more directed, shortening the final landing phase while preserving a useful steering window.
+
 The visuals and game code are original procedural assets. The project is not affiliated with or endorsed by Epic Games.
 
 ## Foreground party lobby

@@ -11,11 +11,12 @@ function overlap(a,b){return a.min.every((v,i)=>v<b.max[i]&&a.max[i]>b.min[i]);}
 export function validBuild(s,structures,players,world){if(structures.length>=260||s.y>42)return false;if(structures.some(v=>Math.abs(v.x-s.x)<.1&&Math.abs(v.z-s.z)<.1&&Math.abs(v.y-s.y)<.2&&v.type===s.type&&(s.type!==2||Math.abs(Math.sin(v.angle-s.angle))<.1)))return false;const b=s.type===2?bounds(s):{min:[s.x-2.4,s.y+.15,s.z-2.4],max:[s.x+2.4,s.y+3.5,s.z+2.4]};if(world.obstacles.some(v=>overlap(b,v)))return false;if(s.type===2&&players.some(p=>p.hp>0&&p.air==='landed'&&overlap(b,{min:[p.p[0]-.38,p.p[1],p.p[2]-.38],max:[p.p[0]+.38,p.p[1]+2.3,p.p[2]+.38]})))return false;const floor=world.height(s.x,s.z);return s.y<=floor+.5||structures.some(v=>Math.hypot(v.x-s.x,v.z-s.z)<=5.1&&Math.abs(v.y+3.6-s.y)<.3);}
 export function ground(x,z,foot,structures,world){let h=world.height(x,z);for(const b of world.obstacles||[]){if(x>b.min[0]+.08&&x<b.max[0]-.08&&z>b.min[2]+.08&&z<b.max[2]-.08&&b.max[1]<=foot+.55)h=Math.max(h,b.max[1]);}for(const s of structures){if(s.type!==3)continue;const dx=x-s.x,dz=z-s.z,localX=dx*Math.cos(s.angle)-dz*Math.sin(s.angle),localZ=dx*Math.sin(s.angle)+dz*Math.cos(s.angle);if(Math.abs(localX)<=2.48&&Math.abs(localZ)<=2.5){let v=s.y+(2.5-localZ)*.72;if(v<=foot+.48)h=Math.max(h,v);}}return h;}
 export function rayBox(o,d,b){let lo=0,hi=500;for(let i=0;i<3;i++){if(Math.abs(d[i])<1e-7){if(o[i]<b.min[i]||o[i]>b.max[i])return Infinity;continue;}let a=(b.min[i]-o[i])/d[i],c=(b.max[i]-o[i])/d[i];if(a>c)[a,c]=[c,a];lo=Math.max(lo,a);hi=Math.min(hi,c);if(hi<lo)return Infinity;}return lo;}
-export function sanitize(i={}){const num=(v,a,b)=>clamp(Number.isFinite(v)?v:0,a,b),yaw=num(i.yaw,-10000,10000),pitch=num(i.pitch,-.9,.7);return {x:num(i.x,-1,1),z:num(i.z,-1,1),yaw,pitch,aimYaw:Number.isFinite(i.aimYaw)?num(i.aimYaw,-10000,10000):yaw,aimPitch:Number.isFinite(i.aimPitch)?num(i.aimPitch,-.9,.7):pitch,rotation:num(i.rotation,-10000,10000),slot:[1,2,3,4,5,6].includes(i.slot)?i.slot:1,jump:!!i.jump,sprint:!!i.sprint,aim:!!i.aim,fire:!!i.fire,reload:!!i.reload};}
+export function sanitize(i={}){const num=(v,a,b)=>clamp(Number.isFinite(v)?v:0,a,b),yaw=num(i.yaw,-10000,10000),pitch=num(i.pitch,-.9,.7);return {x:num(i.x,-1,1),z:num(i.z,-1,1),yaw,pitch,aimYaw:Number.isFinite(i.aimYaw)?num(i.aimYaw,-10000,10000):yaw,aimPitch:Number.isFinite(i.aimPitch)?num(i.aimPitch,-.9,.7):pitch,rotation:num(i.rotation,-10000,10000),slot:[1,2,3,4,5,6].includes(i.slot)?i.slot:1,jump:!!i.jump,sprint:!!i.sprint,aim:!!i.aim,fire:!!i.fire,firePulse:!!i.firePulse,reload:!!i.reload};}
 
 // A long cross-island route gives the party time to choose between distant POIs.
 export const ISLAND_LIMIT=292,BUS_SECONDS=32,BUS_ALTITUDE=240;
-export const DROP_TUNING=Object.freeze({neutralFall:17,diveFall:30,neutralSpeed:12,diveSpeed:21,glideFall:4.6,glideSpeed:14,autoDeployBase:64,deploySeconds:.9});
+export const DROP_TUNING=Object.freeze({neutralFall:17,diveFall:30,neutralSpeed:12,diveSpeed:21,glideFall:6.3,glideSpeed:14.6,autoDeployBase:64,deploySeconds:.9});
+export const INPUT_STALE_SECONDS=1.6;
 const BUS_START=[-312,188],BUS_END=[312,-188];
 const seatOffset=i=>{const row=Math.floor(i/2),side=i%2?1:-1;return [side*1.15,0,3.2-row*2.05];};
 const damp=(from,to,rate,dt)=>from+(to-from)*(1-Math.exp(-rate*dt));
@@ -45,7 +46,7 @@ export class Match{
   this.dropElapsed+=dt;this.bus=this.busAt(this.dropElapsed);this.timer=Math.max(0,BUS_SECONDS-this.dropElapsed);
   let anyDropped=false;
   for(let index=0;index<this.players.length;index++){
-   const p=this.players[index];if(p.hp<=0)continue;p.lastInput+=dt;const i=p.lastInput>.75?sanitize():p.input;const edgeJump=i.jump&&!p.jumpLatch;p.jumpLatch=i.jump;
+   const p=this.players[index];if(p.hp<=0)continue;p.lastInput+=dt;const i=p.lastInput>INPUT_STALE_SECONDS?sanitize():p.input;const edgeJump=i.jump&&!p.jumpLatch;p.jumpLatch=i.jump;
    if(p.air==='bus'){
     const off=seatOffset(index),cy=Math.cos(this.bus.yaw),sy=Math.sin(this.bus.yaw);p.p[0]=this.bus.x+off[0]*cy+off[2]*sy;p.p[1]=this.bus.y+.2;p.p[2]=this.bus.z-off[0]*sy+off[2]*cy;p.yaw=this.bus.yaw;
     if(edgeJump||i.fire||this.bus.progress>=.995){const launchYaw=i.yaw||this.bus.yaw;p.air='freefall';p.dropState='neutral';p.yaw=launchYaw;p.vy=-5;p.airVelocity=[-Math.sin(launchYaw)*6,-5,-Math.cos(launchYaw)*6];p.airPitch=-1.34;p.airRoll=0;p.diveBlend=0;p.gliderActive=false;this.event({type:'jump',by:p.id,state:'neutral'});}
@@ -129,7 +130,7 @@ export class Match{
   this.elapsed+=dt;const walls=this.world.obstacles.concat(this.structures.filter(s=>s.type===2).map(bounds));
   for(const p of this.players){
    if(p.hp<=0)continue;
-   p.lastInput+=dt;const i=p.lastInput>.6?sanitize():p.input,edgeFire=i.fire&&!p.fireLatch,edgeReload=i.reload&&!p.reloadLatch;
+   p.lastInput+=dt;const i=p.lastInput>INPUT_STALE_SECONDS?sanitize():p.input,edgeFire=i.fire&&!p.fireLatch,edgeReload=i.reload&&!p.reloadLatch;
    p.fireLatch=i.fire;p.reloadLatch=i.reload;p.cool=Math.max(-.05,p.cool-dt);p.equip=Math.max(0,p.equip-dt);p.sustained=Math.max(0,p.sustained-dt*3.4);
    if(i.slot!==p.slot&&(isWeaponSlot(i.slot)||isBuildSlot(i.slot))){
     p.slot=i.slot;if(isWeaponSlot(i.slot))p.weapon=weaponIdForSlot(i.slot);p.building=isBuildSlot(i.slot);p.reload=0;p.reloadWeapon=null;p.equip=isWeaponSlot(i.slot)?weaponForSlot(i.slot).equipDuration:.22;if(isWeaponSlot(i.slot))p.cool=Math.max(p.cool,p.equip*.45);this.event({type:'switch',by:p.id,slot:p.slot,weapon:p.weapon,building:p.building});
@@ -143,6 +144,7 @@ export class Match{
     if(isBuildSlot(p.slot)){p.cool=.22;const b=placement(p,{...i,slot:p.slot},this.world);if((this.mode==='build'||p.material>=10)&&validBuild(b,this.structures,this.players,this.world)){this.structures.push(b);if(this.mode!=='build')p.material-=10;this.event({type:'build',by:p.id,structure:b});}}
     else{const profile=weaponForSlot(p.slot);if(!p.reload&&(profile.automatic||edgeFire))this.fireWeapon(p,i,Math.min(1,inputLength));}
    }
+   if(i.firePulse){p.input.fire=false;p.input.firePulse=false;}
    if(isWeaponSlot(p.slot))p.weapon=weaponIdForSlot(p.slot);p.building=isBuildSlot(p.slot);p.ammo=currentAmmo(p.weapons,p.slot);
    if(this.mode==='town'){const radius=Math.max(18,255-this.elapsed*.58);if(Math.hypot(p.p[0],p.p[2])>radius)this.hit(p,7*dt);for(const item of [...this.pickups]){if(Math.hypot(item.x-p.p[0],item.z-p.p[2])<2){if(item.type==='shield'&&p.shield<100)p.shield=Math.min(100,p.shield+40);else if(item.type==='health'&&p.hp<100)p.hp=Math.min(100,p.hp+40);else if(item.type==='wood')p.material+=50;else continue;this.pickups=this.pickups.filter(v=>v!==item);}}}
   }

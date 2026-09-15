@@ -2,9 +2,10 @@ import './engine.js';
 import {Connection,Voice,SocialDirectory,uid} from './network.js';
 import {Match,placement,validBuild} from './simulation.js';
 import {orderPartyProfiles} from './lobby-state.js';
+import {networkCadence,accumulateInput} from './network-tuning.js';
 
 const $=id=>document.getElementById(id),game=window.Game;
-let conn=null,peers=new Map(),host=false,ready=false,match=null,snapshot=null,matchId='',seenEvent=0,lastHello=0,lastSnap=0,busy=false,voiceWanted=false,muted=false,showMenu=false,enteredLocal=false,entered=new Set();
+let conn=null,peers=new Map(),host=false,ready=false,match=null,snapshot=null,matchId='',seenEvent=0,lastHello=0,lastPing=0,pingCursor=0,lastSnap=0,lastInput=0,pendingInput=null,busy=false,voiceWanted=false,muted=false,showMenu=false,enteredLocal=false,entered=new Set();
 let social=null,onlinePlayers=[],incomingInvites=[],socialBusy=false,socialTimer=null,socialError='',lastStatusAt=0,latencies=new Map();
 
 const readStore=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null;}};
@@ -132,11 +133,11 @@ async function respondInvite(inv,accept){
  finally{renderInvites();refresh();}
 }
 
-function resetMatchState(){match=null;snapshot=null;matchId='';seenEvent=0;showMenu=false;enteredLocal=false;entered=new Set();$('enter-match').hidden=true;$('match-actions').hidden=true;$('round-banner').textContent='';window.Duel.lobby=true;document.body.classList.remove('dropping');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear();document.exitPointerLock?.();}
+function resetMatchState(){match=null;snapshot=null;matchId='';seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;enteredLocal=false;entered=new Set();$('enter-match').hidden=true;$('match-actions').hidden=true;$('round-banner').textContent='';window.Duel.lobby=true;document.body.classList.remove('dropping');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear();document.exitPointerLock?.();}
 function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
 function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);matchId=uid();seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;enteredLocal=false;entered=new Set();sendSnapshot();updatePresence();status('Match prepared · everyone must enter the drop.','success');}
-function sendSnapshot(){if(!match||!host)return;const data={id:matchId,state:match.snapshot()};conn.send('snapshot',data);apply(data);}
+function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;const data={id:matchId,state};conn.send('snapshot',data);apply(data);}
 function roundBanner(s){const me=s.players.find(p=>p.id===conn.id);if(s.phase==='waiting')return enteredLocal?'WAITING FOR THE PARTY':'ENTER THE DROP WHEN READY';if(s.phase==='bus'||s.phase==='drop'){if(me?.air==='bus')return `SKYLINER CROSSING · ${Math.ceil(s.timer||0)}s · SPACE TO JUMP`;if(me?.air==='freefall'){const speed=Math.round(me.airSpeed||Math.abs(me.vy)||0);return me.dropState==='dive'?`STEEP DIVE · ${speed} M/S · LOOK UP TO LEVEL OUT`:`SKYDIVE · ${speed} M/S · LOOK DOWN OR SHIFT TO DIVE`;}if(me?.air==='deploying')return `CANOPY OPENING · ${Math.round((me.deploy||0)*100)}%`;if(me?.air==='glider')return `GLIDING · ${Math.max(0,Math.round(me.clearance||0))} M CLEARANCE · STEER TO LAND`;return 'LANDED · WAITING FOR THE PARTY';}if(s.phase==='countdown')return `ROUND ${s.round} · ${Math.max(1,Math.ceil(s.timer))}`;if(s.phase==='roundover'){if(s.winner<0)return 'ROUND DRAW';const winner=s.players[s.winner];return winner?.id===conn.id?'ROUND WON':`${playerName(winner?.id)} WON THE ROUND`;}if(s.phase==='paused')return 'CONNECTION INTERRUPTED · HOLDING MATCH';if(s.phase==='done'){const champ=s.scores.findIndex(n=>n>=s.targetScore),winner=champ>=0?s.players[champ]:s.players[s.winner];return winner?.id===conn.id?'VICTORY':`${playerName(winner?.id)} WINS THE MATCH`;}if(me?.hp<=0)return 'ELIMINATED · SPECTATING';return '';}
 function apply(data){
  if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn)return;const s=data.state;if(!s.players.some(p=>p.id===conn.id))return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('dropping',s.phase==='bus'||s.phase==='drop');$('lobby').hidden=true;
@@ -174,7 +175,7 @@ function receive(m){
  if(m.type==='pong'&&Number.isFinite(d.time)){latencies.set(m.from,Math.max(0,Date.now()-d.time));updateNetworkChip();}
 }
 
-window.Duel={active:true,lobby:true,round:0,myColor:profile.color,party:partyProfiles(),peerColors:{},menu(){game.clear();if(this.lobby)return;showMenu=true;$('match-actions').hidden=false;$('resume').hidden=false;$('rematch').hidden=snapshot?.phase!=='done';$('back-lobby').hidden=false;document.exitPointerLock?.();},preview(){const p=game.pose(),i=game.input();return placement(p,i,game.world);},valid(s){return !!snapshot&&validBuild(s,snapshot.structures,snapshot.players,game.world);},render(){if(snapshot&&conn)game.apply(snapshot,conn.id,colors());}};
+window.Duel={active:true,lobby:true,round:0,myColor:profile.color,party:partyProfiles(),peerColors:{},menu(){game.clear();if(this.lobby)return;showMenu=true;$('match-actions').hidden=false;$('resume').hidden=false;$('rematch').hidden=snapshot?.phase!=='done';$('back-lobby').hidden=false;document.exitPointerLock?.();},preview(){const p=game.pose(),i=game.input();return placement(p,i,game.world);},valid(s){return !!snapshot&&validBuild(s,snapshot.structures,snapshot.players,game.world);},render(dt){if(snapshot&&conn)game.apply(snapshot,conn.id,colors(),dt);}};
 
 $('create').onclick=()=>connect(true);
 $('join').onclick=()=>connect(false);
@@ -212,10 +213,12 @@ window.addEventListener('beforeunload',()=>{voice.stop();conn?.close();social?.c
 let previous=performance.now();
 setInterval(()=>{
  const now=performance.now(),dt=Math.min(.05,(now-previous)/1000);previous=now;if(!conn)return;
- if(now-lastHello>950){hello();lastHello=now;for(const p of activePeers())conn.send('ping',{time:Date.now()},p.id);}
+ const cadence=networkCadence(partyProfiles().length);
+ if(now-lastHello>=cadence.helloMs){hello();lastHello=now;}
+ if(host&&now-lastPing>=cadence.pingMs){const live=activePeers();if(live.length){const peer=live[pingCursor++%live.length];conn.send('ping',{time:Date.now()},peer.id);}lastPing=now;}
  for(const p of [...peers.values()])if(Date.now()-p.lastSeen>19000){if(p.id===conn.host&&!host){leave('The party leader disconnected.');return;}removePeer(p.id,'disconnected');}
- if(match&&host){match.input(conn.id,showMenu?{}:game.input());match.tick(dt);if(now-lastSnap>66){sendSnapshot();lastSnap=now;}}
- else if(snapshot&&!host)conn.send('input',{id:matchId,input:showMenu?{}:game.input()},conn.host);
+ if(match&&host){match.input(conn.id,showMenu?{}:game.input());match.tick(dt);snapshot=match.snapshot();if(now-lastSnap>=cadence.snapshotMs){sendSnapshot(snapshot);lastSnap=now;}}
+ else if(snapshot&&!host){pendingInput=accumulateInput(pendingInput,showMenu?{}:game.input());if(now-lastInput>=cadence.inputMs){conn.send('input',{id:matchId,input:pendingInput},conn.host);pendingInput=null;lastInput=now;}}
 },33);
 
 renderVoice();refresh();startSocial();

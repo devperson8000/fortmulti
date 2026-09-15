@@ -1,3 +1,5 @@
+import {isActiveSocket} from './network-tuning.js';
+
 export const uid=()=>Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
 const timeout=(p,ms,label)=>Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(Error(label)),ms))]);
 const AUTH_STORE='sunny-auth-v3';
@@ -103,14 +105,16 @@ export class Connection extends SupabaseClient{
  async connect(){
   if(this.closed)return;this.connected=false;this.onstatus(this.retry?'Reconnecting…':'Connecting to private party…');
   const socket=new WebSocket(this.config.url.replace('https:','wss:')+'/realtime/v1/websocket?apikey='+encodeURIComponent(this.config.key)+'&vsn=1.0.0');this.socket=socket;this.topic='realtime:duel:'+this.room;this.joinRef=String(++this.ref);
-  await timeout(new Promise((resolve,reject)=>{
+  const current=()=>isActiveSocket(this,socket);
+  try{await timeout(new Promise((resolve,reject)=>{
    let settled=false;
    const fail=e=>{if(settled)return;settled=true;reject(e);};
-   socket.onopen=()=>this.raw('phx_join',{config:{broadcast:{ack:false,self:false},presence:{enabled:false},private:true},access_token:this.session.access_token},this.joinRef);
-   socket.onmessage=e=>{let m;try{m=JSON.parse(e.data);}catch{return;}if(m.event==='phx_reply'&&m.ref===this.joinRef){if(m.payload.status!=='ok'){fail(Error(m.payload.response?.reason||'Room authorization failed. Run the latest supabase.sql.'));socket.close();return;}if(!settled){settled=true;this.connected=true;this.retry=0;this.onstatus('Online · private party');resolve();}}if(m.event==='broadcast'&&m.payload.event==='duel')this.onmessage(m.payload.payload);if(m.event==='phx_error')socket.close();};
-   socket.onerror=()=>fail(Error('Could not reach the room service.'));
-   socket.onclose=()=>{clearInterval(this.heartbeat);this.connected=false;if(!this.closed){this.onstatus('Connection lost · reconnecting');clearTimeout(this.reconnect);this.reconnect=setTimeout(()=>this.connect().catch(e=>this.onstatus(e.message)),Math.min(10000,1000*2**this.retry++));}};
-  }),12000,'Room connection timed out.');
+   socket.onopen=()=>{if(current())this.raw('phx_join',{config:{broadcast:{ack:false,self:false},presence:{enabled:false},private:true},access_token:this.session.access_token},this.joinRef);};
+   socket.onmessage=e=>{if(!current())return;let m;try{m=JSON.parse(e.data);}catch{return;}if(m.event==='phx_reply'&&m.ref===this.joinRef){if(m.payload.status!=='ok'){fail(Error(m.payload.response?.reason||'Room authorization failed. Run the latest supabase.sql.'));socket.close();return;}if(!settled){settled=true;this.connected=true;this.retry=0;this.onstatus('Online · private party');resolve();}}if(m.event==='broadcast'&&m.payload.event==='duel')this.onmessage(m.payload.payload);if(m.event==='phx_error')socket.close();};
+   socket.onerror=()=>{if(current())fail(Error('Could not reach the room service.'));};
+   socket.onclose=()=>{if(!current())return;clearInterval(this.heartbeat);this.connected=false;if(!this.closed){this.onstatus('Connection lost · reconnecting');clearTimeout(this.reconnect);this.reconnect=setTimeout(()=>this.connect().catch(e=>this.onstatus(e.message)),Math.min(10000,1000*2**this.retry++));}};
+  }),12000,'Room connection timed out.');}catch(e){if(current())socket.close();throw e;}
+  if(!current())return;
   clearInterval(this.heartbeat);this.heartbeat=setInterval(()=>{if(socket.readyState===1)socket.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:String(++this.ref)}));},20000);
  }
  raw(event,payload,ref){if(this.socket?.readyState===1)this.socket.send(JSON.stringify({topic:this.topic,event,payload,ref:ref||String(++this.ref),join_ref:this.joinRef}));}
@@ -140,7 +144,7 @@ export class Voice{
   if(!id||id===this.localId||this.pcs.has(id)||!this.stream)return this.pcs.get(id);
   const configured=Array.isArray(window.SUNNY_CONFIG?.iceServers)?window.SUNNY_CONFIG.iceServers:[],pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},...configured]});this.pcs.set(id,pc);this.pending.set(id,[]);this.stream.getAudioTracks().forEach(t=>pc.addTrack(t,this.stream));
   pc.onicecandidate=e=>{if(e.candidate)this.send(id,{candidate:e.candidate.toJSON?.()||e.candidate});};
-  pc.ontrack=e=>{let audio=this.audios.get(id);if(!audio){audio=new Audio();audio.autoplay=true;audio.playsInline=true;this.audios.set(id,audio);}audio.srcObject=e.streams[0]||new MediaStream([e.track]);audio.play().catch(()=>this.state('Voice connected · click MIC ON to allow audio','warning'));};
+  pc.ontrack=e=>{let audio=this.audios.get(id);if(!audio){audio=new Audio();audio.autoplay=true;audio.playsInline=true;this.audios.set(id,audio);}audio.srcObject=e.streams[0]||new MediaStream([e.track]);audio.play().catch(()=>this.state('Voice connected · click the game window to allow audio','warning'));};
   pc.onconnectionstatechange=()=>{const state=pc.connectionState;if(state==='connected'){clearTimeout(this.retries.get(id));this.retries.delete(id);this.state(this.connectionMessage(),'ready');}else if(state==='failed'){this.state(this.connectionMessage(),'warning');this.reconnect(id);}else if(state==='connecting'||state==='new')this.state(this.connectionMessage(),'connecting');};
   if(this.localId<id)queueMicrotask(()=>this.offer(id).catch(()=>this.reconnect(id)));return pc;
  }
