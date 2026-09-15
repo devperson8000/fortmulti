@@ -45,6 +45,8 @@ export function smoothPoint(current,target,rate,dt){
  return current.map((v,i)=>v+(target[i]-v)*t);
 }
 
+export function isStaleSnapshotGap(seconds){return Number(seconds)>.75;}
+
 function connectionState(conn){
  let state=stateByConnection.get(conn);
  if(!state){state={lastInput:null,lastInputAt:-Infinity,lastSnapshotAt:-Infinity,lastHelloAt:-Infinity,lastHelloSig:'',pingAt:new Map()};stateByConnection.set(conn,state);}
@@ -117,7 +119,7 @@ function installGameSmoothing(){
  game.input=()=>{const input=originalInput();input.slot=desiredSlot;return input;};
  game.apply=(snapshot,id,colors)=>{
   if(!snapshot?.players?.length)return originalApply(snapshot,id,colors);
-  const now=nowMs(),dt=clamp((now-lastFrameAt)/1000,.001,.05),isNew=snapshot!==lastSnapshot,snapshotDt=clamp((now-lastSnapshotAt)/1000,.03,.6);lastFrameAt=now;
+  const now=nowMs(),dt=clamp((now-lastFrameAt)/1000,.001,.05),isNew=snapshot!==lastSnapshot,rawSnapshotDt=Math.max(0,(now-lastSnapshotAt)/1000),staleGap=isStaleSnapshotGap(rawSnapshotDt),snapshotDt=clamp(rawSnapshotDt,.03,.6);lastFrameAt=now;
   const localInput=game.input();
   if(isNew){
    const live=new Set(snapshot.players.map(p=>p.id));for(const key of tracks.keys())if(!live.has(key))tracks.delete(key);
@@ -126,8 +128,8 @@ function installGameSmoothing(){
     if(!track){track={render:target.slice(),target:target.slice(),previousTarget:target.slice(),estimatedVelocity:[0,0,0],yaw:Number(p.yaw)||0,airPitch:Number(p.airPitch)||0,airRoll:Number(p.airRoll)||0,diveBlend:Number(p.diveBlend)||0,deploy:Number(p.deploy)||0,updatedAt:now,air:p.air};tracks.set(p.id,track);}
     else{
      const previous=track.target.slice(),distance=Math.hypot(target[0]-previous[0],target[1]-previous[1],target[2]-previous[2]);
-     track.previousTarget=previous;track.target=target;const estimate=target.map((v,i)=>(v-previous[i])/snapshotDt),horizontal=Math.hypot(estimate[0],estimate[2]);if(horizontal>12){const scale=12/horizontal;estimate[0]*=scale;estimate[2]*=scale;}estimate[1]=clamp(estimate[1],-24,24);track.estimatedVelocity=estimate;track.updatedAt=now;
-     if(distance>28||p.air==='bus'||(track.air!==p.air&&['landed','bus'].includes(p.air))){track.render=target.slice();track.estimatedVelocity=[0,0,0];}
+     track.previousTarget=previous;track.target=target;let estimate=staleGap?[0,0,0]:target.map((v,i)=>(v-previous[i])/snapshotDt),horizontal=Math.hypot(estimate[0],estimate[2]);if(horizontal>12){const scale=12/horizontal;estimate[0]*=scale;estimate[2]*=scale;}estimate[1]=clamp(estimate[1],-24,24);track.estimatedVelocity=estimate;track.updatedAt=now;
+     if(distance>28||rawSnapshotDt>1.5||p.air==='bus'||(track.air!==p.air&&['landed','bus'].includes(p.air))){track.render=target.slice();track.estimatedVelocity=[0,0,0];}
      track.air=p.air;
     }
    }
