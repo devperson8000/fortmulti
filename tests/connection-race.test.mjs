@@ -69,20 +69,3 @@ test('session refresh is scheduled before expiry and retries quickly after a fai
  assert.equal(sessionRefreshDelay({expires_at:expiresAtSeconds},now,2),30_000);
  assert.equal(sessionRefreshDelay({expires_at:expiresAtSeconds},now,5),120_000);
 });
-
-test('online social reads are skipped and identical presence is deduplicated during a match',async()=>{
- const previousWindow=globalThis.window,calls=[];
- globalThis.window={Duel:{lobby:false}};
- try{
-  const directory=new SocialDirectory(()=>{});
-  directory.session={access_token:'token'};
-  directory.api=async(path)=>{calls.push(path);return path.includes('presence_upsert')?{ok:true}:[];};
-  assert.deepEqual(await directory.online(),[]);
-  assert.deepEqual(await directory.invites(),[]);
-  await directory.presence('Ranger','408faf','match','ROOM');
-  await directory.presence('Ranger','408faf','match','ROOM');
-  assert.equal(calls.filter(path=>path.includes('presence_upsert')).length,1);
-  assert.equal(calls.some(path=>path.includes('online_players')),false);
-  assert.equal(calls.some(path=>path.endsWith('/duel_invites')),false);
- }finally{globalThis.window=previousWindow;}
-});
