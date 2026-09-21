@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 
 const tuning=await import('../public/network-tuning.js').catch(()=>({}));
 
@@ -94,4 +95,15 @@ test('spectator view selects a living player while preserving the local score ow
  assert.equal(tuning.selectViewPlayer(players,'self').id,'alive');
  players[1].hp=0;
  assert.equal(tuning.selectViewPlayer(players,'self').id,'self');
+});
+
+test('sniper terminal state stays event-driven and out of continuous input payloads',async()=>{
+ const simulation=await readFile(new URL('../public/simulation.js',import.meta.url),'utf8');
+ const app=await readFile(new URL('../public/app.js',import.meta.url),'utf8');
+ assert.match(simulation,/type:'projectile-impact'/);
+ assert.match(simulation,/type:'projectile-expire'/);
+ assert.doesNotMatch(app,/input:\{[^}]*projectile/s);
+ const players=4,{inputMs,snapshotMs,helloMs,pingMs}=tuning.networkCadence(players);
+ const eventsPerSecond=players*(players-1)*(1000/inputMs)+players*(1000/snapshotMs)+players*players*(1000/helloMs)+2*players*(1000/pingMs);
+ assert.ok(eventsPerSecond<=95);
 });

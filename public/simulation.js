@@ -1,10 +1,11 @@
 import {WEAPON_ORDER,createLoadout,weaponForSlot,weaponIdForSlot,isWeaponSlot,isBuildSlot,buildTypeForSlot,currentAmmo,shotSpread,spreadDirection} from './weapon-system.js';
+import {createProjectile,advanceProjectile,segmentSphereTime,segmentAabbTime} from './ballistics.js';
 
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const mix=(a,b,t)=>a+(b-a)*t;
 const dist=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
 const normalize=v=>{const n=Math.hypot(...v)||1;return v.map(x=>x/n);};
-export function cameraAimOrigin(p,input,profile){const yaw=Number.isFinite(input.aimYaw)?input.aimYaw:input.yaw,pitch=Number.isFinite(input.aimPitch)?input.aimPitch:input.pitch,forward=[-Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch)],right=[Math.cos(yaw),0,-Math.sin(yaw)],anchor=[p.p[0],p.p[1]+2.15,p.p[2]],distance=input.aim?(profile.scope ? .16 : 3.15):6.8,shoulder=input.aim?(profile.scope?0:.56):1.05;return anchor.map((v,k)=>v-forward[k]*distance+right[k]*shoulder);}
+export function cameraAimOrigin(p,input,profile){if(p?.air==='landed')return [p.p[0],p.p[1]+1.72,p.p[2]];const yaw=Number.isFinite(input.aimYaw)?input.aimYaw:input.yaw,pitch=Number.isFinite(input.aimPitch)?input.aimPitch:input.pitch,forward=[-Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch)],right=[Math.cos(yaw),0,-Math.sin(yaw)],anchor=[p.p[0],p.p[1]+2.15,p.p[2]],distance=input.aim?(profile.scope ? .16 : 3.15):6.8,shoulder=input.aim?(profile.scope?0:.56):1.05;return anchor.map((v,k)=>v-forward[k]*distance+right[k]*shoulder);}
 export function placement(p,input,world){const angle=Math.round(input.yaw/(Math.PI/2))*Math.PI/2+(input.rotation||0),dx=-Math.sin(angle),dz=-Math.cos(angle),x=Math.round((p.p[0]+dx*5)/5)*5,z=Math.round((p.p[2]+dz*5)/5)*5;return {x,z,y:Math.max(world.height(x,z),Math.floor((p.p[1]+.25)/3.6)*3.6),angle,type:buildTypeForSlot(input.slot),hp:150};}
 export function bounds(s){const r=Math.abs(Math.sin(s.angle))>.5;return {min:[s.x-(r?.22:2.5),s.y,s.z-(r?2.5:.22)],max:[s.x+(r?.22:2.5),s.y+3.6,s.z+(r?2.5:.22)]};}
 function overlap(a,b){return a.min.every((v,i)=>v<b.max[i]&&a.max[i]>b.min[i]);}
@@ -26,12 +27,12 @@ export function autoDeployClearance(verticalSpeed=0){return DROP_TUNING.autoDepl
 
 export class Match{
  constructor(world,ids,mode='build'){
-  this.world=world;this.ids=[...new Set(ids)].slice(0,8);this.mode=mode;this.scores=this.ids.map(()=>0);this.disconnected=new Set();this.targetScore=5;this.round=0;this.events=[];this.eventId=0;this.startRound(true);
+  this.world=world;this.ids=[...new Set(ids)].slice(0,8);this.mode=mode;this.scores=this.ids.map(()=>0);this.disconnected=new Set();this.targetScore=5;this.round=0;this.events=[];this.eventId=0;this.projectiles=[];this.projectileSequence=0;this.startRound(true);
  }
  busAt(t){const q=clamp(t/BUS_SECONDS,0,1),ease=q*q*(3-2*q),x=BUS_START[0]+(BUS_END[0]-BUS_START[0])*ease,z=BUS_START[1]+(BUS_END[1]-BUS_START[1])*ease,y=BUS_ALTITUDE+Math.sin(q*Math.PI)*5+Math.sin(t*.72)*.45,yaw=Math.atan2(-(BUS_END[0]-BUS_START[0]),-(BUS_END[1]-BUS_START[1]));return {x,y,z,yaw,progress:q,active:q<1,bank:Math.sin(t*.42)*.025,bob:Math.sin(t*.72)*.45,speed:Math.hypot(BUS_END[0]-BUS_START[0],BUS_END[1]-BUS_START[1])*(6*q*(1-q))/BUS_SECONDS};}
  startRound(waiting=false){
   if(this.disconnected.size){const scoreById=new Map(this.ids.map((id,i)=>[id,this.scores[i]||0]));this.ids=this.ids.filter(id=>!this.disconnected.has(id));this.scores=this.ids.map(id=>scoreById.get(id)||0);this.disconnected.clear();}
-  this.round++;this.phase=waiting?'waiting':'bus';this.timer=waiting?0:BUS_SECONDS;this.elapsed=0;this.dropElapsed=0;this.structures=[];this.winner=undefined;
+  this.round++;this.phase=waiting?'waiting':'bus';this.timer=waiting?0:BUS_SECONDS;this.elapsed=0;this.dropElapsed=0;this.structures=[];this.projectiles.length=0;this.winner=undefined;
   this.pickups=this.mode==='town'?[{x:0,z:8,type:'shield'},{x:-22,z:20,type:'wood'},{x:25,z:8,type:'health'},{x:36,z:-18,type:'wood'},{x:-38,z:-9,type:'shield'},{x:8,z:38,type:'health'},{x:-205,z:72,type:'shield'},{x:-188,z:91,type:'wood'},{x:176,z:94,type:'health'},{x:198,z:67,type:'wood'},{x:128,z:-188,type:'shield'},{x:-92,z:-178,type:'health'}]:[];
   this.bus=this.busAt(0);
   this.players=this.ids.map((id,i)=>{const off=seatOffset(i);return {id,p:[this.bus.x+off[0],this.bus.y+.1,this.bus.z+off[2]],yaw:this.bus.yaw,vy:0,hp:100,shield:100,weapons:createLoadout(),slot:1,weapon:'ar',ammo:30,material:150,reload:0,equip:0,cool:0,sustained:0,walk:0,aim:false,input:sanitize(),lastInput:0,air:'bus',dropState:'bus',airVelocity:[0,0,0],airPitch:0,airRoll:0,diveBlend:0,airSpeed:0,clearance:0,gliderActive:false,deploy:0,jumpLatch:false,fireLatch:false,reloadLatch:false,eliminated:false};});
@@ -113,6 +114,12 @@ export class Match{
   if(!state?.ammo){this.reloadWeapon(p);return;}
   state.ammo--;p.ammo=state.ammo;p.cool+=profile.fireInterval;p.sustained=Math.min(5,p.sustained+1);
   const spread=shotSpread(profile,{aim:i.aim,moving,sustained:p.sustained}),traces=[],hitTotals=new Map(),structureHits=new Map(),camera=this.cameraOrigin(p,i,profile),muzzleZ=profile.id==='sniper'?-1.95:profile.id==='shotgun'?-1.72:-1.48,muzzle=[p.p[0]+.24*Math.cos(i.yaw)+muzzleZ*Math.sin(i.yaw),p.p[1]+1.59,p.p[2]-.24*Math.sin(i.yaw)+muzzleZ*Math.cos(i.yaw)];
+  if(profile.projectile){
+   const viewDirection=spreadDirection(i.aimYaw,i.aimPitch,spread),crosshairTrace=this.traceShot(p,viewDirection,profile.range,camera),toAim=crosshairTrace.end.map((v,k)=>v-muzzle[k]),muzzleDirection=normalize(toAim),projectileId=`${p.id}:${++this.projectileSequence}`;
+   this.projectiles.push(createProjectile({id:projectileId,owner:p.id,origin:muzzle,direction:muzzleDirection,speed:profile.projectile.speed,gravity:profile.projectile.gravity,range:profile.range,damage:profile.damage,spawnTick:this.elapsed,maxAge:profile.projectile.maxAge}));
+   this.event({type:'shot',by:p.id,weapon:profile.id,a:muzzle,b:crosshairTrace.end,traces:[crosshairTrace.end],hits:[],hit:null,damage:0,projectileId});
+   return;
+  }
   for(let pellet=0;pellet<profile.pellets;pellet++){
    const viewDirection=spreadDirection(i.aimYaw,i.aimPitch,spread),crosshairTrace=this.traceShot(p,viewDirection,profile.range,camera),toAim=crosshairTrace.end.map((v,k)=>v-muzzle[k]),aimDistance=Math.hypot(...toAim),muzzleDirection=normalize(toAim),trace=this.traceShot(p,muzzleDirection,Math.min(profile.range,aimDistance+.35),muzzle);traces.push(trace.end);
    if(trace.target){const multiplier=trace.critical?1.65:1,damage=Math.round(profile.damage*multiplier),prior=hitTotals.get(trace.target)||{damage:0,critical:false};prior.damage+=damage;prior.critical||=trace.critical;hitTotals.set(trace.target,prior);}
@@ -122,6 +129,33 @@ export class Match{
   for(const [structure,damage] of structureHits){structure.hp-=damage;if(structure.hp<=0)this.structures=this.structures.filter(s=>s!==structure);}
   const hits=[...hitTotals].map(([target,hit])=>({id:target.id,...hit}));
   this.event({type:'shot',by:p.id,weapon:profile.id,a:muzzle,b:traces[0],traces,hits,hit:hits[0]?.id||null,damage:hits.reduce((n,h)=>n+h.damage,0)});
+ }
+ tickProjectiles(dt){
+  for(let index=this.projectiles.length-1;index>=0;index--){
+   const projectile=advanceProjectile(this.projectiles[index],dt),from=projectile.previous,to=projectile.position;
+   let nearest=Infinity,target=null,structure=null,terrain=false;
+   for(const obstacle of this.world.obstacles||[]){const t=segmentAabbTime(from,to,obstacle.min,obstacle.max);if(t!==null&&t<nearest){nearest=t;target=null;structure=null;terrain=false;}}
+   for(const candidate of this.structures){const box=candidate.type===2?bounds(candidate):{min:[candidate.x-2.5,candidate.y,candidate.z-2.5],max:[candidate.x+2.5,candidate.y+3.6,candidate.z+2.5]},t=segmentAabbTime(from,to,box.min,box.max);if(t!==null&&t<nearest){nearest=t;target=null;structure=candidate;terrain=false;}}
+   for(const candidate of this.players){
+    if(candidate.id===projectile.owner||candidate.hp<=0)continue;
+    const t=segmentSphereTime(from,to,[candidate.p[0],candidate.p[1]+1.25,candidate.p[2]],.72);
+    if(t!==null&&t<nearest){nearest=t;target=candidate;structure=null;terrain=false;}
+   }
+   const segmentDistance=Math.hypot(to[0]-from[0],to[1]-from[1],to[2]-from[2]),samples=Math.max(1,Math.ceil(segmentDistance/.5));
+   for(let step=1;step<=samples;step++){
+    const t=step/samples;if(t>=nearest)break;
+    const x=mix(from[0],to[0],t),y=mix(from[1],to[1],t),z=mix(from[2],to[2],t);
+    if(y<=this.world.height(x,z)){nearest=t;target=null;structure=null;terrain=true;break;}
+   }
+   if(nearest!==Infinity){
+    const point=[mix(from[0],to[0],nearest),mix(from[1],to[1],nearest),mix(from[2],to[2],nearest)];let damage=0,critical=false;
+    if(target){critical=point[1]>target.p[1]+1.86;damage=Math.round(projectile.damage*(critical?1.65:1));this.hit(target,damage);if(target.hp<=0&&!target.eliminated){target.eliminated=true;this.event({type:'elimination',by:projectile.owner,hit:target.id,weapon:'sniper'});}}
+    if(structure){damage=projectile.damage;structure.hp-=damage;if(structure.hp<=0)this.structures=this.structures.filter(item=>item!==structure);}
+    this.event({type:'projectile-impact',projectileId:projectile.id,by:projectile.owner,weapon:'sniper',point,hit:target?.id||null,damage,critical,structure:Boolean(structure),terrain});
+    this.projectiles[index]=this.projectiles.at(-1);this.projectiles.pop();continue;
+   }
+   if(projectile.expired){this.event({type:'projectile-expire',projectileId:projectile.id,by:projectile.owner});this.projectiles[index]=this.projectiles.at(-1);this.projectiles.pop();}
+  }
  }
  tick(dt){
   dt=clamp(dt,0,.05);if(this.phase==='done'||this.phase==='paused'||this.phase==='waiting')return;
@@ -148,7 +182,7 @@ export class Match{
    if(isWeaponSlot(p.slot))p.weapon=weaponIdForSlot(p.slot);p.building=isBuildSlot(p.slot);p.ammo=currentAmmo(p.weapons,p.slot);
    if(this.mode==='town'){const radius=Math.max(18,255-this.elapsed*.58);if(Math.hypot(p.p[0],p.p[2])>radius)this.hit(p,7*dt);for(const item of [...this.pickups]){if(Math.hypot(item.x-p.p[0],item.z-p.p[2])<2){if(item.type==='shield'&&p.shield<100)p.shield=Math.min(100,p.shield+40);else if(item.type==='health'&&p.hp<100)p.hp=Math.min(100,p.hp+40);else if(item.type==='wood')p.material+=50;else continue;this.pickups=this.pickups.filter(v=>v!==item);}}}
   }
-  for(const p of this.players)if(p.hp<=0&&!p.eliminated){p.eliminated=true;this.event({type:'elimination',by:null,hit:p.id,reason:'storm'});}this.checkRoundEnd();
+  this.tickProjectiles(dt);for(const p of this.players)if(p.hp<=0&&!p.eliminated){p.eliminated=true;this.event({type:'elimination',by:null,hit:p.id,reason:'storm'});}this.checkRoundEnd();
  }
- snapshot(){return {phase:this.phase,timer:this.timer,elapsed:this.elapsed,round:this.round,mode:this.mode,targetScore:this.targetScore,scores:this.scores,winner:this.winner,bus:this.bus,players:this.players.map(({input,lastInput,jumpLatch,...p})=>p),structures:this.structures,pickups:this.pickups,events:this.events};}
+ snapshot(){return {phase:this.phase,timer:this.timer,elapsed:this.elapsed,round:this.round,mode:this.mode,targetScore:this.targetScore,scores:this.scores,winner:this.winner,bus:this.bus,players:this.players.map(({input,lastInput,jumpLatch,...p})=>p),structures:this.structures,pickups:this.pickups,projectiles:this.projectiles.map(({id,owner,position,velocity,spawnTick})=>({id,owner,position:position.slice(),velocity:velocity.slice(),spawnTick})),events:this.events};}
 }

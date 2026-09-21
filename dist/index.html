@@ -10,12 +10,12 @@
 <link rel="stylesheet" href="lobby.css">
 </head>
 <body class="in-lobby">
-<canvas id="game" aria-label="Third-person 3D multiplayer game"></canvas>
+<canvas id="game" aria-label="First-person combat with third-person aerial drop and lobby"></canvas>
 <div id="vignette"></div><div id="damage"></div>
 <div id="scope" aria-hidden="true">
   <div class="scope-lens">
     <svg viewBox="0 0 600 600" role="presentation"><circle cx="300" cy="300" r="286"/><path d="M300 0v244M300 356v244M0 300h244M356 300h244"/><path class="scope-fine" d="M270 300h60M300 270v60M282 330l18-30 18 30M255 370h90M270 405h60"/></svg>
-    <span class="scope-glint"></span><b>4×</b><small>HOLD RMB TO FOCUS</small>
+    <span class="scope-glint"></span><span class="scope-range">PRECISION OPTIC · LIVE RANGE</span><b>4×</b><small>HOLD RMB TO FOCUS</small>
   </div>
 </div>
 <header>
@@ -27,7 +27,7 @@
 <div id="mission" style="display:none"><small>PRIVATE PARTY</small><b>Own the island.</b><span>Drop, build and be the last player standing.</span></div>
 <div id="notice" role="status"></div><div id="crosshair"><i></i><i></i><i></i><i></i></div><div id="hitmarker">×</div><div id="damagevalue"></div><div id="buildhelp"></div>
 <section id="health"><div><span>▰ SHIELD</span><b id="shieldtext">100</b></div><div class="bar"><i id="shieldbar"></i></div><div><span>✚ HEALTH</span><b id="hptext">100</b></div><div class="bar green"><i id="hpbar"></i></div></section>
-<section id="inventory"><div class="ammo"><span id="ammotext">30</span><small id="ammocap">/ 30</small><b id="weaponlabel">STRIKER AR</b><i id="reload-progress"></i></div><div class="slots weapon-slots"><button class="selected rare" data-slot="1"><kbd>1</kbd><span>⌁</span><small>AR</small></button><button class="epic" data-slot="2"><kbd>2</kbd><span>═</span><small>SHOTGUN</small></button><button class="uncommon" data-slot="3"><kbd>3</kbd><span>≋</span><small>SMG</small></button><button class="legendary" data-slot="4"><kbd>4</kbd><span>—</span><small>SNIPER</small></button><button class="build-slot" data-slot="5"><kbd>5</kbd><span>▥</span><small>WALL</small></button><button class="build-slot" data-slot="6"><kbd>6</kbd><span>◩</span><small>RAMP</small></button><div class="wood"><b id="wood">150</b><small>MATERIAL</small></div></div></section>
+<section id="inventory"><div class="ammo"><span id="ammotext">30</span><small id="ammocap">/ 30</small><b id="weaponlabel">STRIKER AR</b><em id="reload-stage">READY</em><i id="reload-progress"></i></div><div class="slots weapon-slots"><button class="selected rare" data-slot="1"><kbd>1</kbd><span>⌁</span><small>AR</small></button><button class="epic" data-slot="2"><kbd>2</kbd><span>═</span><small>SHOTGUN</small></button><button class="uncommon" data-slot="3"><kbd>3</kbd><span>≋</span><small>SMG</small></button><button class="legendary" data-slot="4"><kbd>4</kbd><span>—</span><small>SNIPER</small></button><button class="build-slot" data-slot="5"><kbd>5</kbd><span>▥</span><small>WALL</small></button><button class="build-slot" data-slot="6"><kbd>6</kbd><span>◩</span><small>RAMP</small></button><div class="wood"><b id="wood">150</b><small>MATERIAL</small></div></div></section>
 <footer>W A S D <span>move / steer</span> &nbsp; LMB <span>fire</span> &nbsp; RMB <span>aim / scope</span> &nbsp; SPACE <span>jump / deploy canopy</span> &nbsp; SHIFT <span>sprint / dive</span> &nbsp; R <span>reload</span> &nbsp; 1–4 <span>weapons</span> &nbsp; Q / 5–6 <span>build</span> &nbsp; G <span>rotate</span> &nbsp; ESC <span>menu</span></footer>
 <div hidden id="overlay"><button id="play"></button><p id="eyebrow"></p><p id="heading"></p><p id="intro"></p></div>
 <div id="touch"><div><button data-key="KeyW">▲</button><br><button data-key="KeyA">◀</button><button data-key="KeyS">▼</button><button data-key="KeyD">▶</button></div><div><button id="touchjump">JUMP</button><button id="touchfire">FIRE</button></div></div>
@@ -98,7 +98,15 @@
 
 <div id="round-banner" role="status"></div>
 <button id="enter-match" hidden>ENTER THE DROP</button>
-<div id="match-actions" hidden><button id="resume">RETURN TO MATCH</button><button id="rematch">RETURN PARTY TO LOBBY</button><button id="back-lobby">BACK TO PARTY LOBBY</button><button id="forfeit">LEAVE PARTY</button><small>Esc opens this menu. The party leader runs the authoritative match simulation.</small></div>
+<div id="match-actions" hidden><button id="resume">RETURN TO MATCH</button><button id="game-settings-toggle">GAME SETTINGS</button><button id="rematch">RETURN PARTY TO LOBBY</button><button id="back-lobby">BACK TO PARTY LOBBY</button><button id="forfeit">LEAVE PARTY</button><small>Esc opens this menu. The party leader runs the authoritative match simulation.</small></div>
+<button id="resume-control" hidden type="button"><b>CLICK TO RESUME</b><span>Mouse control paused · your round is still running</span></button>
+<aside id="game-settings" hidden aria-label="Game settings">
+  <div><b>GAME SETTINGS</b><button id="game-settings-close" type="button" aria-label="Close game settings">×</button></div>
+  <label>Graphics quality<select id="graphics-quality"><option value="auto">Auto</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label>
+  <label>Mouse sensitivity<input id="mouse-sensitivity" type="range" min="0.5" max="2" value="1" step="0.05"><output id="mouse-sensitivity-value">1.00×</output></label>
+  <label>Scope sensitivity<input id="scope-sensitivity" type="range" min="0.35" max="1.25" value="0.7" step="0.05"><output id="scope-sensitivity-value">0.70×</output></label>
+  <small>Auto quality adjusts resolution and cosmetic detail only. Simulation and network timing stay unchanged.</small>
+</aside>
 
 <dialog id="setup">
   <h2>Online multiplayer setup</h2>
