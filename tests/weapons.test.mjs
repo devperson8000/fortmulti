@@ -29,12 +29,18 @@ test('movement and sustained fire widen the simulated crosshair spread',()=>{
  const profile=WEAPON_PROFILES.ar,rest=shotSpread(profile,{aim:true}),moving=shotSpread(profile,{aim:true,moving:1,sustained:3});assert.ok(moving>rest);assert.ok(moving<=profile.spread.max);assert.deepEqual(Object.keys(createLoadout()),WEAPON_ORDER);
 });
 
+test('landed authoritative aim begins at the first-person eye anchor',()=>{
+ const player={p:[4,3,-2],air:'landed'};
+ assert.deepEqual(cameraAimOrigin(player,{yaw:1,pitch:.2,aim:true},WEAPON_PROFILES.ar),[4,4.72,-2]);
+ assert.deepEqual(cameraAimOrigin(player,{yaw:-2,pitch:-.3,aim:true},WEAPON_PROFILES.sniper),[4,4.72,-2]);
+});
+
 test('snapshots expose ADS, weapon animation state and versioned shot payloads',()=>{
  const m=playing(),p=m.players[0];m.input('a',{slot:4,yaw:0});for(let i=0;i<11;i++)m.tick(.05);m.input('a',{slot:4,yaw:0,pitch:0,aim:true,fire:true});m.tick(.05);const snap=m.snapshot(),me=snap.players[0],shot=snap.events.findLast(e=>e.type==='shot');assert.equal(me.weapon,'sniper');assert.equal(me.aim,true);assert.equal(me.slot,4);assert.equal(me.weapons.sniper.ammo,3);assert.equal(shot.weapon,'sniper');assert.equal(shot.traces.length,1);assert.ok(Array.isArray(shot.hits));assert.ok(Number.isFinite(shot.damage));
 });
 
-test('the authoritative shot ray converges on the shoulder-camera crosshair',()=>{
- const m=playing(),p=m.players[0],target=m.players[1],profile=WEAPON_PROFILES.sniper;target.p=[0,0,-20];let aim={slot:4,yaw:0,pitch:0,aimYaw:0,aimPitch:0,aim:true};
+test('the authoritative shot ray converges on the first-person crosshair',()=>{
+ const m=playing(),p=m.players[0],target=m.players[1],profile=WEAPON_PROFILES.ar;target.p=[0,0,-20];let aim={slot:1,yaw:0,pitch:0,aimYaw:0,aimPitch:0,aim:true};
  for(let n=0;n<12;n++){const eye=cameraAimOrigin(p,aim,profile),dx=target.p[0]-eye[0],dy=target.p[1]+1.25-eye[1],dz=target.p[2]-eye[2];aim.yaw=aim.aimYaw=Math.atan2(-dx,-dz);aim.pitch=aim.aimPitch=Math.atan2(dy,Math.hypot(dx,dz));}
- m.input('a',aim);for(let i=0;i<11;i++)m.tick(.05);m.input('a',{...aim,fire:true});m.tick(.05);const shot=m.events.findLast(e=>e.type==='shot');assert.equal(shot.hit,'b');assert.ok(shot.damage>=profile.damage);assert.ok(target.shield<100);
+ m.input('a',aim);m.tick(.05);m.input('a',{...aim,fire:true});m.tick(.05);const shot=m.events.findLast(e=>e.type==='shot');assert.equal(shot.hit,'b');assert.ok(shot.damage>=profile.damage);assert.ok(target.shield<100);
 });

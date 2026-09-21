@@ -15,3 +15,14 @@ test('renderer applies bounded motion tracks to the viewed player and peers',asy
  assert.ok((source.match(/advanceMotionTrack\(/g)||[]).length>=2);
  assert.doesNotMatch(source,/player\.p\s*=\s*smoothPosition/);
 });
+
+test('first-person renderer keeps hot-path effects and matrix storage bounded',async()=>{
+ const source=await readFile(new URL('../public/engine.js',import.meta.url),'utf8');
+ assert.doesNotMatch(source,/effects\.push\(/);
+ assert.doesNotMatch(source,/return new Float32Array\(out\)/);
+ assert.match(source,/createEffectPool\(144\)/);
+ assert.match(source,/shouldShowLocalAvatar\(/);
+ assert.match(source,/shouldShowViewModel\(/);
+ assert.match(source,/drawFirstPersonBlueprint\(/);
+ assert.match(source,/dynamicData\.copy\(geo\)/);
+});

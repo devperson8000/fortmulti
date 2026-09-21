@@ -1,10 +1,12 @@
 # Sunny Skirmish
 
-Sunny Skirmish is a static, browser-based third-person multiplayer prototype built for Vercel. Private parties support **2–8 players** with an authoritative leader simulation, online presence and party invites, ready-up, shared building, text chat, optional party voice, reconnect handling, a detailed airborne drop route, freefall, steerable canopy deployment, and last-player-standing rounds.
+Sunny Skirmish is a static, browser-based multiplayer prototype built for Vercel. The lobby, transport, freefall and canopy sequence use a third-person presentation; landed combat transitions smoothly into first person. Private parties support **2–8 players** with an authoritative leader simulation, online presence and party invites, ready-up, shared building, text chat, optional party voice, reconnect handling and last-player-standing rounds.
 
 The v7.1 playability pass keeps the authoritative 30 Hz host simulation while adapting guest input and snapshot traffic to party size. Host-only latency probes, queued action taps, render-side position/rotation interpolation, stale-socket protection and reconnect cleanup keep larger parties below the Supabase Free Realtime event ceiling without making two-player combat feel delayed. Glider descent is faster and more directed, shortening the final landing phase while preserving a useful steering window.
 
 The v7.2 smooth-motion pass adds short, bounded render prediction for grounded movement and synchronized air velocity, so players keep moving between authoritative snapshots without changing host-owned collisions or hit results. Dynamic geometry now reuses CPU and GPU storage across frames to prevent allocation-related pauses. Automatic canopy deployment happens lower, and the final glide descends faster for a shorter, more responsive landing phase.
+
+The v8 first-person pass preserves the existing third-person lobby and aerial drop, then blends to an eye-level combat camera after landing. It adds detailed foreground arms and distinct procedural AR, shotgun, SMG and sniper models; weapon sway, breathing, recoil, sprint, equip and staged reload motion; crosshair-aligned hitscan combat; and a host-authoritative sniper projectile with visible travel and mild gravity. Cosmetic effects use bounded reusable pools, projectile visuals interpolate between network snapshots, and reusable camera matrices remove a repeated per-frame allocation. Auto graphics quality adjusts resolution, remote-player detail, shadows, storm detail and effect budgets without changing simulation or network cadence.
 
 The visuals and game code are original procedural assets. The project is not affiliated with or endorsed by Epic Games.
 
@@ -18,11 +20,11 @@ The v5.2 framing pass guarantees that the local player occupies the nearest cent
 
 The v6.2 presentation pass replaces the remaining block-jointed silhouette with a higher-density capsule-and-ovoid character. Rounded shoulders, elbows, hands, hips, knees, ankles, boots, layered hair and curved outfit panels overlap cleanly during the relaxed lobby pose, combat, freefall and canopy poses. Party members now share consistent natural skin materials instead of receiving the old opponent tint. The lobby chrome uses rounded layered cards, softer controls, a curved slide-out social drawer and a compact voice panel while keeping the local character unobstructed at the front.
 
-## Combat system v6
+## First-person combat system v8
 
 The combat pass adds four independent weapon classes: **Striker AR, Thunder Shotgun, Burst SMG and Eagle-Eye Sniper**. Each profile defines damage, cadence, hip/ADS/movement spread, recoil, reload time, magazine size, range, pellet count, automatic mode, equip time and FOV. Magazines persist independently when swapping slots.
 
-- Right mouse smoothly blends the chase camera from a 75° field of view into each weapon's ADS FOV.
+- Right mouse smoothly blends the first-person camera from a 75° field of view into each weapon's ADS FOV.
 - The sniper blends to 15°, removes the local model from the sight picture and opens a dedicated precision optic with a circular vignette and fine reticle.
 - The normal crosshair expands from movement, weapon accuracy, sustained fire and recoil, then settles smoothly.
 - Recoil layers camera pitch/yaw kick, weapon translation and recovery without changing movement physics.
@@ -30,6 +32,9 @@ The combat pass adds four independent weapon classes: **Striker AR, Thunder Shot
 - Reloads animate the weapon tilt, magazine release/ejection, replacement insertion, action rack and return to aim. The support hand follows the magazine through the sequence.
 - Equip animations lower and rotate the outgoing/incoming weapon. Mouse sway and breathing remain layered over both aiming and reload motion.
 - The party leader remains authoritative: sanitized inputs drive weapon selection, firing, ADS and reloads; snapshots carry weapon/ammo/animation state; shot, reload and switch events carry IDs and timing through the existing private Supabase Realtime channel.
+- AR, SMG and shotgun fire remains hitscan and converges on the exact world point under the centered crosshair. The sniper alone uses a lightweight simulated projectile with visible travel, mild drop, swept collision and event-driven impact feedback.
+- Losing pointer lock clears held inputs and displays a click-to-resume control without resetting or pausing the authoritative round.
+- Match settings provide Auto/Low/Medium/High graphics and separate mouse/scope sensitivity. These preferences remain local to the browser.
 
 The v6.1 polish pass resolves third-person crosshair offset by reconstructing the same shoulder camera on the authoritative host. Every shot first resolves the world point under the crosshair, then converges from the visible muzzle toward that point. A second muzzle-side collision check still blocks shots when nearby cover obstructs the weapon. Camera recoil is included in the transmitted aim ray, the dynamic crosshair now recovers correctly during multiplayer play, and selecting a build slot replaces the gun with an animated holographic blueprint for both local and remote players.
 
@@ -91,7 +96,7 @@ Rounds are last-player-standing. The first player to 5 round wins takes the matc
 | Control | Action |
 | --- | --- |
 | WASD | Move / steer in the air |
-| Mouse | Look |
+| Mouse | Look in first person after landing |
 | Left mouse | Fire / place selected build |
 | Right mouse | ADS / sniper scope |
 | Space | Jump / leave Skyliner / deploy canopy |
@@ -108,6 +113,8 @@ Rounds are last-player-standing. The first player to 5 round wins takes the matc
 | R | Reload |
 | Esc | Match menu |
 
+The lobby and all aerial states remain third person. First-person mode begins only after touchdown and a short camera blend.
+
 ## Deploy to Vercel
 
 1. Import this repository into Vercel.
@@ -118,6 +125,8 @@ Rounds are last-player-standing. The first player to 5 round wins takes the matc
    - `SUPABASE_URL` — for example `https://project-ref.supabase.co`
    - `SUPABASE_PUBLISHABLE_KEY` — the public `sb_publishable_...` key
 6. Redeploy.
+
+The first-person update does not require a Supabase schema change. Projects already running the latest `supabase.sql` keep the same Auth, Realtime and RLS setup.
 
 Never put a Supabase secret key or service-role key in the browser or Vercel environment for this project. The build and in-game setup reject obvious secret/service-role keys.
 
@@ -154,4 +163,4 @@ Party voice uses browser WebRTC and requests microphone permission only after th
 npm run check
 ```
 
-The automated suite covers local multi-client room messaging, targeted signaling metadata, online-player discovery and invite acceptance, neutral/dive/glide blending, velocity synchronization, terrain-aware forced deployment, one-way canopy state, landing flow, disconnect cleanup, multiplayer elimination rules, four weapon profiles, independent magazines, fire modes, reload timing, spread, shooting, structures, build validation, waiting-state protection and first-to-five completion.
+The automated suite covers local multi-client room messaging, targeted signaling metadata, online-player discovery and invite acceptance, neutral/dive/glide blending, velocity synchronization, terrain-aware forced deployment, one-way canopy state, landing and first-person camera transitions, crosshair-aligned hitscan fire, sniper projectile travel and collision, bounded effects, adaptive graphics, procedural weapon/reload motion, disconnect cleanup, multiplayer elimination rules, independent magazines, build validation, waiting-state protection, a 45-second combat soak and first-to-five completion.

@@ -10,6 +10,14 @@ export function aimChanged(prev,next,threshold=.018){if(!prev)return true;return
 export function shouldForwardInput(prev,next,elapsed,cadence){if(!prev||inputTransition(prev,next))return true;if(aimChanged(prev,next)&&elapsed>=cadence.inputMs)return true;return elapsed>=cadence.heartbeatMs;}
 export function smoothPoint(current,target,rate,dt){const t=1-Math.exp(-Math.max(0,rate)*Math.max(0,dt));return current.map((value,index)=>value+(target[index]-value)*t);}
 export function isStaleSnapshotGap(seconds){return Number(seconds)>.75;}
+export function acceptEventId(cache,id,now=Date.now(),ttl=3000){
+ if(!cache||id==null)return true;
+ const key=String(id),time=Number(now)||0,expires=cache.get(key);
+ if(Number(expires)>time)return false;
+ cache.set(key,time+Math.max(1,Number(ttl)||3000));
+ if(cache.size>128)for(const [entry,expiry] of cache)if(expiry<=time)cache.delete(entry);
+ return true;
+}
 
 let networkInstalled=false;
 export function installNetworkStability(){
