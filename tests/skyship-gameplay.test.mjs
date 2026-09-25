@@ -13,6 +13,32 @@ test('the match begins inside the moving skyship and locks movement until the ri
  assert.equal(match.sequence.controls,true);assert.equal(match.players[0].sequence,'ready');
 });
 
+test('cabin walking follows first-person look direction relative to the skyship',()=>{
+ const match=new Match(world,['a','b']);match.beginSkyshipJourney();stepUntil(match,8.7,{yaw:match.skyship.yaw});
+ const player=match.players[0],before=player.shipLocal.slice();
+ match.input('a',{z:1,yaw:match.skyship.yaw+Math.PI/2});match.tick(.05);
+ assert.ok(player.shipLocal[0]<before[0]-.1);
+ assert.ok(Math.abs(player.shipLocal[2]-before[2])<.01);
+});
+
+test('diagonal cabin walking keeps the same total speed as straight walking',()=>{
+ const travel=(x,z)=>{
+  const match=new Match(world,['a','b']);match.beginSkyshipJourney();stepUntil(match,8.7,{yaw:match.skyship.yaw});
+  const before=match.players[0].shipLocal.slice();match.input('a',{x,z,yaw:match.skyship.yaw});match.tick(.05);
+  return Math.hypot(match.players[0].shipLocal[0]-before[0],match.players[0].shipLocal[2]-before[2]);
+ };
+ assert.ok(Math.abs(travel(1,1)-travel(1,0))<.001);
+});
+
+test('sprint accelerates the player along the cabin aisle',()=>{
+ const travel=sprint=>{
+  const match=new Match(world,['a','b']);match.beginSkyshipJourney();stepUntil(match,8.7,{yaw:match.skyship.yaw});
+  const before=match.players[0].shipLocal.slice();match.input('a',{z:1,yaw:match.skyship.yaw,sprint});match.tick(.05);
+  return Math.hypot(match.players[0].shipLocal[0]-before[0],match.players[0].shipLocal[2]-before[2]);
+ };
+ assert.ok(Math.abs(travel(true)/travel(false)-4/3)<.01);
+});
+
 test('the rift can be entered from the aisle and automatically moves any late players',()=>{
  const match=new Match(world,['a','b']);match.beginSkyshipJourney();stepUntil(match,8.8,{yaw:match.skyship.yaw});
  match.input('a',{z:1,yaw:match.skyship.yaw});for(let i=0;i<30;i++)match.tick(.05);

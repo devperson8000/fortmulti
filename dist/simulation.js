@@ -56,7 +56,11 @@ export class Match{
    const p=this.players[index];if(p.hp<=0)continue;p.lastInput+=dt;const i=p.lastInput>INPUT_STALE_SECONDS?sanitize():p.input;const edgeJump=i.jump&&!p.jumpLatch;p.jumpLatch=i.jump;
    if(p.air==='ship'){
     const local=p.shipLocal||seatOffset(index);p.shipLocal=local;p.yaw=dampAngle(p.yaw||this.skyship.yaw,i.yaw,7,dt);p.sequence=this.sequence.stage;p.riftBlend=this.sequence.riftBlend;
-    if(this.sequence.controls){local[0]=clamp(local[0]+i.x*5.4*dt,-2,2);local[2]=clamp(local[2]-i.z*5.4*dt,-4.25,3.45);}
+    if(this.sequence.controls){
+     const length=Math.max(1,Math.hypot(i.x,i.z)),speed=(i.sprint?7.2:5.4)*dt/length,c=Math.cos(this.skyship.yaw),s=Math.sin(this.skyship.yaw);
+     const dx=(Math.cos(i.yaw)*i.x-Math.sin(i.yaw)*i.z)*speed,dz=(-Math.sin(i.yaw)*i.x-Math.cos(i.yaw)*i.z)*speed;
+     local[0]=clamp(local[0]+dx*c-dz*s,-2,2);local[2]=clamp(local[2]+dx*s+dz*c,-4.25,3.45);
+    }
     local[1]=this.sequence.standBlend*.48;p.p=this.shipWorld(local);
     if(this.sequence.autoLaunch){this.beginRift(p,true);continue;}
     if(edgeJump&&canEnterRift(this.dropElapsed,local)){this.beginRift(p,false);continue;}
