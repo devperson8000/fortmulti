@@ -31,9 +31,9 @@ test('network position smoothing blends normal updates and snaps teleports',()=>
 
 test('motion prediction keeps airborne movement advancing between snapshots',()=>{
  assert.equal(typeof tuning.advanceMotionTrack,'function');
- let track=tuning.advanceMotionTrack(null,[0,120,0],{dt:.016,state:'glider',velocity:[0,-6.3,-14.6]});
+ let track=tuning.advanceMotionTrack(null,[0,120,0],{dt:.016,state:'winged',velocity:[0,-6.3,-14.6]});
  const first=track.position.slice();
- for(let i=0;i<4;i++)track=tuning.advanceMotionTrack(track,[0,120,0],{dt:.016,state:'glider',velocity:[0,-6.3,-14.6]});
+ for(let i=0;i<4;i++)track=tuning.advanceMotionTrack(track,[0,120,0],{dt:.016,state:'winged',velocity:[0,-6.3,-14.6]});
  assert.ok(track.position[1]<first[1],`expected continuous descent, got ${track.position[1]}`);
  assert.ok(track.position[2]<first[2],`expected continuous forward glide, got ${track.position[2]}`);
  assert.ok(track.position.every(Number.isFinite));
@@ -58,7 +58,7 @@ test('a fresh stationary snapshot clears grounded prediction momentum',()=>{
 });
 
 test('motion prediction snaps genuine teleports and resets stale momentum on landing',()=>{
- let track=tuning.advanceMotionTrack(null,[0,90,0],{dt:.016,state:'glider',velocity:[10,-6.3,0]});
+ let track=tuning.advanceMotionTrack(null,[0,90,0],{dt:.016,state:'winged',velocity:[10,-6.3,0]});
  track=tuning.advanceMotionTrack(track,[120,5,120],{dt:.08,state:'landed'});
  assert.deepEqual(track.position,[120,5,120]);
  assert.deepEqual(track.velocity,[0,0,0]);

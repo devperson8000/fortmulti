@@ -1,6 +1,6 @@
 import {mkdir,cp,writeFile,readFile,rm,access} from 'node:fs/promises';
 await rm('dist',{recursive:true,force:true});await mkdir('dist',{recursive:true});await cp('public','dist',{recursive:true});
-for(const file of ['app.js','engine.js','network.js','network-tuning.js','drop-camera.js','avatar-model.js','weapon-model.js','render-buffer.js','simulation.js','connection-stability.js','multiplayer-runtime.js','index.html'])await access('dist/'+file);
+for(const file of ['app.js','engine.js','network.js','network-tuning.js','skyship-camera.js','skyship-sequence.js','avatar-model.js','weapon-model.js','render-buffer.js','simulation.js','connection-stability.js','multiplayer-runtime.js','index.html'])await access('dist/'+file);
 const url=process.env.SUPABASE_URL||'',key=process.env.SUPABASE_PUBLISHABLE_KEY||'';
 if(key.startsWith('sb_secret_'))throw Error('Use a public Supabase publishable key, never a secret key.');
 if(key.startsWith('eyJ')){try{const role=JSON.parse(Buffer.from(key.split('.')[1],'base64url')).role;if(role==='service_role')throw Error('Use the public anon or publishable key, never the service-role key.');}catch(e){if(e.message.includes('service-role'))throw e;}}

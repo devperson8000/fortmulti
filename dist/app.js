@@ -95,7 +95,7 @@ function closeOnline(){const panel=$('social-panel');panel.classList.remove('ope
 function toggleProfile(force){const open=force??!document.body.classList.contains('profile-open');document.body.classList.toggle('profile-open',open);$('profile-toggle').classList.toggle('active',open);}
 function hello(){conn?.send('hello',{name:profile.name,color:profile.color,ready,host:conn.host||null,mode:$('mode').value,match:matchId,voice:voiceWanted,maxPlayers:conn.maxPlayers||8});}
 function everyoneReady(){const party=partyProfiles();return party.length>=2&&party.every(p=>p.ready);}
-function beginIfEntered(){if(host&&match?.phase==='waiting'&&match.ids.length>=2&&match.ids.every(id=>entered.has(id))){match.launchDrop();sendSnapshot();}}
+function beginIfEntered(){if(host&&match?.phase==='waiting'&&match.ids.length>=2&&match.ids.every(id=>entered.has(id))){match.beginSkyshipJourney();sendSnapshot();}}
 
 async function updatePresence(){if(!social)return;try{await social.presence(profile.name,profile.color,currentActivity(),conn?.code||null);}catch(e){if(Date.now()-lastStatusAt>5000)status(e.message,'error');}}
 async function pollSocial(){
@@ -136,16 +136,24 @@ async function respondInvite(inv,accept){
 function resetMatchState(){match=null;snapshot=null;matchId='';seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;enteredLocal=false;entered=new Set();$('enter-match').hidden=true;$('match-actions').hidden=true;$('round-banner').textContent='';window.Duel.lobby=true;document.body.classList.remove('dropping');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear();document.exitPointerLock?.();}
 function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
-function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);matchId=uid();seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;enteredLocal=false;entered=new Set();sendSnapshot();updatePresence();status('Match prepared · everyone must enter the drop.','success');}
+function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);matchId=uid();seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;enteredLocal=false;entered=new Set();sendSnapshot();updatePresence();status('Match prepared · everyone aboard the Aether Ark.','success');}
 function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;const data={id:matchId,state};conn.send('snapshot',data);apply(data);}
 function roundBanner(s){
- const me=s.players.find(p=>p.id===conn.id);if(s.phase==='waiting')return enteredLocal?'WAITING FOR THE PARTY':'ENTER THE DROP WHEN READY';
- if(s.phase==='bus'||s.phase==='drop'||(s.phase==='playing'&&me?.air!=='landed')){
-  if(me?.air==='bus')return `SKYLINER CROSSING · ${Math.ceil(s.timer||0)}s · SPACE TO JUMP`;
-  if(me?.air==='freefall'){const speed=Math.round(me.airSpeed||Math.abs(me.vy)||0);return me.dropState==='dive'?`STEEP DIVE · ${speed} M/S · LOOK UP TO LEVEL OUT`:`SKYDIVE · ${speed} M/S · LOOK DOWN OR SHIFT TO DIVE`;}
-  if(me?.air==='deploying')return `CANOPY OPENING · ${Math.round((me.deploy||0)*100)}%`;
-  if(me?.air==='cutting')return `CUTTING CANOPY · ${Math.max(0,Math.round(me.clearance||0))} M · DIVE`;
-  if(me?.air==='glider')return `GLIDING · ${Math.max(0,Math.round(me.clearance||0))} M CLEARANCE · SPACE TO DIVE`;
+ const me=s.players.find(p=>p.id===conn.id);if(s.phase==='waiting')return enteredLocal?'WAITING FOR THE PARTY':'BOARD THE ARK WHEN READY';
+ if(s.phase==='ship'||s.phase==='flight'||(s.phase==='playing'&&me?.air!=='landed')){
+  if(me?.air==='ship'){
+   const stage=s.sequence?.stage||me.sequence||'seated',local=me.shipLocal||[0,0,0],atRift=local[2]<=-2.65;
+   if(stage==='seated')return 'ABOARD THE AETHER ARK · THE VOYAGE BEGINS';
+   if(stage==='rising')return 'THE ARK IS RISING THROUGH THE CLOUDS';
+   if(stage==='rift-opening')return 'THE RIFT IS OPENING · STAY READY';
+   if(stage==='auto-launch')return 'THE ARK IS LAUNCHING · FOLLOW THE AETHER CURRENT';
+   return `${atRift?'RIFT STABLE · SPACE TO ENTER':'WALK TO THE RIFT · SPACE TO ENTER'} · ${Math.ceil(s.timer||0)}s`;
+  }
+  if(me?.air==='riftTransit')return 'ENTERING THE AETHER CURRENT';
+  if(me?.air==='rift')return 'AETHER CURRENT · SPACE TO UNFURL ENERGY WINGS';
+  if(me?.air==='wingOpening')return `ENERGY WINGS UNFURLING · ${Math.round((me.deploy||0)*100)}%`;
+  if(me?.air==='wingFolding')return `FOLDING ENERGY WINGS · ${Math.round((me.deploy||0)*100)}%`;
+  if(me?.air==='winged')return (me.clearance||0)>57?'WINGED GLIDE · SPACE TO FOLD INTO THE CURRENT':`WINGED GLIDE · ${Math.max(0,Math.round(me.clearance||0))} M · WINGS LOCKED`;
   return 'LANDED · YOU CAN PLAY NOW';
  }
  if(s.phase==='countdown')return `ROUND ${s.round} · ${Math.max(1,Math.ceil(s.timer))}`;
@@ -155,7 +163,7 @@ function roundBanner(s){
  if(me?.hp<=0)return 'ELIMINATED · SPECTATING';return '';
 }
 function apply(data){
- if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn)return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('dropping',s.phase==='bus'||s.phase==='drop'||localPlayer.air!=='landed');$('lobby').hidden=true;
+ if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn)return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('dropping',s.phase==='ship'||s.phase==='flight'||localPlayer.air!=='landed');$('lobby').hidden=true;
  if(fresh||window.Duel.round!==s.round){const me=s.players.find(p=>p.id===conn.id);game.look(me?.yaw||0);seenEvent=0;window.Duel.round=s.round;showMenu=false;$('match-actions').hidden=true;updatePresence();}
  $('enter-match').hidden=s.phase!=='waiting'||enteredLocal;$('round-banner').textContent=roundBanner(s);for(const e of s.events||[])if(e.id>seenEvent){game.effect(e,conn.id);seenEvent=e.id;}
  if(s.phase==='done'){showMenu=true;$('match-actions').hidden=false;$('resume').hidden=true;$('rematch').hidden=false;$('back-lobby').hidden=false;document.exitPointerLock?.();}else if(!showMenu)$('match-actions').hidden=true;refresh();

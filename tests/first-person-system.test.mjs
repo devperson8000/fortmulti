@@ -20,49 +20,39 @@ const sample=(overrides={})=>({
  ...overrides
 });
 
-test('lobby and aerial modes never enter first person',()=>{
+test('gameplay stays first-person from the cabin through energy-wing flight',()=>{
  assert.equal(cameraMode(sample({lobby:true})),'lobby');
- assert.equal(cameraMode(sample({air:'glider'})),'aerial');
- assert.equal(cameraMode(sample({air:'freefall'})),'aerial');
+ for(const air of['ship','riftTransit','rift','wingOpening','winged','wingFolding','landed'])assert.equal(cameraMode(sample({air})),'firstPerson',air);
+ assert.equal(cameraMode(sample({alive:false,spectating:true,air:'ship'})),'spectator');
 });
 
-test('landing blends for 450ms and enables firing as the first-person hands arrive',()=>{
- let state=createCameraPresentation();
- state=stepCameraPresentation(state,sample({air:'glider'}),.016);
- state=stepCameraPresentation(state,sample(),.075);
- assert.equal(state.mode,'transition');
- assert.ok(state.blend>0&&state.blend<.45);
- assert.equal(canFireDuringPresentation(state),false);
- state=stepCameraPresentation(state,sample(),.15);
- assert.ok(state.blend>=.45);
- assert.equal(canFireDuringPresentation(state),true);
- state=stepCameraPresentation(state,sample(),.30);
- assert.equal(state.mode,'firstPerson');
- assert.equal(state.blend,1);
+test('a legacy aerial-to-ground transition blends for 450ms and gates firing',()=>{
+ let state={...createCameraPresentation(),mode:'aerial',blend:0,lastAir:'winged',roundToken:1};
+ state=stepCameraPresentation(state,sample(),.075);assert.equal(state.mode,'transition');assert.ok(state.blend>0&&state.blend<.45);assert.equal(canFireDuringPresentation(state),false);
+ state=stepCameraPresentation(state,sample(),.15);assert.ok(state.blend>=.45);assert.equal(canFireDuringPresentation(state),true);
+ state=stepCameraPresentation(state,sample(),.30);assert.equal(state.mode,'firstPerson');assert.equal(state.blend,1);
 });
 
 test('death and a new round reset the presentation deterministically',()=>{
  let state={...createCameraPresentation(),mode:'firstPerson',blend:1,roundToken:1,lastAir:'landed'};
- state=stepCameraPresentation(state,sample({alive:false,spectating:true}),.016);
- assert.equal(state.mode,'spectator');
- state=stepCameraPresentation(state,sample({air:'bus',roundToken:2}),.016);
- assert.equal(state.mode,'aerial');
- assert.equal(state.blend,0);
+ state=stepCameraPresentation(state,sample({alive:false,spectating:true}),.016);assert.equal(state.mode,'spectator');
+ state=stepCameraPresentation(state,sample({air:'ship',roundToken:2}),.016);assert.equal(state.mode,'firstPerson');assert.equal(state.blend,1);
 });
 
-test('local avatar stays visible in the air and disappears halfway through landing',()=>{
- assert.equal(shouldShowLocalAvatar({mode:'aerial',blend:0},'glider',true),true);
+test('the local character stays hidden in first person and remains available to a spectator camera',()=>{
+ assert.equal(shouldShowLocalAvatar({mode:'firstPerson',blend:1},'ship',true),false);
+ assert.equal(shouldShowLocalAvatar({mode:'firstPerson',blend:1},'winged',true),false);
  assert.equal(shouldShowLocalAvatar({mode:'transition',blend:.49},'landed',true),true);
  assert.equal(shouldShowLocalAvatar({mode:'transition',blend:.5},'landed',true),false);
- assert.equal(shouldShowLocalAvatar({mode:'firstPerson',blend:1},'landed',true),false);
- assert.equal(shouldShowLocalAvatar({mode:'aerial',blend:0},'glider',false),false);
+ assert.equal(shouldShowLocalAvatar({mode:'spectator',blend:0},'winged',true),true);
+ assert.equal(shouldShowLocalAvatar({mode:'spectator',blend:0},'landed',false),false);
 });
 
 test('view model appears only for a living unscoped local first-person view',()=>{
  assert.equal(shouldShowViewModel({mode:'firstPerson'},true,false,false),true);
  assert.equal(shouldShowViewModel({mode:'transition',blend:.44},true,false,false),false);
  assert.equal(shouldShowViewModel({mode:'transition',blend:.45},true,false,false),true);
- assert.equal(shouldShowViewModel({mode:'aerial'},true,false,false),false);
+ assert.equal(shouldShowViewModel({mode:'spectator'},true,false,false),false);
  assert.equal(shouldShowViewModel({mode:'firstPerson'},true,false,true),false);
  assert.equal(shouldShowViewModel({mode:'firstPerson'},true,true,false),false);
 });
