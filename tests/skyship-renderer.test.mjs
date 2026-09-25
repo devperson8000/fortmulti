@@ -3,19 +3,31 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {skyshipFirstPersonView,cabinPoint} from '../public/skyship-camera.js';
 
-test('the cabin camera rises smoothly while keeping mouse look in first person',()=>{
- const seated=skyshipFirstPersonView([12,240,-8],.1,-.12,0),standing=skyshipFirstPersonView([12,240,-8],1.2,.42,1);
+test('the first-person eye rises smoothly while remaining at the same cabin position',()=>{
+ const position=[12,240,-8],seated=skyshipFirstPersonView(position,.1,-.12,0),standing=skyshipFirstPersonView(position,1.2,.42,1);
  assert.ok(seated.height<standing.height);assert.ok(seated.height>1&&standing.height<1.8);
  assert.ok(Math.hypot(...seated.forward)>.999&&Math.hypot(...standing.forward)<1.001);
- assert.ok(Math.hypot(seated.eye[0]-standing.eye[0],seated.eye[2]-standing.eye[2])<.001);
- const front=cabinPoint([0,0,-4],standing.eye,1.2);assert.ok(Math.hypot(front[0]-standing.eye[0],front[2]-standing.eye[2])>3.9);
+ assert.deepEqual(seated.eye.map((v,i)=>i===1?0:v),standing.eye.map((v,i)=>i===1?0:v));
 });
 
-test('the renderer and lobby use the staged Aether Ark sequence and first-person wing visuals',async()=>{
+test('cabin landmarks stay fixed to the Cloudliner while the camera turns',()=>{
+ const origin=[80,240,-14],shipYaw=Math.PI/2;
+ const rear=cabinPoint([0,0,6],origin,shipYaw),left=cabinPoint([-2,0,0],origin,shipYaw);
+ assert.ok(Math.abs(rear[0]-86)<.001&&Math.abs(rear[2]+14)<.001);
+ assert.ok(Math.abs(left[0]-80)<.001&&Math.abs(left[2]-(-12))<.001);
+});
+
+test('the renderer uses fixed cabin geometry, an animated rear hatch and first-person arcade glide visuals',async()=>{
  const engine=await readFile(new URL('../public/engine.js',import.meta.url),'utf8'),app=await readFile(new URL('../public/app.js',import.meta.url),'utf8');
- assert.match(engine,/skyshipFirstPersonView\(player\.p,yaw\+recoilYaw,pitch\+recoilPitch/);
- assert.match(engine,/skyshipInterior\(eye,yaw\+recoilYaw,skyshipPresentation/);
- assert.match(engine,/energyWings\(b\.p/);assert.match(engine,/firstPersonWings\(eye/);
- assert.match(engine,/watchedVelocity=\['riftTransit','rift','wingOpening','winged','wingFolding'\]/);
- assert.match(app,/me\?\.air==='ship'/);assert.match(app,/ENERGY WINGS UNFURLING/);
+ assert.match(engine,/clampCabinWorldPosition\(player\.p,\[skyshipData\.x,skyshipData\.y,skyshipData\.z\],skyshipData\.yaw\)/);
+ assert.match(engine,/skyshipFirstPersonView\(cabinPosition,shipLookYaw,pitch\+recoilPitch/);
+ assert.match(engine,/skyshipInterior\(skyshipData,eye,shipLookYaw,skyshipPresentation/);
+ assert.match(engine,/skyshipMotion=advanceMotionTrack\(skyshipMotion/);
+ assert.match(engine,/cabinPoint\(v,origin,shipYaw\)/);
+ assert.match(engine,/hatchBlend\*Math\.PI\*\.49/);
+ assert.match(engine,/gliderCanopy\(b\.p/);assert.match(engine,/firstPersonGlider\(eye/);
+ assert.match(engine,/watchedVelocity=\['launchTransit','skyDrift','gliderOpening','gliding','gliderFolding'\]/);
+ assert.match(engine,/skyshipPresentation\.rearLookBlend/);
+ assert.match(app,/me\?\.air==='ship'/);assert.match(app,/REAR HATCH LOWERING/);assert.match(app,/SPACE TO GLIDE/);
+ assert.doesNotMatch(engine,/Aether|aether|portal/i);assert.doesNotMatch(app,/Aether|aether|portal/i);
 });

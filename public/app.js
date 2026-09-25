@@ -136,24 +136,24 @@ async function respondInvite(inv,accept){
 function resetMatchState(){match=null;snapshot=null;matchId='';seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;enteredLocal=false;entered=new Set();$('enter-match').hidden=true;$('match-actions').hidden=true;$('round-banner').textContent='';window.Duel.lobby=true;document.body.classList.remove('dropping');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear();document.exitPointerLock?.();}
 function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
-function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);matchId=uid();seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;enteredLocal=false;entered=new Set();sendSnapshot();updatePresence();status('Match prepared · everyone aboard the Aether Ark.','success');}
+function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);matchId=uid();seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;enteredLocal=false;entered=new Set();sendSnapshot();updatePresence();status('Match prepared · party aboard the Cloudliner.','success');}
 function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;const data={id:matchId,state};conn.send('snapshot',data);apply(data);}
 function roundBanner(s){
- const me=s.players.find(p=>p.id===conn.id);if(s.phase==='waiting')return enteredLocal?'WAITING FOR THE PARTY':'BOARD THE ARK WHEN READY';
+ const me=s.players.find(p=>p.id===conn.id);if(s.phase==='waiting')return enteredLocal?'WAITING FOR THE PARTY':'BOARD THE CLOUDLINER WHEN READY';
  if(s.phase==='ship'||s.phase==='flight'||(s.phase==='playing'&&me?.air!=='landed')){
   if(me?.air==='ship'){
-   const stage=s.sequence?.stage||me.sequence||'seated',local=me.shipLocal||[0,0,0],atRift=local[2]<=-2.65;
-   if(stage==='seated')return 'ABOARD THE AETHER ARK · THE VOYAGE BEGINS';
-   if(stage==='rising')return 'THE ARK IS RISING THROUGH THE CLOUDS';
-   if(stage==='rift-opening')return 'THE RIFT IS OPENING · STAY READY';
-   if(stage==='auto-launch')return 'THE ARK IS LAUNCHING · FOLLOW THE AETHER CURRENT';
-   return `${atRift?'RIFT STABLE · SPACE TO ENTER':'WALK TO THE RIFT · SPACE TO ENTER'} · ${Math.ceil(s.timer||0)}s`;
+   const stage=s.sequence?.stage||me.sequence||'seated',local=me.shipLocal||[0,0,0],atHatch=Math.abs(local[0])<=1.55&&local[2]>=4.6;
+   if(stage==='seated')return 'SEATED · THE CLOUDLINER IS LIFTING';
+   if(stage==='rising')return 'STANDING UP · WATCH THE REAR HATCH';
+   if(stage==='hatch-opening')return 'REAR HATCH LOWERING · CONTROL UNLOCKS WHEN IT SETTLES';
+   if(stage==='arcade-launch')return 'CLOUDLINER ARCADE LAUNCH · GET READY';
+   return `${atHatch?'REAR HATCH OPEN · SPACE TO GLIDE':'REAR HATCH OPEN · MOVE TO THE REAR AISLE'} · ${Math.ceil(s.timer||0)}s`;
   }
-  if(me?.air==='riftTransit')return 'ENTERING THE AETHER CURRENT';
-  if(me?.air==='rift')return 'AETHER CURRENT · SPACE TO UNFURL ENERGY WINGS';
-  if(me?.air==='wingOpening')return `ENERGY WINGS UNFURLING · ${Math.round((me.deploy||0)*100)}%`;
-  if(me?.air==='wingFolding')return `FOLDING ENERGY WINGS · ${Math.round((me.deploy||0)*100)}%`;
-  if(me?.air==='winged')return (me.clearance||0)>57?'WINGED GLIDE · SPACE TO FOLD INTO THE CURRENT':`WINGED GLIDE · ${Math.max(0,Math.round(me.clearance||0))} M · WINGS LOCKED`;
+  if(me?.air==='launchTransit')return 'ARCADE GLIDE LAUNCH';
+  if(me?.air==='skyDrift')return 'SKY GLIDE · SPACE TO OPEN GLIDER';
+  if(me?.air==='gliderOpening')return `GLIDER OPENING · ${Math.round((me.deploy||0)*100)}%`;
+  if(me?.air==='gliderFolding')return `GLIDER FOLDING · ${Math.round((me.deploy||0)*100)}%`;
+  if(me?.air==='gliding')return (me.clearance||0)>57?'GLIDE · SPACE TO FOLD':'GLIDE · '+Math.max(0,Math.round(me.clearance||0))+' M · GLIDER LOCKED';
   return 'LANDED · YOU CAN PLAY NOW';
  }
  if(s.phase==='countdown')return `ROUND ${s.round} · ${Math.max(1,Math.ceil(s.timer))}`;
