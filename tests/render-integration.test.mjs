@@ -26,3 +26,13 @@ test('first-person renderer keeps hot-path effects and matrix storage bounded',a
  assert.match(source,/drawFirstPersonBlueprint\(/);
  assert.match(source,/dynamicData\.copy\(geo\)/);
 });
+
+test('character and weapon renderers share cached detailed model layouts',async()=>{
+ const source=await readFile(new URL('../public/engine.js',import.meta.url),'utf8');
+ assert.match(source,/import \{AVATAR_MODEL_PARTS,AVATAR_GEAR\} from '\.\/avatar-model\.js'/);
+ assert.match(source,/import \{WEAPON_MODELS\} from '\.\/weapon-model\.js'/);
+ assert.match(source,/for\(const piece of AVATAR_MODEL_PARTS\)/);
+ assert.ok((source.match(/drawWeaponLayout\(/g)||[]).length>=3,'remote and first-person weapon views use one model renderer');
+ assert.match(source,/const sphereTemplates=new Map\(\)/);
+ assert.match(source,/triCoordinates\(/);
+});

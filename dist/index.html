@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#081a31">
-<meta name="description" content="A browser-based multiplayer battle game for up to eight players with online invites, an airborne drop phase, building, voice chat and private parties.">
+<meta name="description" content="A browser-based multiplayer battle game for up to eight players with online invites, an Aether Ark flight sequence, building, voice chat and private parties.">
 <title>Sunny Skirmish · Multiplayer</title>
 <link rel="stylesheet" href="game.css">
 <link rel="stylesheet" href="lobby.css">
 </head>
 <body class="in-lobby">
-<canvas id="game" aria-label="First-person combat with third-person aerial drop and lobby"></canvas>
+<canvas id="game" aria-label="First-person multiplayer adventure with an Aether Ark opening, energy-wing flight, and lobby"></canvas>
 <div id="vignette"></div><div id="damage"></div>
 <div id="scope" aria-hidden="true">
   <div class="scope-lens">
@@ -23,12 +23,12 @@
   <div id="compass">W &nbsp; · &nbsp; NW &nbsp; · &nbsp; <strong>N</strong> &nbsp; · &nbsp; NE &nbsp; · &nbsp; E</div>
   <button id="pause" aria-label="Pause game">Ⅱ</button>
 </header>
-<aside id="mapbox"><canvas id="map" width="180" height="180" aria-label="Minimap"></canvas><b>SUNCREST</b><div><span id="time">DROP</span><span id="remaining">1 LEFT</span><span id="score">◎ 0</span></div></aside>
+<aside id="mapbox"><canvas id="map" width="180" height="180" aria-label="Minimap"></canvas><b>SUNCREST</b><div><span id="time">ARK</span><span id="remaining">1 LEFT</span><span id="score">◎ 0</span></div></aside>
 <div id="mission" style="display:none"><small>PRIVATE PARTY</small><b>Own the island.</b><span>Drop, build and be the last player standing.</span></div>
 <div id="notice" role="status"></div><div id="crosshair"><i></i><i></i><i></i><i></i></div><div id="hitmarker">×</div><div id="damagevalue"></div><div id="buildhelp"></div>
 <section id="health"><div><span>▰ SHIELD</span><b id="shieldtext">100</b></div><div class="bar"><i id="shieldbar"></i></div><div><span>✚ HEALTH</span><b id="hptext">100</b></div><div class="bar green"><i id="hpbar"></i></div></section>
 <section id="inventory"><div class="ammo"><span id="ammotext">30</span><small id="ammocap">/ 30</small><b id="weaponlabel">STRIKER AR</b><em id="reload-stage">READY</em><i id="reload-progress"></i></div><div class="slots weapon-slots"><button class="selected rare" data-slot="1"><kbd>1</kbd><span>⌁</span><small>AR</small></button><button class="epic" data-slot="2"><kbd>2</kbd><span>═</span><small>SHOTGUN</small></button><button class="uncommon" data-slot="3"><kbd>3</kbd><span>≋</span><small>SMG</small></button><button class="legendary" data-slot="4"><kbd>4</kbd><span>—</span><small>SNIPER</small></button><button class="build-slot" data-slot="5"><kbd>5</kbd><span>▥</span><small>WALL</small></button><button class="build-slot" data-slot="6"><kbd>6</kbd><span>◩</span><small>RAMP</small></button><div class="wood"><b id="wood">150</b><small>MATERIAL</small></div></div></section>
-<footer>W A S D <span>move / steer</span> &nbsp; LMB <span>fire</span> &nbsp; RMB <span>aim / scope</span> &nbsp; SPACE <span>jump / deploy canopy</span> &nbsp; SHIFT <span>sprint / dive</span> &nbsp; R <span>reload</span> &nbsp; 1–4 <span>weapons</span> &nbsp; Q / 5–6 <span>build</span> &nbsp; G <span>rotate</span> &nbsp; ESC <span>menu</span></footer>
+<footer>W A S D <span>move / steer</span> &nbsp; MOUSE <span>look / steer</span> &nbsp; LMB <span>fire</span> &nbsp; RMB <span>aim / scope</span> &nbsp; SPACE <span>enter rift / unfurl or fold wings</span> &nbsp; SHIFT <span>sprint / Aether surge</span> &nbsp; R <span>reload</span> &nbsp; 1–4 <span>weapons</span> &nbsp; Q / 5–6 <span>build</span> &nbsp; G <span>rotate</span> &nbsp; ESC <span>menu</span></footer>
 <div hidden id="overlay"><button id="play"></button><p id="eyebrow"></p><p id="heading"></p><p id="intro"></p></div>
 <div id="touch"><div><button data-key="KeyW">▲</button><br><button data-key="KeyA">◀</button><button data-key="KeyS">▼</button><button data-key="KeyD">▶</button></div><div><button id="touchjump">JUMP</button><button id="touchfire">FIRE</button></div></div>
 
@@ -97,7 +97,7 @@
 </aside>
 
 <div id="round-banner" role="status"></div>
-<button id="enter-match" hidden>ENTER THE DROP</button>
+<button id="enter-match" hidden>BOARD THE AETHER ARK</button>
 <div id="match-actions" hidden><button id="resume">RETURN TO MATCH</button><button id="game-settings-toggle">GAME SETTINGS</button><button id="rematch">RETURN PARTY TO LOBBY</button><button id="back-lobby">BACK TO PARTY LOBBY</button><button id="forfeit">LEAVE PARTY</button><small>Esc opens this menu. The party leader runs the authoritative match simulation.</small></div>
 <button id="resume-control" hidden type="button"><b>CLICK TO RESUME</b><span>Mouse control paused · your round is still running</span></button>
 <aside id="game-settings" hidden aria-label="Game settings">

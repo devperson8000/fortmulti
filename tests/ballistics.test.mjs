@@ -16,6 +16,13 @@ test('sniper projectile travels forward and gains mild downward velocity',()=>{
  assert.equal(projectile.expired,false);
 });
 
+test('gravity curves each projectile step with accurate constant acceleration',()=>{
+ const projectile=createProjectile({id:'curve',owner:'a',origin:[0,2,0],direction:[0,1,0],speed:3,gravity:18,range:100,damage:1});
+ advanceProjectile(projectile,.05);
+ assert.ok(Math.abs(projectile.position[1]-2.1275)<1e-9);
+ assert.ok(Math.abs(projectile.velocity[1]-2.1)<1e-9);
+});
+
 test('large frame deltas are bounded instead of skipping through the world',()=>{
  const projectile=createProjectile({id:'p2',owner:'a',origin:[0,0,0],direction:[0,0,-1],speed:100,gravity:0,range:360,damage:1,spawnTick:1});
  advanceProjectile(projectile,.5);
