@@ -45,3 +45,21 @@ test('arcade glider transition follows the world-height limit and flight stays s
 test('arcade glider physics ease with the visible opening progress instead of switching instantly',()=>{
  let velocity=[0,-8,0],largestChange=0;for(let i=1;i<=16;i++){const next=stepArcadeGlide(velocity,{yaw:0,pitch:0,z:0},i/16,.05);largestChange=Math.max(largestChange,Math.hypot(...next.map((value,index)=>value-velocity[index])));velocity=next;}assert.ok(largestChange<1.5);assert.ok(velocity[1]>-7);
 });
+
+test('bank steering keeps forward carry while arcade boost and pull-up remain bounded',()=>{
+ let banked=[0,-5.6,-10.8];
+ for(let i=0;i<80;i++)banked=stepArcadeGlide(banked,{yaw:0,pitch:0,x:1,z:0,sprint:true},true,.05);
+ assert.ok(banked[0]>3,'right input should arc the glide to the right');
+ assert.ok(banked[2]<-8,'banking should preserve strong forward carry');
+ assert.ok(Math.hypot(...banked)<=ARCADE_FLIGHT.maxSpeed,'boosted glide must stay inside the speed cap');
+ let level=[0,-5.6,-10.8],pullUp=[0,-5.6,-10.8];
+ for(let i=0;i<60;i++){
+  level=stepArcadeGlide(level,{yaw:0,pitch:0,z:1},true,.05);
+  pullUp=stepArcadeGlide(pullUp,{yaw:0,pitch:.7,z:1},true,.05);
+ }
+ assert.ok(pullUp[1]>-.5,'looking up with the energy wings should flatten descent into a tiny arcade lift');
+ assert.ok(pullUp[1]<=ARCADE_FLIGHT.maxRise,'arcade lift must have a hard ceiling');
+ assert.ok(level[1]<pullUp[1],'pitch should visibly affect the flight arc');
+ const overshoot=stepArcadeGlide([0,1.5,0],{yaw:0,pitch:.7,z:1},true,.05);
+ assert.ok(overshoot[1]<=ARCADE_FLIGHT.maxRise,'stale upward velocity must be clamped to the same lift ceiling');
+});

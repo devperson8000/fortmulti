@@ -26,6 +26,8 @@ test('the renderer uses fixed cabin geometry, an animated rear hatch and first-p
  assert.match(engine,/cabinPoint\(v,origin,shipYaw\)/);
  assert.match(engine,/hatchBlend\*Math\.PI\*\.49/);
  assert.match(engine,/gliderCanopy\(b\.p/);assert.match(engine,/firstPersonGlider\(eye/);
+ assert.match(engine,/firstPersonGlider\(eye,yaw\+recoilYaw,player\.air==='gliding'\?1:player\.deploy\|\|0,player\.airRoll\|\|0,player\.airSpeed\|\|0\)/);
+ assert.match(engine,/function firstPersonGlider\(eye,yaw,amount=1,bank=0,speed=0\)/);
  assert.match(engine,/watchedVelocity=\['launchTransit','skyDrift','gliderOpening','gliding','gliderFolding'\]/);
  assert.match(engine,/skyshipPresentation\.rearLookBlend/);
  assert.match(app,/me\?\.air==='ship'/);assert.match(app,/REAR HATCH LOWERING/);assert.match(app,/SPACE TO GLIDE/);
