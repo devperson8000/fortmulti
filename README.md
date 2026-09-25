@@ -95,7 +95,7 @@ Rounds are last-player-standing. The first player to 5 round wins takes the matc
 
 | Control | Action |
 | --- | --- |
-| WASD | Walk the Cloudliner aisle; steer the arcade glider |
+| WASD | Walk the Cloudliner aisle; W/S guide the arcade glide and A/D bank into forward turns |
 | Mouse | Look around in first person |
 | Left mouse | Fire / place selected build |
 | Right mouse | ADS / sniper scope |
@@ -113,7 +113,7 @@ Rounds are last-player-standing. The first player to 5 round wins takes the matc
 | R | Reload |
 | Esc | Match menu |
 
-The lobby remains third person. The match intro, arcade glide and combat stay first person.
+The lobby remains third person. The match intro, arcade glide and combat stay first person. In flight, A/D bend the glide into banked forward arcs, mouse pitch shapes a small energy-wing lift, and Shift adds a capped burst of speed.
 
 ## Deploy to Vercel
 

@@ -79,7 +79,7 @@ export class Match{
     if(p.air==='gliderOpening'){p.deploy=clamp((p.deploy||0)+dt/ARCADE_FLIGHT.openSeconds,0,1);if(p.deploy>=1){p.air='gliding';p.dropState='gliding';p.deploy=1;}}
     else if(p.air==='gliding'){p.deploy=1;p.wingsActive=true;p.dropState='gliding';}
     else if(p.air==='gliderFolding'){p.deploy=clamp((p.deploy||1)-dt/ARCADE_FLIGHT.foldSeconds,0,1);if(p.deploy<=0){p.air='skyDrift';p.wingsActive=false;p.dropState='sky-glide';p.deploy=0;this.event({type:'glider_retract',by:p.id});}}
-    const velocity=stepArcadeGlide(p.airVelocity,i,p.deploy,dt);p.airVelocity=velocity;p.vy=velocity[1];p.airSpeed=Math.hypot(...velocity);p.airPitch=damp(p.airPitch||0,i.pitch*.48,4,dt);p.airRoll=damp(p.airRoll||0,-i.x*.27,4.4,dt);
+    const velocity=stepArcadeGlide(p.airVelocity,i,p.deploy,dt),wingBlend=p.air==='gliding'?1:(p.air==='gliderOpening'||p.air==='gliderFolding'?clamp(p.deploy||0,0,1):0),bankTarget=-i.x*(.14+wingBlend*.42);p.airVelocity=velocity;p.vy=velocity[1];p.airSpeed=Math.hypot(...velocity);p.airPitch=damp(p.airPitch||0,i.pitch*.48,4,dt);p.airRoll=damp(p.airRoll||0,bankTarget,4.8,dt);
     p.p[0]=clamp(p.p[0]+velocity[0]*dt,-ISLAND_LIMIT,ISLAND_LIMIT);p.p[2]=clamp(p.p[2]+velocity[2]*dt,-ISLAND_LIMIT,ISLAND_LIMIT);p.p[1]+=velocity[1]*dt;
     const landingFloor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world,this.groundGrid);if(p.p[1]<=landingFloor){p.p[1]=landingFloor;p.vy=0;p.airVelocity=[0,0,0];p.airSpeed=0;p.clearance=0;p.air='landed';p.dropState='landed';p.wingsActive=false;p.deploy=0;p.airPitch=0;p.airRoll=0;this.event({type:'land',by:p.id});}
    }
