@@ -138,9 +138,24 @@ function leave(reason='Party left. Invite someone online to start another.',quie
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
 function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);matchId=uid();seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;enteredLocal=false;entered=new Set();sendSnapshot();updatePresence();status('Match prepared · everyone must enter the drop.','success');}
 function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;const data={id:matchId,state};conn.send('snapshot',data);apply(data);}
-function roundBanner(s){const me=s.players.find(p=>p.id===conn.id);if(s.phase==='waiting')return enteredLocal?'WAITING FOR THE PARTY':'ENTER THE DROP WHEN READY';if(s.phase==='bus'||s.phase==='drop'){if(me?.air==='bus')return `SKYLINER CROSSING · ${Math.ceil(s.timer||0)}s · SPACE TO JUMP`;if(me?.air==='freefall'){const speed=Math.round(me.airSpeed||Math.abs(me.vy)||0);return me.dropState==='dive'?`STEEP DIVE · ${speed} M/S · LOOK UP TO LEVEL OUT`:`SKYDIVE · ${speed} M/S · LOOK DOWN OR SHIFT TO DIVE`;}if(me?.air==='deploying')return `CANOPY OPENING · ${Math.round((me.deploy||0)*100)}%`;if(me?.air==='glider')return `GLIDING · ${Math.max(0,Math.round(me.clearance||0))} M CLEARANCE · STEER TO LAND`;return 'LANDED · WAITING FOR THE PARTY';}if(s.phase==='countdown')return `ROUND ${s.round} · ${Math.max(1,Math.ceil(s.timer))}`;if(s.phase==='roundover'){if(s.winner<0)return 'ROUND DRAW';const winner=s.players[s.winner];return winner?.id===conn.id?'ROUND WON':`${playerName(winner?.id)} WON THE ROUND`;}if(s.phase==='paused')return 'CONNECTION INTERRUPTED · HOLDING MATCH';if(s.phase==='done'){const champ=s.scores.findIndex(n=>n>=s.targetScore),winner=champ>=0?s.players[champ]:s.players[s.winner];return winner?.id===conn.id?'VICTORY':`${playerName(winner?.id)} WINS THE MATCH`;}if(me?.hp<=0)return 'ELIMINATED · SPECTATING';return '';}
+function roundBanner(s){
+ const me=s.players.find(p=>p.id===conn.id);if(s.phase==='waiting')return enteredLocal?'WAITING FOR THE PARTY':'ENTER THE DROP WHEN READY';
+ if(s.phase==='bus'||s.phase==='drop'||(s.phase==='playing'&&me?.air!=='landed')){
+  if(me?.air==='bus')return `SKYLINER CROSSING · ${Math.ceil(s.timer||0)}s · SPACE TO JUMP`;
+  if(me?.air==='freefall'){const speed=Math.round(me.airSpeed||Math.abs(me.vy)||0);return me.dropState==='dive'?`STEEP DIVE · ${speed} M/S · LOOK UP TO LEVEL OUT`:`SKYDIVE · ${speed} M/S · LOOK DOWN OR SHIFT TO DIVE`;}
+  if(me?.air==='deploying')return `CANOPY OPENING · ${Math.round((me.deploy||0)*100)}%`;
+  if(me?.air==='cutting')return `CUTTING CANOPY · ${Math.max(0,Math.round(me.clearance||0))} M · DIVE`;
+  if(me?.air==='glider')return `GLIDING · ${Math.max(0,Math.round(me.clearance||0))} M CLEARANCE · SPACE TO DIVE`;
+  return 'LANDED · YOU CAN PLAY NOW';
+ }
+ if(s.phase==='countdown')return `ROUND ${s.round} · ${Math.max(1,Math.ceil(s.timer))}`;
+ if(s.phase==='roundover'){if(s.winner<0)return 'ROUND DRAW';const winner=s.players[s.winner];return winner?.id===conn.id?'ROUND WON':`${playerName(winner?.id)} WON THE ROUND`;}
+ if(s.phase==='paused')return 'CONNECTION INTERRUPTED · HOLDING MATCH';
+ if(s.phase==='done'){const champ=s.scores.findIndex(n=>n>=s.targetScore),winner=champ>=0?s.players[champ]:s.players[s.winner];return winner?.id===conn.id?'VICTORY':`${playerName(winner?.id)} WINS THE MATCH`;}
+ if(me?.hp<=0)return 'ELIMINATED · SPECTATING';return '';
+}
 function apply(data){
- if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn)return;const s=data.state;if(!s.players.some(p=>p.id===conn.id))return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('dropping',s.phase==='bus'||s.phase==='drop');$('lobby').hidden=true;
+ if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn)return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('dropping',s.phase==='bus'||s.phase==='drop'||localPlayer.air!=='landed');$('lobby').hidden=true;
  if(fresh||window.Duel.round!==s.round){const me=s.players.find(p=>p.id===conn.id);game.look(me?.yaw||0);seenEvent=0;window.Duel.round=s.round;showMenu=false;$('match-actions').hidden=true;updatePresence();}
  $('enter-match').hidden=s.phase!=='waiting'||enteredLocal;$('round-banner').textContent=roundBanner(s);for(const e of s.events||[])if(e.id>seenEvent){game.effect(e,conn.id);seenEvent=e.id;}
  if(s.phase==='done'){showMenu=true;$('match-actions').hidden=false;$('resume').hidden=true;$('rematch').hidden=false;$('back-lobby').hidden=false;document.exitPointerLock?.();}else if(!showMenu)$('match-actions').hidden=true;refresh();

@@ -8,6 +8,8 @@ The v7.2 smooth-motion pass adds short, bounded render prediction for grounded m
 
 The v8 first-person pass preserves the existing third-person lobby and aerial drop, then blends to an eye-level combat camera after landing. It adds detailed foreground arms and distinct procedural AR, shotgun, SMG and sniper models; weapon sway, breathing, recoil, sprint, equip and staged reload motion; crosshair-aligned hitscan combat; and a host-authoritative sniper projectile with visible travel and mild gravity. Cosmetic effects use bounded reusable pools, projectile visuals interpolate between network snapshots, and reusable camera matrices remove a repeated per-frame allocation. Auto graphics quality adjusts resolution, remote-player detail, shadows, storm detail and effect budgets without changing simulation or network cadence.
 
+Drop physics query nearby terrain and rooftop collision buckets rather than scanning the full island for every airborne player. Before anyone lands, the host skips the grounded-combat setup entirely; event and pickup lists stay bounded without recreating their arrays each frame.
+
 The visuals and game code are original procedural assets. The project is not affiliated with or endorsed by Epic Games.
 
 ## Foreground party lobby
@@ -68,17 +70,18 @@ Other multiplayer improvements include:
 
 Every round begins aboard the **Skyliner**, an original high-detail procedural airborne transport. Its slower, eased route now crosses the much larger island for roughly 32 seconds at a 240-unit cruising altitude, with animated propulsion, slipstream trails, camera drift, moving vapor wisps and altitude movement that make the flight readable. The higher route provides at least ten seconds of neutral freefall before automatic deployment on flat terrain. A 44-unit base deployment buffer and 7.2-unit canopy descent produce a shorter final approach while retaining roughly six seconds of steering time on flat terrain; manual deployment remains available earlier.
 
-The v7 aerial rework replaces fixed fall speeds with an authoritative, momentum-based three-stage controller. Neutral skydiving uses a wide stabilized pose and moderate terminal velocity. Looking down while moving forward—or holding Shift—smoothly blends into a tucked steep dive with faster vertical and forward movement. Looking up blends back out without snapping. Space begins a one-way canopy deployment; it cannot be closed again in the same descent. A downward terrain/roof clearance check forces deployment early enough for the full opening animation, with extra safety distance at higher descent speeds.
+The v7 aerial controller uses authoritative momentum across neutral skydiving, steep diving and gliding. Looking down while moving forward—or holding Shift—blends into a faster dive; looking up eases back to a neutral fall. Space opens the canopy with a staged animation. Once open, Space cuts it back into a dive with a short retract animation. Cutting is disabled inside the terrain-aware forced-deployment safety buffer, and the canopy will automatically reopen if the dive reaches that buffer.
 
 The procedural rig cross-fades the torso pitch, arm spread, leg tuck, riser reach and glider hanging pose from synchronized `diveBlend`, `airPitch`, `airRoll`, `airVelocity`, `airSpeed`, `clearance` and `gliderActive` fields. The camera widens from 78° toward 96° during a fast dive, eases back to 70° under canopy, adds restrained velocity-scaled shake, and renders hand/boot wind trails plus an edge-speed treatment. Glider steering preserves momentum, turns smoothly and banks both the character and canopy.
 
-- Press **Space** (or fire) to jump from the transport.
+- Move the mouse to orbit around the Skyliner while aboard; press **Space** to jump.
 - Steer during freefall with **WASD** and the mouse.
 - Press **Space** again to begin the canopy deployment sequence. It now opens over time instead of appearing instantly.
+- While gliding, press **Space** again to cut the canopy and return to diving, when enough altitude remains.
 - The canopy automatically deploys near the ground.
 - During deployment the canopy expands from the pack, the character reaches for both risers, the arms settle onto the controls, and the legs trail and sway before the descent stabilizes.
 - Continue steering under canopy until touchdown.
-- Combat begins after all active players land.
+- The first player can move, build and fight as soon as they land; other players keep their live drop simulation until they touch down.
 
 The Skyliner includes a rounded coach body, cockpit glazing, window panels, reinforced chassis, roof machinery, suspension gantry, lift envelope, structural ribs, propulsion pods, animated fan blades, navigation lights, cargo rails, service panels, landing hardware and moving air trails. The canopy uses a dense curved multi-panel mesh with reinforced edging, stitched radial ribs, suspension lines, risers, harness straps, control toggles and hardware.
 
@@ -96,10 +99,10 @@ Rounds are last-player-standing. The first player to 5 round wins takes the matc
 | Control | Action |
 | --- | --- |
 | WASD | Move / steer in the air |
-| Mouse | Look in first person after landing |
+| Mouse | Orbit the Skyliner; look after landing |
 | Left mouse | Fire / place selected build |
 | Right mouse | ADS / sniper scope |
-| Space | Jump / leave Skyliner / deploy canopy |
+| Space | Jump / deploy canopy / cut canopy back to dive |
 | Shift | Sprint / commit to steep dive |
 | 1 | Striker AR |
 | 2 | Thunder Shotgun |

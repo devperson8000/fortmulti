@@ -10,13 +10,20 @@ export function placement(p,input,world){const angle=Math.round(input.yaw/(Math.
 export function bounds(s){const r=Math.abs(Math.sin(s.angle))>.5;return {min:[s.x-(r?.22:2.5),s.y,s.z-(r?2.5:.22)],max:[s.x+(r?.22:2.5),s.y+3.6,s.z+(r?2.5:.22)]};}
 function overlap(a,b){return a.min.every((v,i)=>v<b.max[i]&&a.max[i]>b.min[i]);}
 export function validBuild(s,structures,players,world){if(structures.length>=260||s.y>42)return false;if(structures.some(v=>Math.abs(v.x-s.x)<.1&&Math.abs(v.z-s.z)<.1&&Math.abs(v.y-s.y)<.2&&v.type===s.type&&(s.type!==2||Math.abs(Math.sin(v.angle-s.angle))<.1)))return false;const b=s.type===2?bounds(s):{min:[s.x-2.4,s.y+.15,s.z-2.4],max:[s.x+2.4,s.y+3.5,s.z+2.4]};if(world.obstacles.some(v=>overlap(b,v)))return false;if(s.type===2&&players.some(p=>p.hp>0&&p.air==='landed'&&overlap(b,{min:[p.p[0]-.38,p.p[1],p.p[2]-.38],max:[p.p[0]+.38,p.p[1]+2.3,p.p[2]+.38]})))return false;const floor=world.height(s.x,s.z);return s.y<=floor+.5||structures.some(v=>Math.hypot(v.x-s.x,v.z-s.z)<=5.1&&Math.abs(v.y+3.6-s.y)<.3);}
-export function ground(x,z,foot,structures,world){let h=world.height(x,z);for(const b of world.obstacles||[]){if(x>b.min[0]+.08&&x<b.max[0]-.08&&z>b.min[2]+.08&&z<b.max[2]-.08&&b.max[1]<=foot+.55)h=Math.max(h,b.max[1]);}for(const s of structures){if(s.type!==3)continue;const dx=x-s.x,dz=z-s.z,localX=dx*Math.cos(s.angle)-dz*Math.sin(s.angle),localZ=dx*Math.sin(s.angle)+dz*Math.cos(s.angle);if(Math.abs(localX)<=2.48&&Math.abs(localZ)<=2.5){let v=s.y+(2.5-localZ)*.72;if(v<=foot+.48)h=Math.max(h,v);}}return h;}
+const EMPTY_OBSTACLES=[];
+const groundCellKey=(x,z,size)=>Math.floor(x/size)*65536+Math.floor(z/size);
+export function createGroundGrid(obstacles=[],cellSize=24){
+ const cells=new Map(),size=clamp(Number(cellSize)||24,8,64);
+ for(const box of obstacles){const minX=Math.floor(box.min[0]/size),maxX=Math.floor(box.max[0]/size),minZ=Math.floor(box.min[2]/size),maxZ=Math.floor(box.max[2]/size);for(let x=minX;x<=maxX;x++)for(let z=minZ;z<=maxZ;z++){const key=x*65536+z;let bucket=cells.get(key);if(!bucket)cells.set(key,bucket=[]);bucket.push(box);}}
+ return {cellSize:size,cells};
+}
+export function ground(x,z,foot,structures,world,grid=null){let h=world.height(x,z);const candidates=grid?grid.cells.get(groundCellKey(x,z,grid.cellSize))||EMPTY_OBSTACLES:world.obstacles||EMPTY_OBSTACLES;for(const b of candidates){if(x>b.min[0]+.08&&x<b.max[0]-.08&&z>b.min[2]+.08&&z<b.max[2]-.08&&b.max[1]<=foot+.55)h=Math.max(h,b.max[1]);}for(const s of structures){if(s.type!==3)continue;const dx=x-s.x,dz=z-s.z,localX=dx*Math.cos(s.angle)-dz*Math.sin(s.angle),localZ=dx*Math.sin(s.angle)+dz*Math.cos(s.angle);if(Math.abs(localX)<=2.48&&Math.abs(localZ)<=2.5){let v=s.y+(2.5-localZ)*.72;if(v<=foot+.48)h=Math.max(h,v);}}return h;}
 export function rayBox(o,d,b){let lo=0,hi=500;for(let i=0;i<3;i++){if(Math.abs(d[i])<1e-7){if(o[i]<b.min[i]||o[i]>b.max[i])return Infinity;continue;}let a=(b.min[i]-o[i])/d[i],c=(b.max[i]-o[i])/d[i];if(a>c)[a,c]=[c,a];lo=Math.max(lo,a);hi=Math.min(hi,c);if(hi<lo)return Infinity;}return lo;}
 export function sanitize(i={}){const num=(v,a,b)=>clamp(Number.isFinite(v)?v:0,a,b),yaw=num(i.yaw,-10000,10000),pitch=num(i.pitch,-.9,.7);return {x:num(i.x,-1,1),z:num(i.z,-1,1),yaw,pitch,aimYaw:Number.isFinite(i.aimYaw)?num(i.aimYaw,-10000,10000):yaw,aimPitch:Number.isFinite(i.aimPitch)?num(i.aimPitch,-.9,.7):pitch,rotation:num(i.rotation,-10000,10000),slot:[1,2,3,4,5,6].includes(i.slot)?i.slot:1,jump:!!i.jump,sprint:!!i.sprint,aim:!!i.aim,fire:!!i.fire,firePulse:!!i.firePulse,reload:!!i.reload};}
 
 // A long cross-island route gives the party time to choose between distant POIs.
 export const ISLAND_LIMIT=292,BUS_SECONDS=32,BUS_ALTITUDE=240;
-export const DROP_TUNING=Object.freeze({neutralFall:17,diveFall:30,neutralSpeed:12,diveSpeed:21,glideFall:7.2,glideSpeed:14.6,autoDeployBase:44,deploySeconds:.9});
+export const DROP_TUNING=Object.freeze({neutralFall:17,diveFall:30,neutralSpeed:12,diveSpeed:21,glideFall:7.2,glideSpeed:14.6,autoDeployBase:44,deploySeconds:.9,cutSeconds:.38,cutBuffer:10});
 export const INPUT_STALE_SECONDS=1.6;
 const BUS_START=[-312,188],BUS_END=[312,-188];
 const seatOffset=i=>{const row=Math.floor(i/2),side=i%2?1:-1;return [side*1.15,0,3.2-row*2.05];};
@@ -27,7 +34,7 @@ export function autoDeployClearance(verticalSpeed=0){return DROP_TUNING.autoDepl
 
 export class Match{
  constructor(world,ids,mode='build'){
-  this.world=world;this.ids=[...new Set(ids)].slice(0,8);this.mode=mode;this.scores=this.ids.map(()=>0);this.disconnected=new Set();this.targetScore=5;this.round=0;this.events=[];this.eventId=0;this.projectiles=[];this.projectileSequence=0;this.startRound(true);
+  this.world=world;this.groundGrid=createGroundGrid(world.obstacles||[]);this.ids=[...new Set(ids)].slice(0,8);this.mode=mode;this.scores=this.ids.map(()=>0);this.disconnected=new Set();this.targetScore=5;this.round=0;this.events=[];this.eventId=0;this.projectiles=[];this.projectileSequence=0;this.startRound(true);
  }
  busAt(t){const q=clamp(t/BUS_SECONDS,0,1),ease=q*q*(3-2*q),x=BUS_START[0]+(BUS_END[0]-BUS_START[0])*ease,z=BUS_START[1]+(BUS_END[1]-BUS_START[1])*ease,y=BUS_ALTITUDE+Math.sin(q*Math.PI)*5+Math.sin(t*.72)*.45,yaw=Math.atan2(-(BUS_END[0]-BUS_START[0]),-(BUS_END[1]-BUS_START[1]));return {x,y,z,yaw,progress:q,active:q<1,bank:Math.sin(t*.42)*.025,bob:Math.sin(t*.72)*.45,speed:Math.hypot(BUS_END[0]-BUS_START[0],BUS_END[1]-BUS_START[1])*(6*q*(1-q))/BUS_SECONDS};}
  startRound(waiting=false){
@@ -35,13 +42,13 @@ export class Match{
   this.round++;this.phase=waiting?'waiting':'bus';this.timer=waiting?0:BUS_SECONDS;this.elapsed=0;this.dropElapsed=0;this.structures=[];this.projectiles.length=0;this.winner=undefined;
   this.pickups=this.mode==='town'?[{x:0,z:8,type:'shield'},{x:-22,z:20,type:'wood'},{x:25,z:8,type:'health'},{x:36,z:-18,type:'wood'},{x:-38,z:-9,type:'shield'},{x:8,z:38,type:'health'},{x:-205,z:72,type:'shield'},{x:-188,z:91,type:'wood'},{x:176,z:94,type:'health'},{x:198,z:67,type:'wood'},{x:128,z:-188,type:'shield'},{x:-92,z:-178,type:'health'}]:[];
   this.bus=this.busAt(0);
-  this.players=this.ids.map((id,i)=>{const off=seatOffset(i);return {id,p:[this.bus.x+off[0],this.bus.y+.1,this.bus.z+off[2]],yaw:this.bus.yaw,vy:0,hp:100,shield:100,weapons:createLoadout(),slot:1,weapon:'ar',ammo:30,material:150,reload:0,equip:0,cool:0,sustained:0,walk:0,aim:false,input:sanitize(),lastInput:0,air:'bus',dropState:'bus',airVelocity:[0,0,0],airPitch:0,airRoll:0,diveBlend:0,airSpeed:0,clearance:0,gliderActive:false,deploy:0,jumpLatch:false,fireLatch:false,reloadLatch:false,eliminated:false};});
+  this.players=this.ids.map((id,i)=>{const off=seatOffset(i);return {id,p:[this.bus.x+off[0],this.bus.y+.1,this.bus.z+off[2]],yaw:this.bus.yaw,vy:0,hp:100,shield:100,weapons:createLoadout(),slot:1,weapon:'ar',ammo:30,material:150,reload:0,equip:0,cool:0,sustained:0,walk:0,aim:false,input:sanitize(),lastInput:0,air:'bus',dropState:'bus',airVelocity:[0,0,0],airPitch:0,airRoll:0,diveBlend:0,airSpeed:0,clearance:0,gliderActive:false,deploy:0,cutProgress:0,cutStartDeploy:0,jumpLatch:false,fireLatch:false,reloadLatch:false,eliminated:false};});
   this.events=[];
  }
  launchDrop(){if(this.phase!=='waiting')return;this.phase='bus';this.timer=BUS_SECONDS;this.dropElapsed=0;this.bus=this.busAt(0);this.event({type:'drop_start'});}
  input(id,input){const p=this.players.find(p=>p.id===id);if(p){p.input=sanitize(input);p.lastInput=0;}}
  disconnect(id){const p=this.players.find(p=>p.id===id);if(!p||this.disconnected.has(id))return;this.disconnected.add(id);p.hp=0;p.eliminated=true;p.air='landed';this.event({type:'elimination',by:null,hit:id,reason:'disconnect'});if(this.phase==='waiting'){const scoreById=new Map(this.ids.map((pid,i)=>[pid,this.scores[i]||0]));this.ids=this.ids.filter(pid=>pid!==id);this.scores=this.ids.map(pid=>scoreById.get(pid)||0);this.players=this.players.filter(v=>v.id!==id);this.disconnected.delete(id);return;}if(['playing','countdown','bus','drop'].includes(this.phase))this.checkRoundEnd();}
- event(e){this.events.push({...e,id:++this.eventId});this.events=this.events.slice(-36);}
+ event(e){this.events.push({...e,id:++this.eventId});if(this.events.length>36)this.events.splice(0,this.events.length-36);}
  hit(p,n){if(p.hp<=0)return;let shield=Math.min(p.shield,n);p.shield-=shield;p.hp=Math.max(0,p.hp-(n-shield));}
  updateDrop(dt){
   this.dropElapsed+=dt;this.bus=this.busAt(this.dropElapsed);this.timer=Math.max(0,BUS_SECONDS-this.dropElapsed);
@@ -50,10 +57,14 @@ export class Match{
    const p=this.players[index];if(p.hp<=0)continue;p.lastInput+=dt;const i=p.lastInput>INPUT_STALE_SECONDS?sanitize():p.input;const edgeJump=i.jump&&!p.jumpLatch;p.jumpLatch=i.jump;
    if(p.air==='bus'){
     const off=seatOffset(index),cy=Math.cos(this.bus.yaw),sy=Math.sin(this.bus.yaw);p.p[0]=this.bus.x+off[0]*cy+off[2]*sy;p.p[1]=this.bus.y+.2;p.p[2]=this.bus.z-off[0]*sy+off[2]*cy;p.yaw=this.bus.yaw;
-    if(edgeJump||i.fire||this.bus.progress>=.995){const launchYaw=i.yaw||this.bus.yaw;p.air='freefall';p.dropState='neutral';p.yaw=launchYaw;p.vy=-5;p.airVelocity=[-Math.sin(launchYaw)*6,-5,-Math.cos(launchYaw)*6];p.airPitch=-1.34;p.airRoll=0;p.diveBlend=0;p.gliderActive=false;this.event({type:'jump',by:p.id,state:'neutral'});}
-   }else if(p.air==='freefall'||p.air==='deploying'||p.air==='glider'){
+    if(edgeJump||this.bus.progress>=.995){const launchYaw=Number.isFinite(i.yaw)?i.yaw:this.bus.yaw;p.air='freefall';p.dropState='neutral';p.yaw=launchYaw;p.vy=-5;p.airVelocity=[-Math.sin(launchYaw)*6,-5,-Math.cos(launchYaw)*6];p.airPitch=-1.34;p.airRoll=0;p.diveBlend=0;p.gliderActive=false;this.event({type:'jump',by:p.id,state:'neutral'});}
+   }else if(p.air==='freefall'||p.air==='deploying'||p.air==='glider'||p.air==='cutting'){
     anyDropped=true;p.yaw=dampAngle(p.yaw||0,i.yaw,p.air==='glider'?3.7:p.air==='deploying'?4.5:6.5,dt);const velocity=Array.isArray(p.airVelocity)&&p.airVelocity.length===3?p.airVelocity:[0,p.vy||-5,0],inputLength=Math.hypot(i.x,i.z),inputScale=1/Math.max(1,inputLength),worldX=(Math.cos(i.yaw)*i.x-Math.sin(i.yaw)*i.z)*inputScale,worldZ=(-Math.sin(i.yaw)*i.x-Math.cos(i.yaw)*i.z)*inputScale;
-    const floor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world);p.clearance=Math.max(0,p.p[1]-floor);
+    const floor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world,this.groundGrid);p.clearance=Math.max(0,p.p[1]-floor);
+    if((p.air==='deploying'||p.air==='glider')&&edgeJump){
+     if(p.clearance>autoDeployClearance(velocity[1])+DROP_TUNING.cutBuffer){p.cutStartDeploy=p.air==='glider'?1:clamp(p.deploy||0,0,1);p.cutProgress=0;p.air='cutting';p.dropState='cutting';this.event({type:'glider_cut',by:p.id});}
+     else this.event({type:'glider_cut_blocked',by:p.id});
+    }
     if(p.air==='freefall'){
      const targetDive=desiredDiveBlend(i);p.diveBlend=damp(p.diveBlend||0,targetDive,targetDive>(p.diveBlend||0)?5.2:3.4,dt);p.dropState=p.diveBlend>.52?'dive':'neutral';
      const horizontalSpeed=mix(DROP_TUNING.neutralSpeed,DROP_TUNING.diveSpeed,p.diveBlend),response=mix(6.2,3.4,p.diveBlend),fallbackForward=p.diveBlend>.3&&!inputLength?1:0,dirX=inputLength?worldX:-Math.sin(i.yaw)*fallbackForward,dirZ=inputLength?worldZ:-Math.cos(i.yaw)*fallbackForward;
@@ -68,13 +79,23 @@ export class Match{
     }else if(p.air==='glider'){
      p.dropState='glide';p.gliderActive=true;p.diveBlend=damp(p.diveBlend||0,0,4,dt);const glideZ=Math.abs(i.z)>.05?i.z:.24,len=Math.max(1,Math.hypot(i.x,glideZ)),gx=(Math.cos(i.yaw)*i.x-Math.sin(i.yaw)*glideZ)/len,gz=(-Math.sin(i.yaw)*i.x-Math.cos(i.yaw)*glideZ)/len,targetSpeed=DROP_TUNING.glideSpeed*(i.sprint?1.08:1);
      velocity[0]=damp(velocity[0],gx*targetSpeed,4.1,dt);velocity[2]=damp(velocity[2],gz*targetSpeed,4.1,dt);velocity[1]=damp(velocity[1],-DROP_TUNING.glideFall,6.4,dt);p.airPitch=damp(p.airPitch||0,.04+Math.max(0,i.z)*.06,5.2,dt);p.airRoll=damp(p.airRoll||0,-i.x*.34,4.8,dt);
+    }else if(p.air==='cutting'){
+     p.gliderActive=true;p.cutProgress=clamp((p.cutProgress||0)+dt/DROP_TUNING.cutSeconds,0,1);const blend=p.cutProgress*p.cutProgress*(3-2*p.cutProgress),targetDive=desiredDiveBlend(i);p.diveBlend=damp(p.diveBlend||0,targetDive,targetDive>(p.diveBlend||0)?5.2:3.4,dt);p.dropState='cutting';
+     const horizontalSpeed=mix(DROP_TUNING.neutralSpeed,DROP_TUNING.diveSpeed,p.diveBlend),fallbackForward=p.diveBlend>.3&&!inputLength?1:0,dirX=inputLength?worldX:-Math.sin(i.yaw)*fallbackForward,dirZ=inputLength?worldZ:-Math.cos(i.yaw)*fallbackForward;
+     velocity[0]=damp(velocity[0],dirX*horizontalSpeed,mix(6.2,3.4,p.diveBlend),dt);velocity[2]=damp(velocity[2],dirZ*horizontalSpeed,mix(6.2,3.4,p.diveBlend),dt);velocity[1]=damp(velocity[1],-mix(DROP_TUNING.glideFall,mix(DROP_TUNING.neutralFall,DROP_TUNING.diveFall,p.diveBlend),blend),4.2,dt);
+     p.deploy=(p.cutStartDeploy||1)*(1-blend);p.airPitch=damp(p.airPitch||.04,mix(.04,mix(-1.34,-2.34,p.diveBlend),blend),4.7,dt);p.airRoll=damp(p.airRoll||0,-i.x*.18,4.5,dt);
+     if(p.cutProgress>=1){p.air='freefall';p.dropState=p.diveBlend>.52?'dive':'neutral';p.deploy=0;p.gliderActive=false;p.cutProgress=0;p.cutStartDeploy=0;this.event({type:'dive_start',by:p.id,state:p.dropState});}
     }
     p.airVelocity=velocity;p.vy=velocity[1];p.airSpeed=Math.hypot(...velocity);p.p[0]=clamp(p.p[0]+velocity[0]*dt,-ISLAND_LIMIT,ISLAND_LIMIT);p.p[2]=clamp(p.p[2]+velocity[2]*dt,-ISLAND_LIMIT,ISLAND_LIMIT);p.p[1]+=velocity[1]*dt;
-    const landingFloor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world);if(p.p[1]<=landingFloor){p.p[1]=landingFloor;p.vy=0;p.airVelocity=[0,0,0];p.airSpeed=0;p.clearance=0;p.air='landed';p.dropState='landed';p.gliderActive=false;p.airPitch=0;p.airRoll=0;this.event({type:'land',by:p.id});}
+    const landingFloor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world,this.groundGrid);if(p.p[1]<=landingFloor){p.p[1]=landingFloor;p.vy=0;p.airVelocity=[0,0,0];p.airSpeed=0;p.clearance=0;p.air='landed';p.dropState='landed';p.gliderActive=false;p.airPitch=0;p.airRoll=0;this.event({type:'land',by:p.id});}
    }
   }
   if(anyDropped&&this.phase==='bus')this.phase='drop';
-  if(this.players.filter(p=>p.hp>0).every(p=>p.air==='landed')){this.phase='countdown';this.timer=2.5;this.bus.active=false;this.event({type:'all_landed'});}
+  const alive=this.players.filter(p=>p.hp>0);
+  if(alive.some(p=>p.air==='landed')){
+   if(this.phase!=='playing'){this.phase='playing';this.elapsed=0;this.event({type:'first_landing'});}
+   if(alive.every(p=>p.air==='landed'))this.bus.active=false;
+  }
  }
  checkRoundEnd(){
   if(!['playing','countdown','bus','drop'].includes(this.phase))return false;
@@ -157,14 +178,12 @@ export class Match{
    if(projectile.expired){this.event({type:'projectile-expire',projectileId:projectile.id,by:projectile.owner});this.projectiles[index]=this.projectiles.at(-1);this.projectiles.pop();}
   }
  }
- tick(dt){
-  dt=clamp(dt,0,.05);if(this.phase==='done'||this.phase==='paused'||this.phase==='waiting')return;
-  if(this.phase==='bus'||this.phase==='drop'){this.updateDrop(dt);return;}
-  if(this.phase==='countdown'||this.phase==='roundover'){this.timer-=dt;if(this.timer<=0){if(this.phase==='countdown')this.phase='playing';else this.startRound(false);}return;}
-  this.elapsed+=dt;const walls=this.world.obstacles.concat(this.structures.filter(s=>s.type===2).map(bounds));
+ tickGroundedPlayers(dt,advanceInput=true){
+  if(!this.players.some(p=>p.hp>0&&p.air==='landed'))return;
+  const walls=this.world.obstacles.concat(this.structures.filter(s=>s.type===2).map(bounds));
   for(const p of this.players){
-   if(p.hp<=0)continue;
-   p.lastInput+=dt;const i=p.lastInput>INPUT_STALE_SECONDS?sanitize():p.input,edgeFire=i.fire&&!p.fireLatch,edgeReload=i.reload&&!p.reloadLatch;
+   if(p.hp<=0||p.air!=='landed')continue;
+   if(advanceInput)p.lastInput+=dt;const i=p.lastInput>INPUT_STALE_SECONDS?sanitize():p.input,edgeFire=i.fire&&!p.fireLatch,edgeReload=i.reload&&!p.reloadLatch;
    p.fireLatch=i.fire;p.reloadLatch=i.reload;p.cool=Math.max(-.05,p.cool-dt);p.equip=Math.max(0,p.equip-dt);p.sustained=Math.max(0,p.sustained-dt*3.4);
    if(i.slot!==p.slot&&(isWeaponSlot(i.slot)||isBuildSlot(i.slot))){
     p.slot=i.slot;if(isWeaponSlot(i.slot))p.weapon=weaponIdForSlot(i.slot);p.building=isBuildSlot(i.slot);p.reload=0;p.reloadWeapon=null;p.equip=isWeaponSlot(i.slot)?weaponForSlot(i.slot).equipDuration:.22;if(isWeaponSlot(i.slot))p.cool=Math.max(p.cool,p.equip*.45);this.event({type:'switch',by:p.id,slot:p.slot,weapon:p.weapon,building:p.building});
@@ -173,16 +192,36 @@ export class Match{
    if(edgeReload)this.reloadWeapon(p);p.yaw=i.yaw;p.aim=Boolean(i.aim&&isWeaponSlot(p.slot)&&!p.reload);
    const inputLength=Math.hypot(i.x,i.z),speed=(i.sprint?9:6)*(p.aim?.58:1),len=Math.max(1,inputLength),dx=(Math.cos(i.yaw)*i.x-Math.sin(i.yaw)*i.z)/len*speed*dt,dz=(-Math.sin(i.yaw)*i.x-Math.cos(i.yaw)*i.z)/len*speed*dt;
    const blocked=q=>walls.some(b=>overlap({min:[q[0]-.36,q[1]+.12,q[2]-.36],max:[q[0]+.36,q[1]+2.3,q[2]+.36]},b));let q=[p.p[0]+dx,p.p[1],p.p[2]];if(!blocked(q))p.p[0]=clamp(q[0],-ISLAND_LIMIT,ISLAND_LIMIT);q=[p.p[0],p.p[1],p.p[2]+dz];if(!blocked(q))p.p[2]=clamp(q[2],-ISLAND_LIMIT,ISLAND_LIMIT);
-   const floor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world);if(i.jump&&p.p[1]<=floor+.05)p.vy=8;p.vy-=22*dt;p.p[1]+=p.vy*dt;if(p.p[1]<floor){p.p[1]=floor;p.vy=0;}p.walk+=Math.hypot(dx,dz)*1.4;
+   const floor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world,this.groundGrid);if(i.jump&&p.p[1]<=floor+.05)p.vy=8;p.vy-=22*dt;p.p[1]+=p.vy*dt;if(p.p[1]<floor){p.p[1]=floor;p.vy=0;}p.walk+=Math.hypot(dx,dz)*1.4;
    if(i.fire&&p.cool<=0&&(isBuildSlot(p.slot)||p.equip<=0)){
     if(isBuildSlot(p.slot)){p.cool=.22;const b=placement(p,{...i,slot:p.slot},this.world);if((this.mode==='build'||p.material>=10)&&validBuild(b,this.structures,this.players,this.world)){this.structures.push(b);if(this.mode!=='build')p.material-=10;this.event({type:'build',by:p.id,structure:b});}}
     else{const profile=weaponForSlot(p.slot);if(!p.reload&&(profile.automatic||edgeFire))this.fireWeapon(p,i,Math.min(1,inputLength));}
    }
    if(i.firePulse){p.input.fire=false;p.input.firePulse=false;}
    if(isWeaponSlot(p.slot))p.weapon=weaponIdForSlot(p.slot);p.building=isBuildSlot(p.slot);p.ammo=currentAmmo(p.weapons,p.slot);
-   if(this.mode==='town'){const radius=Math.max(18,255-this.elapsed*.58);if(Math.hypot(p.p[0],p.p[2])>radius)this.hit(p,7*dt);for(const item of [...this.pickups]){if(Math.hypot(item.x-p.p[0],item.z-p.p[2])<2){if(item.type==='shield'&&p.shield<100)p.shield=Math.min(100,p.shield+40);else if(item.type==='health'&&p.hp<100)p.hp=Math.min(100,p.hp+40);else if(item.type==='wood')p.material+=50;else continue;this.pickups=this.pickups.filter(v=>v!==item);}}}
   }
-  this.tickProjectiles(dt);for(const p of this.players)if(p.hp<=0&&!p.eliminated){p.eliminated=true;this.event({type:'elimination',by:null,hit:p.id,reason:'storm'});}this.checkRoundEnd();
+ }
+ finishCombatTick(dt){
+  this.tickProjectiles(dt);
+  if(this.mode==='town'){
+   const radius=Math.max(18,255-this.elapsed*.58);
+   for(const p of this.players){
+    if(p.hp<=0)continue;if(Math.hypot(p.p[0],p.p[2])>radius)this.hit(p,7*dt);if(p.air!=='landed')continue;
+    for(let index=this.pickups.length-1;index>=0;index--){const item=this.pickups[index];if(Math.hypot(item.x-p.p[0],item.z-p.p[2])>=2)continue;
+     if(item.type==='shield'&&p.shield<100)p.shield=Math.min(100,p.shield+40);else if(item.type==='health'&&p.hp<100)p.hp=Math.min(100,p.hp+40);else if(item.type==='wood')p.material+=50;else continue;this.pickups.splice(index,1);
+    }
+   }
+  }
+  for(const p of this.players)if(p.hp<=0&&!p.eliminated){p.eliminated=true;this.event({type:'elimination',by:null,hit:p.id,reason:'storm'});}this.checkRoundEnd();
+ }
+ tick(dt){
+  dt=clamp(dt,0,.05);if(this.phase==='done'||this.phase==='paused'||this.phase==='waiting')return;
+  const aerial=this.players.some(p=>p.hp>0&&p.air!=='landed');
+  if(this.phase==='bus'||this.phase==='drop'||(this.phase==='playing'&&aerial)){
+   this.updateDrop(dt);if(this.phase==='playing'){this.elapsed+=dt;this.tickGroundedPlayers(dt,false);this.finishCombatTick(dt);}return;
+  }
+  if(this.phase==='countdown'||this.phase==='roundover'){this.timer-=dt;if(this.timer<=0){if(this.phase==='countdown')this.phase='playing';else this.startRound(false);}return;}
+  this.elapsed+=dt;this.tickGroundedPlayers(dt);this.finishCombatTick(dt);
  }
  snapshot(){return {phase:this.phase,timer:this.timer,elapsed:this.elapsed,round:this.round,mode:this.mode,targetScore:this.targetScore,scores:this.scores,winner:this.winner,bus:this.bus,players:this.players.map(({input,lastInput,jumpLatch,...p})=>p),structures:this.structures,pickups:this.pickups,projectiles:this.projectiles.map(({id,owner,position,velocity,spawnTick})=>({id,owner,position:position.slice(),velocity:velocity.slice(),spawnTick})),events:this.events};}
 }

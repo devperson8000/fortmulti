@@ -31,7 +31,7 @@ export function stepCameraPresentation(prior,sample={},dt=.016){
  return {mode:direct,blend:direct==='firstPerson'?1:0,elapsed:0,lastAir:sample.air||'landed',roundToken:sample.roundToken};
 }
 
-export const canFireDuringPresentation=state=>state?.mode==='firstPerson'||(state?.mode==='transition'&&(state.blend||0)>=.7);
+export const canFireDuringPresentation=state=>state?.mode==='firstPerson'||(state?.mode==='transition'&&(state.blend||0)>=.45);
 
 export function createCameraBlendOutput(){
  return {eye:[0,0,0],target:[0,0,-1]};

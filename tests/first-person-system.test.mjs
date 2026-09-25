@@ -26,17 +26,17 @@ test('lobby and aerial modes never enter first person',()=>{
  assert.equal(cameraMode(sample({air:'freefall'})),'aerial');
 });
 
-test('landing blends for 450ms and gates early firing',()=>{
+test('landing blends for 450ms and enables firing as the first-person hands arrive',()=>{
  let state=createCameraPresentation();
  state=stepCameraPresentation(state,sample({air:'glider'}),.016);
- state=stepCameraPresentation(state,sample(),.10);
+ state=stepCameraPresentation(state,sample(),.075);
  assert.equal(state.mode,'transition');
- assert.ok(state.blend>0&&state.blend<.7);
+ assert.ok(state.blend>0&&state.blend<.45);
  assert.equal(canFireDuringPresentation(state),false);
- state=stepCameraPresentation(state,sample(),.24);
- assert.ok(state.blend>=.7);
+ state=stepCameraPresentation(state,sample(),.15);
+ assert.ok(state.blend>=.45);
  assert.equal(canFireDuringPresentation(state),true);
- state=stepCameraPresentation(state,sample(),.20);
+ state=stepCameraPresentation(state,sample(),.30);
  assert.equal(state.mode,'firstPerson');
  assert.equal(state.blend,1);
 });
