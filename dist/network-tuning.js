@@ -63,6 +63,13 @@ export function isActiveSocket(owner,socket){
  return Boolean(owner&&!owner.closed&&owner.socket===socket);
 }
 
+export function acceptSnapshot(currentId,currentFrame,incomingId,incomingFrame,currentEpoch=0,incomingEpoch=0){
+ if(!incomingId)return false;
+ if(currentId!==incomingId)return Number.isSafeInteger(incomingEpoch)&&incomingEpoch>currentEpoch;
+ if(incomingEpoch!==currentEpoch)return false;
+ return Number.isSafeInteger(incomingFrame)&&incomingFrame>(Number.isSafeInteger(currentFrame)?currentFrame:-1);
+}
+
 export function selectViewPlayer(players=[],localId){
  const self=players.find(player=>player.id===localId);
  if(!self)return null;

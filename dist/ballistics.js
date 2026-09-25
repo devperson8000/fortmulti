@@ -13,7 +13,8 @@ export function createProjectile({id,owner,origin,direction,speed,gravity=0,rang
 }
 
 export function advanceProjectile(projectile,dt){
- const step=Math.min(.05,Math.max(0,finite(dt)));
+ const speed=Math.hypot(...projectile.velocity),remaining=Math.max(0,projectile.range-projectile.distance);
+ const step=Math.min(.05,Math.max(0,finite(dt)),Math.max(0,projectile.maxAge-projectile.age),speed>0?remaining/speed:Infinity);
  projectile.previous[0]=projectile.position[0];
  projectile.previous[1]=projectile.position[1];
  projectile.previous[2]=projectile.position[2];
@@ -29,7 +30,7 @@ export function advanceProjectile(projectile,dt){
  );
  projectile.distance+=moved;
  projectile.age+=step;
- projectile.expired=projectile.distance>=projectile.range||projectile.age>=projectile.maxAge;
+ projectile.expired=projectile.distance>=projectile.range-1e-8||projectile.age>=projectile.maxAge-1e-8;
  return projectile;
 }
 
@@ -37,7 +38,8 @@ export function segmentSphereTime(from,to,center,radius){
  const dx=to[0]-from[0],dy=to[1]-from[1],dz=to[2]-from[2];
  const fx=from[0]-center[0],fy=from[1]-center[1],fz=from[2]-center[2];
  const a=dx*dx+dy*dy+dz*dz,c=fx*fx+fy*fy+fz*fz-radius*radius;
- if(a<1e-12)return c<=0?0:null;
+ if(c<=0)return 0;
+ if(a<1e-12)return null;
  const b=2*(fx*dx+fy*dy+fz*dz),discriminant=b*b-4*a*c;
  if(discriminant<0)return null;
  const root=Math.sqrt(discriminant),near=(-b-root)/(2*a),far=(-b+root)/(2*a);

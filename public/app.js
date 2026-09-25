@@ -2,10 +2,10 @@ import './engine.js';
 import {Connection,Voice,SocialDirectory,uid} from './network.js';
 import {Match,placement,validBuild} from './simulation.js';
 import {orderPartyProfiles} from './lobby-state.js';
-import {networkCadence,accumulateInput} from './network-tuning.js';
+import {networkCadence,accumulateInput,acceptSnapshot} from './network-tuning.js';
 
 const $=id=>document.getElementById(id),game=window.Game;
-let conn=null,peers=new Map(),host=false,ready=false,match=null,snapshot=null,matchId='',seenEvent=0,lastHello=0,lastPing=0,pingCursor=0,lastSnap=0,lastInput=0,pendingInput=null,busy=false,voiceWanted=false,muted=false,showMenu=false,enteredLocal=false,entered=new Set();
+let conn=null,peers=new Map(),host=false,ready=false,match=null,snapshot=null,matchId='',seenEvent=0,lastHello=0,lastPing=0,pingCursor=0,lastSnap=0,lastInput=0,pendingInput=null,busy=false,voiceWanted=false,muted=false,showMenu=false,snapshotFrame=-1,matchEpoch=0;
 let social=null,onlinePlayers=[],incomingInvites=[],socialBusy=false,socialTimer=null,socialError='',lastStatusAt=0,latencies=new Map();
 
 const readStore=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null;}};
@@ -95,7 +95,6 @@ function closeOnline(){const panel=$('social-panel');panel.classList.remove('ope
 function toggleProfile(force){const open=force??!document.body.classList.contains('profile-open');document.body.classList.toggle('profile-open',open);$('profile-toggle').classList.toggle('active',open);}
 function hello(){conn?.send('hello',{name:profile.name,color:profile.color,ready,host:conn.host||null,mode:$('mode').value,match:matchId,voice:voiceWanted,maxPlayers:conn.maxPlayers||8});}
 function everyoneReady(){const party=partyProfiles();return party.length>=2&&party.every(p=>p.ready);}
-function beginIfEntered(){if(host&&match?.phase==='waiting'&&match.ids.length>=2&&match.ids.every(id=>entered.has(id))){match.beginSkyshipJourney();sendSnapshot();}}
 
 async function updatePresence(){if(!social)return;try{await social.presence(profile.name,profile.color,currentActivity(),conn?.code||null);}catch(e){if(Date.now()-lastStatusAt>5000)status(e.message,'error');}}
 async function pollSocial(){
@@ -133,24 +132,24 @@ async function respondInvite(inv,accept){
  finally{renderInvites();refresh();}
 }
 
-function resetMatchState(){match=null;snapshot=null;matchId='';seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;enteredLocal=false;entered=new Set();$('enter-match').hidden=true;$('match-actions').hidden=true;$('round-banner').textContent='';window.Duel.lobby=true;document.body.classList.remove('dropping');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear();document.exitPointerLock?.();}
+function resetMatchState(){match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';window.Duel.lobby=true;document.body.classList.remove('dropping');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear();document.exitPointerLock?.();}
 function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
-function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);matchId=uid();seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;enteredLocal=false;entered=new Set();sendSnapshot();updatePresence();status('Match prepared · party aboard the Cloudliner.','success');}
-function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;const data={id:matchId,state};conn.send('snapshot',data);apply(data);}
+function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);match.beginSkyshipJourney();matchId=uid();matchEpoch=Math.max(Date.now(),matchEpoch+1);snapshotFrame=-1;seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;sendSnapshot();updatePresence();status('Transport departing · stand by for the rear hatch.','success');}
+function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;const data={id:matchId,epoch:matchEpoch,frame:snapshotFrame+1,state};conn.send('snapshot',data);apply(data);}
 function roundBanner(s){
- const me=s.players.find(p=>p.id===conn.id);if(s.phase==='waiting')return enteredLocal?'WAITING FOR THE PARTY':'BOARD THE CLOUDLINER WHEN READY';
+ const me=s.players.find(p=>p.id===conn.id);
  if(s.phase==='ship'||s.phase==='flight'||(s.phase==='playing'&&me?.air!=='landed')){
   if(me?.air==='ship'){
    const stage=s.sequence?.stage||me.sequence||'seated',local=me.shipLocal||[0,0,0],atHatch=Math.abs(local[0])<=1.55&&local[2]>=4.6;
-   if(stage==='seated')return 'SEATED · THE CLOUDLINER IS LIFTING';
-   if(stage==='rising')return 'STANDING UP · WATCH THE REAR HATCH';
-   if(stage==='hatch-opening')return 'REAR HATCH LOWERING · CONTROL UNLOCKS WHEN IT SETTLES';
-   if(stage==='arcade-launch')return 'CLOUDLINER ARCADE LAUNCH · GET READY';
-   return `${atHatch?'REAR HATCH OPEN · SPACE TO GLIDE':'REAR HATCH OPEN · MOVE TO THE REAR AISLE'} · ${Math.ceil(s.timer||0)}s`;
+   if(stage==='seated')return 'TRANSPORT IN FLIGHT · HOLD ON';
+   if(stage==='rising')return 'STAND UP · WATCH THE REAR RAMP';
+   if(stage==='hatch-opening')return 'REAR RAMP LOWERING · STAND BY';
+   if(stage==='arcade-launch')return 'LEAVING THE TRANSPORT';
+   return `${atHatch?'AT THE RAMP · SPACE TO JUMP':'RAMP OPEN · MOVE DOWN THE AISLE'} · ${Math.ceil(s.timer||0)}s`;
   }
-  if(me?.air==='launchTransit')return 'ARCADE GLIDE LAUNCH';
-  if(me?.air==='skyDrift')return 'SKY GLIDE · SPACE TO OPEN GLIDER';
+  if(me?.air==='launchTransit')return 'JUMPING · STEADY YOUR VIEW';
+  if(me?.air==='skyDrift')return 'FREEFALL · SPACE TO OPEN GLIDER';
   if(me?.air==='gliderOpening')return `GLIDER OPENING · ${Math.round((me.deploy||0)*100)}%`;
   if(me?.air==='gliderFolding')return `GLIDER FOLDING · ${Math.round((me.deploy||0)*100)}%`;
   if(me?.air==='gliding')return (me.clearance||0)>57?'GLIDE · SPACE TO FOLD':'GLIDE · '+Math.max(0,Math.round(me.clearance||0))+' M · GLIDER LOCKED';
@@ -163,14 +162,14 @@ function roundBanner(s){
  if(me?.hp<=0)return 'ELIMINATED · SPECTATING';return '';
 }
 function apply(data){
- if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn)return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('dropping',s.phase==='ship'||s.phase==='flight'||localPlayer.air!=='landed');$('lobby').hidden=true;
+ if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn||!acceptSnapshot(matchId,snapshotFrame,data.id,data.frame,matchEpoch,data.epoch))return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;matchEpoch=data.epoch;snapshotFrame=data.frame;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('dropping',s.phase==='ship'||s.phase==='flight'||localPlayer.air!=='landed');$('lobby').hidden=true;
  if(fresh||window.Duel.round!==s.round){const me=s.players.find(p=>p.id===conn.id);game.look(me?.yaw||0);seenEvent=0;window.Duel.round=s.round;showMenu=false;$('match-actions').hidden=true;updatePresence();}
- $('enter-match').hidden=s.phase!=='waiting'||enteredLocal;$('round-banner').textContent=roundBanner(s);for(const e of s.events||[])if(e.id>seenEvent){game.effect(e,conn.id);seenEvent=e.id;}
+ $('round-banner').textContent=roundBanner(s);for(const e of s.events||[])if(e.id>seenEvent){game.effect(e,conn.id);seenEvent=e.id;}
  if(s.phase==='done'){showMenu=true;$('match-actions').hidden=false;$('resume').hidden=true;$('rematch').hidden=false;$('back-lobby').hidden=false;document.exitPointerLock?.();}else if(!showMenu)$('match-actions').hidden=true;refresh();
 }
 function removePeer(id,reason='left the party'){
- const p=peers.get(id);if(!p)return;peers.delete(id);latencies.delete(id);voice.remove(id);entered.delete(id);
- if(host&&match?.ids.includes(id)){match.disconnect(id);if(participantIds().length<2){resetToLobby(true);status('Not enough players remain. Returned to the party lobby.');}else if(match.phase==='waiting'){beginIfEntered();sendSnapshot();}}
+ const p=peers.get(id);if(!p)return;peers.delete(id);latencies.delete(id);voice.remove(id);
+ if(host&&match?.ids.includes(id)){match.disconnect(id);if(participantIds().length<2){resetToLobby(true);status('Not enough players remain. Returned to the party lobby.');}else sendSnapshot();}
  say('Party',`${p.name} ${reason}.`,true);refresh();
 }
 function receive(m){
@@ -187,7 +186,6 @@ function receive(m){
  const peer=peers.get(m.from);if(peer)peer.lastSeen=Date.now();
  if(m.type==='snapshot'){if(m.from===conn.host&&!host)apply(d);return;}
  if(m.type==='input'&&host&&match&&d.id===matchId&&match.ids.includes(m.from)){match.input(m.from,d.input);return;}
- if(m.type==='entered'&&host&&match&&d.id===matchId&&match.ids.includes(m.from)){entered.add(m.from);beginIfEntered();return;}
  if(m.type==='chat'&&peer&&typeof d.text==='string'){say(peer.name,d.text.slice(0,200));return;}
  if(m.type==='leave'){if(m.from===conn.host&&!host){leave('The party leader left, so the party was closed.');return;}removePeer(m.from);return;}
  if(m.type==='lobby'&&m.from===conn.host&&!host){resetToLobby(false);return;}
@@ -213,7 +211,6 @@ $('name').onchange=$('name').onblur=()=>{profile.name=cleanName($('name').value)
 $('outfit').onchange=()=>{profile.color=cleanColor($('outfit').value);writeStore('duel-profile',profile);ready=false;hello();refresh();updatePresence();};
 $('mode').onchange=()=>{if(!host&&conn)return;ready=false;for(const p of peers.values())p.ready=false;if(conn)conn.send('mode',{mode:$('mode').value});hello();refresh();status('Match mode changed · everyone needs to ready up again.');};
 $('copy').onclick=async()=>{if(!conn)return;try{await navigator.clipboard.writeText(conn.code);status('Fallback party code copied.');}catch{status(`Fallback code: ${conn.code}`);}};
-$('enter-match').onclick=()=>{if(!snapshot||snapshot.phase!=='waiting')return;enteredLocal=true;$('enter-match').hidden=true;game.startAudio();game.capture();if(host){entered.add(conn.id);beginIfEntered();}else conn.send('entered',{id:matchId});};
 $('resume').onclick=()=>{showMenu=false;$('match-actions').hidden=true;game.capture();};
 $('rematch').onclick=$('back-lobby').onclick=()=>{if(host)resetToLobby(true);else conn?.send('lobby-request');};
 $('chat-form').onsubmit=e=>{e.preventDefault();const text=$('message').value.trim();if(!text||!conn||peers.size<1)return;conn.send('chat',{text});say(profile.name,text);$('message').value='';};
@@ -230,7 +227,6 @@ $('local').onchange=()=>{if(conn){$('local').checked=!$('local').checked;return;
 const ping=document.createElement('span');ping.id='net-ping';ping.textContent='OFFLINE';document.querySelector('header').append(ping);
 if(location.hash){$('code').value=location.hash.slice(1).toUpperCase();history.replaceState(null,'',location.pathname+location.search);}
 if(new URLSearchParams(location.search).get('local')==='1')$('local').checked=true;
-document.addEventListener('pointerlockchange',()=>{if(snapshot?.phase==='waiting'&&enteredLocal&&!document.pointerLockElement){enteredLocal=false;$('enter-match').hidden=false;}});
 window.addEventListener('beforeunload',()=>{voice.stop();conn?.close();social?.close();});
 
 let previous=performance.now();

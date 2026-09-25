@@ -36,7 +36,7 @@ export class Match{
  }
  skyshipAt(t){const q=clamp(t/SKYSHIP_SECONDS,0,1),ease=q*q*(3-2*q),x=SKYSHIP_START[0]+(SKYSHIP_END[0]-SKYSHIP_START[0])*ease,z=SKYSHIP_START[1]+(SKYSHIP_END[1]-SKYSHIP_START[1])*ease,y=SKYSHIP_ALTITUDE+Math.sin(q*Math.PI)*5+Math.sin(t*.34)*.25,yaw=Math.atan2(-(SKYSHIP_END[0]-SKYSHIP_START[0]),-(SKYSHIP_END[1]-SKYSHIP_START[1]));return {x,y,z,yaw,progress:q,active:q<1,bank:Math.sin(t*.23)*.018,bob:Math.sin(t*.34)*.25,speed:Math.hypot(SKYSHIP_END[0]-SKYSHIP_START[0],SKYSHIP_END[1]-SKYSHIP_START[1])*(6*q*(1-q))/SKYSHIP_SECONDS};}
  shipWorld(local){const c=Math.cos(this.skyship.yaw),s=Math.sin(this.skyship.yaw);return [this.skyship.x+local[0]*c+local[2]*s,this.skyship.y+local[1],this.skyship.z-local[0]*s+local[2]*c];}
- beginArcadeLaunch(p,forced=false){p.air='launchTransit';p.dropState='arcade-launch';p.launchProgress=0;p.launchStart=p.p.slice();p.wingsActive=false;p.deploy=0;p.airVelocity=[0,0,0];this.event({type:forced?'cabin_autolaunch':'cabin_exit',by:p.id,forced});}
+ beginArcadeLaunch(p,forced=false){p.air='launchTransit';p.dropState='arcade-launch';p.launchProgress=0;p.launchStart=p.p.slice();p.launchTarget=this.shipWorld([(p.shipLocal?.[0]||0)*.7,.3,9.1]);p.wingsActive=false;p.deploy=0;p.airVelocity=[0,0,0];this.event({type:forced?'cabin_autolaunch':'cabin_exit',by:p.id,forced});}
  startRound(waiting=false){
   if(this.disconnected.size){const scoreById=new Map(this.ids.map((id,i)=>[id,this.scores[i]||0]));this.ids=this.ids.filter(id=>!this.disconnected.has(id));this.scores=this.ids.map(id=>scoreById.get(id)||0);this.disconnected.clear();}
   this.round++;this.phase=waiting?'waiting':'ship';this.timer=waiting?0:SKYSHIP_SECONDS;this.elapsed=0;this.dropElapsed=0;this.sequence=skyshipSequenceAt(0);this.structures=[];this.projectiles.length=0;this.winner=undefined;
@@ -68,7 +68,7 @@ export class Match{
     continue;
    }
    if(p.air==='launchTransit'){
-    anyLaunched=true;p.launchProgress=clamp((p.launchProgress||0)+dt/SKYSHIP_TIMELINE.launchSeconds,0,1);const q=p.launchProgress,ease=q*q*(3-2*q),target=this.shipWorld([(p.shipLocal?.[0]||0)*.7,.3,7.8]),start=p.launchStart||p.p;p.p=[start[0]+(target[0]-start[0])*ease,start[1]+(target[1]-start[1])*ease+Math.sin(q*Math.PI)*2.6,start[2]+(target[2]-start[2])*ease];p.airVelocity=[(target[0]-start[0])/SKYSHIP_TIMELINE.launchSeconds,0,(target[2]-start[2])/SKYSHIP_TIMELINE.launchSeconds];
+    anyLaunched=true;p.launchProgress=clamp((p.launchProgress||0)+dt/SKYSHIP_TIMELINE.launchSeconds,0,1);const q=p.launchProgress,ease=q*q*(3-2*q),target=p.launchTarget||this.shipWorld([(p.shipLocal?.[0]||0)*.7,.3,9.1]),start=p.launchStart||p.p;p.p=[start[0]+(target[0]-start[0])*ease,start[1]+(target[1]-start[1])*ease+Math.sin(q*Math.PI)*1.1,start[2]+(target[2]-start[2])*ease];p.airVelocity=[(target[0]-start[0])/SKYSHIP_TIMELINE.launchSeconds,0,(target[2]-start[2])/SKYSHIP_TIMELINE.launchSeconds];
     if(q>=1){p.air='skyDrift';p.dropState='sky-glide';p.p=target;p.airVelocity=[0,-ARCADE_FLIGHT.launchFall,0];p.launchProgress=1;this.event({type:'glide_arrival',by:p.id});}
     continue;
    }
