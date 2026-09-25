@@ -7,6 +7,8 @@ import {createEffectPool} from './effect-pool.js';
 import {acceptEventId} from './multiplayer-runtime.js';
 import {createAutoQuality,sampleAutoQuality,qualityPreset} from './quality-system.js';
 import {busOrbitCamera} from './drop-camera.js';
+import {AVATAR_MODEL_PARTS,AVATAR_GEAR} from './avatar-model.js';
+import {WEAPON_MODELS} from './weapon-model.js';
 
 'use strict';
 (()=>{
@@ -25,15 +27,30 @@ function shader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);g
 const program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vertex));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error('Renderer could not start');gl.useProgram(program);
 const ap=gl.getAttribLocation(program,'aPosition'),ac=gl.getAttribLocation(program,'aColor'),um=gl.getUniformLocation(program,'uMatrix'),ue=gl.getUniformLocation(program,'uEye');gl.enableVertexAttribArray(ap);gl.enableVertexAttribArray(ac);gl.enable(gl.DEPTH_TEST);gl.clearColor(.48,.77,.88,1);
 const light=norm([-.6,1,.4]);let geo=[];
-function tri(a,b,c,col){const n=norm(cross(sub(b,a),sub(c,a))),shade=.62+.38*Math.max(0,dot(n,light));for(const p of[a,b,c])geo.push(...p,col[0]*shade,col[1]*shade,col[2]*shade);}
+function triCoordinates(ax,ay,az,bx,by,bz,cx,cy,cz,col){const abx=bx-ax,aby=by-ay,abz=bz-az,acx=cx-ax,acy=cy-ay,acz=cz-az,nx=aby*acz-abz*acy,ny=abz*acx-abx*acz,nz=abx*acy-aby*acx,length=Math.hypot(nx,ny,nz)||1,shade=.62+.38*Math.max(0,(nx*light[0]+ny*light[1]+nz*light[2])/length),r=col[0]*shade,g=col[1]*shade,b=col[2]*shade;geo.push(ax,ay,az,r,g,b,bx,by,bz,r,g,b,cx,cy,cz,r,g,b);}
+function tri(a,b,c,col){triCoordinates(a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2],col);}
 function quad(a,b,c,d,col){tri(a,b,c,col);tri(a,c,d,col);}
 function transform(p,o,yaw=0,rx=0){let [x,y,z]=p;[y,z]=[y*Math.cos(rx)-z*Math.sin(rx),y*Math.sin(rx)+z*Math.cos(rx)];return [o[0]+x*Math.cos(yaw)+z*Math.sin(yaw),o[1]+y,o[2]-x*Math.sin(yaw)+z*Math.cos(yaw)];}
 function poseTransform(p,o,yaw=0,pitch=0,roll=0,pivot=[0,1.25,0]){let x=p[0]-pivot[0],y=p[1]-pivot[1],z=p[2]-pivot[2];[x,y]=[x*Math.cos(roll)-y*Math.sin(roll),x*Math.sin(roll)+y*Math.cos(roll)];[y,z]=[y*Math.cos(pitch)-z*Math.sin(pitch),y*Math.sin(pitch)+z*Math.cos(pitch)];return transform([x+pivot[0],y+pivot[1],z+pivot[2]],o,yaw);}
-function box(o,s,c,yaw=0,rx=0){const p=[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]].map(p=>transform(p.map((v,i)=>v*s[i]/2),o,yaw,rx));for(const f of[[0,3,2,1],[4,5,6,7],[1,2,6,5],[0,4,7,3],[3,7,6,2],[0,1,5,4]])quad(...f.map(i=>p[i]),c);}
+const BOX_CORNERS=[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]],BOX_FACES=[[0,3,2,1],[4,5,6,7],[1,2,6,5],[0,4,7,3],[3,7,6,2],[0,1,5,4]],boxScratch=new Float32Array(24);
+function box(o,s,c,yaw=0,rx=0){const cy=Math.cos(yaw),sy=Math.sin(yaw),cr=Math.cos(rx),sr=Math.sin(rx);for(let i=0;i<8;i++){const corner=BOX_CORNERS[i],x=corner[0]*s[0]*.5,y=corner[1]*s[1]*.5,z=corner[2]*s[2]*.5,ry=y*cr-z*sr,rz=y*sr+z*cr,k=i*3;boxScratch[k]=o[0]+x*cy+rz*sy;boxScratch[k+1]=o[1]+ry;boxScratch[k+2]=o[2]-x*sy+rz*cy;}for(const f of BOX_FACES){const a=f[0]*3,b=f[1]*3,d=f[2]*3,e=f[3]*3;triCoordinates(boxScratch[a],boxScratch[a+1],boxScratch[a+2],boxScratch[b],boxScratch[b+1],boxScratch[b+2],boxScratch[d],boxScratch[d+1],boxScratch[d+2],c);triCoordinates(boxScratch[a],boxScratch[a+1],boxScratch[a+2],boxScratch[d],boxScratch[d+1],boxScratch[d+2],boxScratch[e],boxScratch[e+1],boxScratch[e+2],c);}}
 function cone(o,r1,r2,h,c,n=16){for(let i=0;i<n;i++){let a=i/n*Math.PI*2,b=(i+1)/n*Math.PI*2,p=[o[0]+Math.cos(a)*r1,o[1],o[2]+Math.sin(a)*r1],q=[o[0]+Math.cos(b)*r1,o[1],o[2]+Math.sin(b)*r1],s=[o[0]+Math.cos(a)*r2,o[1]+h,o[2]+Math.sin(a)*r2],t=[o[0]+Math.cos(b)*r2,o[1]+h,o[2]+Math.sin(b)*r2];quad(p,s,t,q,c);tri([o[0],o[1]+h,o[2]],t,s,c);}}
 function gem(o,s,c,n=7){const top=add(o,[0,s[1],0]),bottom=add(o,[0,-s[1]*.65,0]);for(let i=0;i<n;i++){let a=i/n*Math.PI*2,b=(i+1)/n*Math.PI*2;let p=add(o,[Math.cos(a)*s[0],0,Math.sin(a)*s[2]]),q=add(o,[Math.cos(b)*s[0],0,Math.sin(b)*s[2]]);tri(top,q,p,c);tri(bottom,p,q,c);}}
-function ellipsoid(o,r,c,n=24,rings=14){const pt=(i,j)=>{const a=i/n*Math.PI*2,b=j/rings*Math.PI;return add(o,[Math.cos(a)*Math.sin(b)*r[0],Math.cos(b)*r[1],Math.sin(a)*Math.sin(b)*r[2]]);};for(let j=0;j<rings;j++)for(let i=0;i<n;i++){const a=pt(i,j),b=pt(i+1,j),d=pt(i,j+1),e=pt(i+1,j+1);if(j>0)tri(a,b,d,c);if(j<rings-1)tri(b,e,d,c);}}
-function poseOvoid(v,r,c,o,yaw=0,pitch=0,roll=0,n=28,rings=16,pivot=[0,1.25,0]){const pt=(i,j)=>{const a=i/n*Math.PI*2,b=j/rings*Math.PI,q=[v[0]+Math.cos(a)*Math.sin(b)*r[0],v[1]+Math.cos(b)*r[1],v[2]+Math.sin(a)*Math.sin(b)*r[2]];return poseTransform(q,o,yaw,pitch,roll,pivot);};for(let j=0;j<rings;j++)for(let i=0;i<n;i++){const a=pt(i,j),b=pt(i+1,j),d=pt(i,j+1),e=pt(i+1,j+1);if(j>0)tri(a,b,d,c);if(j<rings-1)tri(b,e,d,c);}}
+const sphereTemplates=new Map();
+function sphereTemplate(n,rings){
+ n=Math.max(3,Math.round(n));rings=Math.max(3,Math.round(rings));const key=`${n}/${rings}`,cached=sphereTemplates.get(key);if(cached)return cached;
+ const vertices=new Float32Array((n+1)*(rings+1)*3);let cursor=0;
+ for(let j=0;j<=rings;j++){const b=j/rings*Math.PI,sinB=Math.sin(b),cosB=Math.cos(b);for(let i=0;i<=n;i++){const a=i/n*Math.PI*2;vertices[cursor++]=Math.cos(a)*sinB;vertices[cursor++]=cosB;vertices[cursor++]=Math.sin(a)*sinB;}}
+ const indices=new Uint32Array(n*2*(rings-1)*3);cursor=0;
+ for(let j=0;j<rings;j++)for(let i=0;i<n;i++){const a=j*(n+1)+i,b=a+1,d=a+n+1,e=d+1;if(j>0){indices[cursor++]=a;indices[cursor++]=b;indices[cursor++]=d;}if(j<rings-1){indices[cursor++]=b;indices[cursor++]=e;indices[cursor++]=d;}}
+ const template={vertices,indices,transformed:new Float32Array(vertices.length)};sphereTemplates.set(key,template);return template;
+}
+function ellipsoid(o,r,c,n=24,rings=14){const template=sphereTemplate(n,rings),source=template.vertices,target=template.transformed;for(let i=0;i<source.length;i+=3){target[i]=o[0]+source[i]*r[0];target[i+1]=o[1]+source[i+1]*r[1];target[i+2]=o[2]+source[i+2]*r[2];}const indices=template.indices;for(let i=0;i<indices.length;i+=3){const a=indices[i]*3,b=indices[i+1]*3,d=indices[i+2]*3;triCoordinates(target[a],target[a+1],target[a+2],target[b],target[b+1],target[b+2],target[d],target[d+1],target[d+2],c);}}
+function poseOvoid(v,r,c,o,yaw=0,pitch=0,roll=0,n=28,rings=16,pivot=[0,1.25,0]){
+ const template=sphereTemplate(n,rings),source=template.vertices,target=template.transformed,cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch),cr=Math.cos(roll),sr=Math.sin(roll);
+ for(let i=0;i<source.length;i+=3){let x=v[0]+source[i]*r[0]-pivot[0],y=v[1]+source[i+1]*r[1]-pivot[1],z=v[2]+source[i+2]*r[2]-pivot[2],rx=x*cr-y*sr; y=x*sr+y*cr;x=rx;const py=y*cp-z*sp,pz=y*sp+z*cp;y=py;z=pz;x+=pivot[0];y+=pivot[1];z+=pivot[2];target[i]=o[0]+x*cy+z*sy;target[i+1]=o[1]+y;target[i+2]=o[2]-x*sy+z*cy;}
+ const indices=template.indices;for(let i=0;i<indices.length;i+=3){const a=indices[i]*3,b=indices[i+1]*3,d=indices[i+2]*3;triCoordinates(target[a],target[a+1],target[a+2],target[b],target[b+1],target[b+2],target[d],target[d+1],target[d+2],c);}
+}
 function shadow(x,z,r){let y=height(x,z)+.04;for(let i=0;i<20;i++){let a=i/20*6.283,b=(i+1)/20*6.283;tri([x,y,z],[x+Math.cos(b)*r,height(x+Math.cos(b)*r,z+Math.sin(b)*r)+.04,z+Math.sin(b)*r],[x+Math.cos(a)*r,height(x+Math.cos(a)*r,z+Math.sin(a)*r)+.04,z+Math.sin(a)*r],color('60913e'));}}
 function beam(a,b,width,col){const axis=sub(b,a),side=mul(norm(cross(axis,[0,1,0])),width);const up=mul(norm(cross(side,axis)),width);let p=[add(add(a,side),up),add(sub(a,side),up),sub(sub(a,side),up),sub(add(a,side),up)],q=p.map(v=>add(v,axis));for(let i=0;i<4;i++)quad(p[i],q[i],q[(i+1)%4],p[(i+1)%4],col);}
 function tube(a,b,r,col,n=16){const axis=norm(sub(b,a)),guide=Math.abs(axis[1])>.92?[1,0,0]:[0,1,0],side=mul(norm(cross(axis,guide)),r),up=mul(norm(cross(side,axis)),r);for(let i=0;i<n;i++){const t=i/n*Math.PI*2,u=(i+1)/n*Math.PI*2,p=add(a,add(mul(side,Math.cos(t)),mul(up,Math.sin(t)))),q=add(a,add(mul(side,Math.cos(u)),mul(up,Math.sin(u)))),s=add(b,add(mul(side,Math.cos(t)),mul(up,Math.sin(t)))),v=add(b,add(mul(side,Math.cos(u)),mul(up,Math.sin(u))));quad(p,s,v,q,col);tri(a,q,p,col);tri(b,s,v,col);}}
@@ -103,41 +120,59 @@ function draw(buffer,count){gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.vertexAttri
 const keys={},player={p:[-18,height(-18,62),62],vy:0,hp:100,shield:50,yaw:0};let yaw=0,pitch=-.15,eye=[-18,19,69],forward=[0,0,-1],running=false,started=false,ended=false,aim=false,firing=false,slot=1,ammo=30,wood=150,reloading=0,cooldown=0,elapsed=0,kills=0,storm=125,noticeTime=0,hitTime=0,hurt=0,walk=0,time=0;
 let bots=[],pickups=[],structures=[],dropBus=null,matchPhase='',matchRound=0,loadout=createLoadout(),reloadWeapon='ar',viewSlot=1,playerMotion=null,playerMotionId='',cameraPresentation=createCameraPresentation(),viewModelState=createViewModelState(),weaponPartState=createWeaponPartState();const visualPeers=new Map(),projectileVisuals=new Map(),projectileEventCache=new Map(),effectPool=createEffectPool(144),spawnEffect=data=>effectPool.activeCount<currentQuality.effects?effectPool.spawn(data):null,cameraBlendOutput=createCameraBlendOutput();let buildRotation=0,flash=0,recoil=0,recoilPitch=0,recoilYaw=0,damageNumber=0,equipTime=0,equipDuration=.34,adsBlend=0,cameraFov=1.07,sustained=0,mouseSwayX=0,mouseSwayY=0,viewShotImpulse=0,lastWeaponSlot=1,lastBuildSlot=5;
 const spawns=[[-20,4],[8,-24],[34,-5],[-38,1],[4,44],[48,36],[-54,-25],[15,-53]];
+const characterWeaponPartState=createWeaponPartState();
+function drawWeaponLayout(profile,parts,scale,drawBox,drawOval,drawTube,detail=1){
+ const model=WEAPON_MODELS[profile.id];if(!model)return;
+ const palette={dark:C.black,metal:C.metal,stock:C.wood,trim:C.cream,accent:color(profile.color.slice(1)),glass:C.blue,gold:C.gold};
+ for(const component of model.parts){
+  const move=component.motion;let ox=0,oy=0,oz=0,rotation=component.rotation||0;
+  if(move==='magazine'){
+   if(parts.stage!=='idle'&&!parts.magazineVisible)continue;
+   if(parts.stage!=='idle'){ox=parts.magazine[0];oy=parts.magazine[1];oz=parts.magazine[2];rotation+=parts.magazineRotation;}
+  }else if(move==='freshMagazine'){
+   if(!parts.freshMagazineVisible)continue;
+   ox=parts.freshMagazine[0];oy=parts.freshMagazine[1];oz=parts.freshMagazine[2];rotation+=parts.freshMagazineRotation;
+  }else if(move==='bolt')oz+=(parts.action||0)*.15;
+  else if(move==='action')oz+=(parts.action||0)*.12;
+  else if(move==='pump')oz+=(parts.action||0)*.2;
+  const material=palette[component.material]||C.metal,pos=[component.position[0]+ox,component.position[1]+oy,component.position[2]+oz];
+  if(component.shape==='box')drawBox(pos,component.size.map(value=>value*scale),material,rotation);
+  else if(component.shape==='oval')drawOval(pos,component.size.map(value=>value*scale),material,Math.max(10,Math.round(component.sides*detail)),Math.max(8,Math.round(component.rings*detail)));
+  else if(component.shape==='tube')drawTube([component.from[0]+ox,component.from[1]+oy,component.from[2]+oz],[component.to[0]+ox,component.to[1]+oy,component.to[2]+oz],component.size[0]*scale,material,Math.max(8,Math.round(component.sides*detail)));
+ }
+}
 function reset(){Object.assign(player,{p:[-18,height(-18,62),62],vy:0,hp:100,shield:50,yaw:0,air:'landed'});visualPeers.clear();projectileVisuals.clear();projectileEventCache.clear();effectPool.clear();playerMotion=null;playerMotionId='';cameraPresentation=createCameraPresentation();viewModelState=createViewModelState();weaponPartState=createWeaponPartState();viewShotImpulse=0;matchRound=0;yaw=0;pitch=-.15;loadout=createLoadout();ammo=30;wood=150;elapsed=0;kills=0;storm=125;ended=false;slot=1;reloading=0;cooldown=0;structures=[];buildRotation=0;flash=0;recoil=0;recoilPitch=0;recoilYaw=0;equipTime=0;adsBlend=0;cameraFov=1.07;sustained=0;bots=spawns.map(([x,z],i)=>({p:[x,height(x,z),z],hp:100,yaw:0,seed:i*2.2,cool:2+i*.3,slot:1,weapon:'ar',reload:0,equip:0,aim:false}));pickups=[[-19,49,'shield'],[-3,16,'wood'],[27,26,'health'],[-39,-3,'wood'],[8,-36,'shield'],[-27,35,'health']].map(([x,z,type])=>({x,z,type}));select(1,true);updateHUD();}
 function character(p,angle,phase,col,enemy=false,air='landed',deploy=1,pose='combat',anim={}){
  const airborne=air!=='landed',opening=air==='deploying'||air==='cutting',open=air==='glider'?1:opening?clamp(deploy,0,1):0,dive=air==='freefall'||air==='cutting'?clamp(anim.diveBlend||0,0,1):0,rigPitch=airborne?(Number.isFinite(anim.airPitch)?anim.airPitch:mix(-1.34,.04,open)):0,rigRoll=airborne?(anim.airRoll||0):0,detail=enemy?currentQuality.remoteDetail*clamp(1-(length(sub(p,eye))-40)/260,.52,1):1,segments=n=>Math.max(10,Math.round(n*detail)),rig=v=>poseTransform(v,p,angle,rigPitch,rigRoll),part=(v,s,c,rx=0)=>box(rig(v),s,c,angle,rx+rigPitch),ball=(v,r,c,n=22,q=13)=>poseOvoid(v,r,c,p,angle,rigPitch,rigRoll,segments(n),segments(q)),limb=(a,b,w,c)=>tube(rig(a),rig(b),w,c,segments(18)),roundPart=(v,r,c,n=26,q=15)=>poseOvoid(v,r,c,p,angle,rigPitch,rigRoll,segments(n),segments(q));
  const sway=Math.sin(time*3.2+phase)*.14,step=Math.sin(phase)*.22,skin=C.skin;
  const weapon=WEAPON_PROFILES[anim.weapon]||WEAPON_PROFILES.ar,reloadP=anim.reload?reloadProgress(anim.reload,weapon.slot):0,equipP=clamp((anim.equip||0)/weapon.equipDuration,0,1),aimP=anim.aim?1:0;
- const reloadWave=Math.sin(Math.PI*clamp(reloadP/.92,0,1)),breath=Math.sin(time*1.65+phase*.05)*.012,localSway=anim.local?[mouseSwayX*.0015,mouseSwayY*.0012]:[0,0];
- const gunX=mix(.28,.1,aimP)+localSway[0],gunY=1.56+breath-localSway[1]-.34*equipP+.13*reloadWave,gunZ=-.7+(anim.recoil||0)*1.25+.16*equipP,gunTilt=-.52*reloadWave+.85*equipP;
- // A layered capsule-based body avoids exposed cuboid seams while preserving a readable original outfit silhouette.
- const cloth=col.map(v=>v*.78),trim=col.map(v=>Math.min(1,v*1.16)),hair=color(enemy?'293c42':'273941');
- roundPart([0,1.5,0],[.44,.54,.3],col,36,22);roundPart([0,1.08,0],[.39,.27,.31],C.pants,30,18);roundPart([0,1.5,-.275],[.41,.46,.065],cloth,28,16);roundPart([0,1.08,-.285],[.37,.105,.045],C.black,24,13);roundPart([0,1.08,.285],[.16,.09,.05],C.gold,18,10);roundPart([0,1.91,0],[.14,.18,.14],skin,22,13);
- roundPart([0,2.2,0],[.26,.31,.25],skin,36,22);roundPart([-.268,2.2,0],[.045,.075,.055],skin,18,11);roundPart([.268,2.2,0],[.045,.075,.055],skin,18,11);roundPart([0,2.43,.025],[.27,.14,.255],hair,30,17);roundPart([-.12,2.37,-.17],[.15,.13,.12],hair,24,14);roundPart([.12,2.39,-.16],[.16,.12,.13],hair,24,14);roundPart([0,2.31,.205],[.255,.115,.08],hair,26,14);roundPart([0,2.145,-.245],[.18,.038,.026],C.black,20,10);
- if(enemy)roundPart([0,2.2,-.265],[.18,.07,.026],C.blue,20,10);else{roundPart([-.1,2.18,-.27],[.075,.044,.024],C.blue,18,10);roundPart([.1,2.18,-.27],[.075,.044,.024],C.blue,18,10);}
- roundPart([0,1.57,.31],[.45,.57,.18],cloth,30,18);roundPart([0,1.59,.47],[.34,.39,.075],col,26,15);for(const x of[-.23,.23])limb([x,1.86,-.235],[x,1.24,-.25],.032,trim);
+ const poseParts=stepWeaponParts(characterWeaponPartState,weapon,anim.reload||0),reloadWave=Math.sin(Math.PI*clamp(reloadP/.92,0,1)),breath=Math.sin(time*1.65+phase*.05)*.012,localSway=anim.local?[mouseSwayX*.0015,mouseSwayY*.0012]:[0,0];
+ const gunX=mix(.28,.1,aimP)+localSway[0],gunY=1.56+breath-localSway[1]-.34*equipP+.08*reloadWave,gunZ=-.7+(anim.recoil||0)*1.25+.16*equipP,gunTilt=poseParts.rootTilt+.75*equipP;
+ // Rounded, fitted "trail runner" kit uses the same smooth silhouette at
+ // every distance, with only its segment budget reduced for faraway players.
+ const cloth=col.map(v=>v*.78),trim=col.map(v=>Math.min(1,v*1.16)),hair=color('263b44'),avatarMaterial=name=>name==='base'?col:name==='cloth'?cloth:name==='trim'?trim:name==='pants'?C.pants:name==='skin'?skin:name==='hair'?hair:name==='dark'?C.black:name==='metal'?C.metal:name==='gold'?C.gold:name==='glass'?C.glass:name==='accent'?(enemy?C.red:C.blue):C.metal;
+ for(const piece of AVATAR_MODEL_PARTS){for(const side of piece.mirror?[-1,1]:[1]){const sign=piece.mirror?side:1,material=avatarMaterial(piece.material);if(piece.shape==='tube'){limb([piece.from[0]*sign,piece.from[1],piece.from[2]],[piece.to[0]*sign,piece.to[1],piece.to[2]],piece.size[0],material);}else{roundPart([piece.position[0]*sign,piece.position[1],piece.position[2]],piece.size,material,segments(piece.sides),segments(piece.rings));}}}
  // The legs trail and sway independently in freefall and under canopy.
- for(const side of[-1,1]){const hip=[side*.2,.95,0],neutralKnee=[side*.37,.57,.18+sway*side],diveKnee=[side*.17,.55,.08],glideKnee=[side*.28,.58,.16+sway*side],neutralAnkle=[side*.52,.18,.08-sway*side],diveAnkle=[side*.15,.16,.14],glideAnkle=[side*.37,.15,.3-sway*side],airKnee=neutralKnee.map((v,k)=>mix(v,diveKnee[k],dive)),airAnkle=neutralAnkle.map((v,k)=>mix(v,diveAnkle[k],dive)),knee=airborne?airKnee.map((v,k)=>mix(v,glideKnee[k],open)):[side*.2,.56,step*side],ankle=airborne?airAnkle.map((v,k)=>mix(v,glideAnkle[k],open)):[side*.18,.16,-.08-step*side];roundPart(hip,[.205,.21,.195],C.pants,24,14);limb(hip,knee,.19,C.pants);roundPart(knee,[.19,.205,.175],C.pants,24,14);roundPart([knee[0],knee[1],knee[2]-.145],[.165,.17,.07],cloth,22,13);limb(knee,ankle,.185,C.pants);roundPart(ankle,[.18,.16,.17],C.black,22,13);roundPart([ankle[0],ankle[1]-.06,ankle[2]-.14],[.205,.145,.34],C.black,26,15);roundPart([ankle[0],ankle[1]-.02,ankle[2]-.31],[.18,.1,.16],cloth,20,12);}
+ for(const side of[-1,1]){
+  const hip=[side*.19,.96,0],neutralKnee=[side*.34,.57,.17+sway*side],diveKnee=[side*.17,.56,.08],glideKnee=[side*.28,.58,.15+sway*side],neutralAnkle=[side*.48,.18,.08-sway*side],diveAnkle=[side*.15,.16,.14],glideAnkle=[side*.36,.16,.28-sway*side],airKnee=neutralKnee.map((v,k)=>mix(v,diveKnee[k],dive)),airAnkle=neutralAnkle.map((v,k)=>mix(v,diveAnkle[k],dive)),knee=airborne?airKnee.map((v,k)=>mix(v,glideKnee[k],open)):[side*.19,.56,step*side],ankle=airborne?airAnkle.map((v,k)=>mix(v,glideAnkle[k],open)):[side*.18,.16,-.08-step*side];
+  roundPart(hip,[.2,.22,.19],C.pants,26,16);limb(hip,knee,.177,C.pants);const thigh=hip.map((v,k)=>mix(v,knee[k],.43));roundPart([thigh[0],thigh[1],thigh[2]-.105],AVATAR_GEAR.thighPanel.size,cloth,24,14);roundPart(knee,[.18,.19,.165],C.pants,24,14);roundPart([knee[0],knee[1],knee[2]-.145],AVATAR_GEAR.kneeGuard.size,C.metal,24,14);roundPart([knee[0],knee[1],knee[2]-.208],AVATAR_GEAR.kneeGuard.inset,enemy?C.red:C.blue,20,12);limb(knee,ankle,.162,C.pants);roundPart([ankle[0],ankle[1]+.18,ankle[2]-.085],AVATAR_GEAR.shinPanel.size,cloth,22,13);roundPart(ankle,AVATAR_GEAR.boot.ankle,C.black,22,14);roundPart([ankle[0],ankle[1]-.07,ankle[2]-.13],AVATAR_GEAR.boot.toe,C.black,24,14);roundPart([ankle[0],ankle[1]-.155,ankle[2]-.13],AVATAR_GEAR.boot.sole,C.metal,22,13);roundPart([ankle[0],ankle[1]+.08,ankle[2]-.025],[.18,.045,.17],trim,18,11);
+ }
  // Arms follow the equipped item, including the magazine handoff during reload and a relaxed lobby stance.
- for(const side of[-1,1]){const shoulder=[side*.43,1.79,-.01];let elbow,hand;if(airborne){const neutralHand=[side*1.02,1.68,-.06+sway*.25],diveHand=[side*.27,1.12,.12],canopyHand=[side*.48,2.72,-.04],neutralElbow=[side*.73,1.79,-.02],diveElbow=[side*.39,1.48,.07],canopyElbow=[side*.6,2.25,-.06],fallHand=neutralHand.map((v,i)=>mix(v,diveHand[i],dive)),fallElbow=neutralElbow.map((v,i)=>mix(v,diveElbow[i],dive));hand=fallHand.map((v,i)=>mix(v,canopyHand[i],open));elbow=fallElbow.map((v,i)=>mix(v,canopyElbow[i],open));}else if(pose==='lobby'){const idle=Math.sin(time*1.25+side)*.018;elbow=[side*.49,1.45+idle,.025];hand=[side*.4,1.08+idle,.06];}else if(anim.building){elbow=[side*.48,1.62,-.27];hand=[side*.32,1.5,-.7];}else if(side<0){const reach=weapon.id==='shotgun'?-.98:weapon.id==='sniper'?-1.08:-.88,magReach=reloadP>.13&&reloadP<.74;elbow=[-.45,1.58+.12*aimP,-.3];hand=magReach?[gunX-.07,gunY-.28-Math.sin(clamp((reloadP-.13)/.61,0,1)*Math.PI)*.34,gunZ-.02]:[gunX-.18,gunY-.02,reach];}else{elbow=[.5,1.58+.1*aimP,-.23];hand=[gunX+.05,gunY-.1,gunZ+.16];}const upper=shoulder.map((v,i)=>mix(v,elbow[i],.28));roundPart(shoulder,[.185,.205,.19],col,26,15);limb(shoulder,upper,.17,col);limb(upper,elbow,.155,skin);roundPart(elbow,[.158,.17,.158],skin,24,14);limb(elbow,hand,.15,skin);roundPart(hand,[.125,.132,.11],skin,22,13);roundPart([side*.23,1.3,-.27],[.09,.15,.055],cloth,20,12);}
+ for(const side of[-1,1]){
+  const shoulder=[side*.43,1.79,-.01];let elbow,hand;
+  if(airborne){const neutralHand=[side*1.02,1.68,-.06+sway*.25],diveHand=[side*.27,1.12,.12],canopyHand=[side*.48,2.72,-.04],neutralElbow=[side*.73,1.79,-.02],diveElbow=[side*.39,1.48,.07],canopyElbow=[side*.6,2.25,-.06],fallHand=neutralHand.map((v,i)=>mix(v,diveHand[i],dive)),fallElbow=neutralElbow.map((v,i)=>mix(v,diveElbow[i],dive));hand=fallHand.map((v,i)=>mix(v,canopyHand[i],open));elbow=fallElbow.map((v,i)=>mix(v,canopyElbow[i],open));}
+  else if(pose==='lobby'){const idle=Math.sin(time*1.25+side)*.018;elbow=[side*.49,1.45+idle,.025];hand=[side*.4,1.08+idle,.06];}
+  else if(anim.building){elbow=[side*.48,1.62,-.27];hand=[side*.32,1.5,-.7];}
+  else if(side<0){const reach=weapon.id==='shotgun'?-.98:weapon.id==='sniper'?-1.08:-.88,handOffset=poseParts.supportHand;elbow=[-.45,1.58+.12*aimP+handOffset[1]*.22,-.3+handOffset[2]*.2];hand=[gunX-.18+handOffset[0]*.55,gunY-.02+handOffset[1]*.65,reach+handOffset[2]*.55];}
+  else{elbow=[.5,1.58+.1*aimP,-.23];hand=[gunX+.05,gunY-.1,gunZ+.16];}
+  const wrist=elbow.map((value,index)=>mix(value,hand[index],.8));roundPart(shoulder,[.195,.215,.2],col,28,16);limb(shoulder,elbow,.165,cloth);roundPart(elbow,[.147,.16,.145],cloth,22,14);limb(elbow,hand,.13,cloth);roundPart(wrist,AVATAR_GEAR.wristCuff.size,trim,20,12);roundPart(hand,AVATAR_GEAR.glove.size,C.black,22,13);for(const knuckle of[-1,0,1])roundPart([hand[0]+knuckle*.045,hand[1]+.045,hand[2]-.08],AVATAR_GEAR.knuckle.size,C.metal,14,9);
+ }
  if(!airborne&&pose!=='lobby'){
   if(anim.building){
    const pulse=.8+Math.sin(time*4)*.08;part([0,1.48,-.73],[.78,.56,.045],C.blue.map(v=>Math.min(1,v*pulse)));for(const x of[-.3,-.1,.1,.3])part([x,1.48,-.76],[.018,.5,.012],C.cream);for(const y of[1.28,1.48,1.68])part([0,y,-.77],[.72,.018,.012],C.cream);part([.38,1.74,-.75],[.09,.09,.03],C.gold);
   }else{
-  // Distinct high-detail silhouettes share a procedural root so sway, recoil, switching and reload all layer cleanly.
-  const accent=color(weapon.color.slice(1)),wp=(v,s,c,rx=0)=>part([gunX+v[0],gunY+v[1],gunZ+v[2]],s,c,gunTilt+rx),wb=(v,r,c,n=20,q=11)=>ball([gunX+v[0],gunY+v[1],gunZ+v[2]],r,c,n,q);
-  const magOut=reloadP<.16?0:reloadP<.4?mix(0,-.62,(reloadP-.16)/.24):reloadP<.72?mix(-.62,0,(reloadP-.4)/.32):0;
-  const rack=reloadP>.7&&reloadP<.88?Math.sin((reloadP-.7)/.18*Math.PI)*.16:0;
-  if(weapon.id==='ar'){
-   wp([0,0,0],[.22,.27,.9],C.black);wp([0,.05,-.63],[.11,.12,.48],C.metal);wp([0,.22,-.03],[.14,.08,.42],C.metal);wp([0,-.27+magOut,-.02],[.16,.38,.22],C.metal,.18);wp([0,.02,.56],[.23,.26,.36],C.wood);for(let k=0;k<7;k++)wp([0,.13,-.18+k*.06],[.23,.025,.025],accent);wp([0,.1+rack,-.32],[.09,.05,.18],C.cream);
-  }else if(weapon.id==='shotgun'){
-   wp([0,0,-.04],[.28,.3,.76],C.black);wp([0,.07,-.76],[.12,.13,.92],C.metal);wp([0,.08,-.78],[.06,.06,.98],C.black);wp([0,-.05,-.48],[.31,.22,.38],C.wood);wp([0,.02,.5],[.27,.31,.48],C.wood);wp([0,-.25+magOut,.02],[.18,.28,.16],accent,.1);
-  }else if(weapon.id==='smg'){
-   wp([0,0,.04],[.28,.34,.62],C.black);wp([0,.03,-.48],[.13,.14,.45],C.metal);wp([0,.19,-.04],[.18,.08,.28],accent);wp([0,-.3+magOut,.04],[.17,.42,.2],C.metal,-.08);wp([0,.01,.46],[.22,.25,.22],C.black);for(let k=0;k<5;k++)wp([0,.14,-.27+k*.055],[.29,.026,.023],C.metal);
-  }else{
-   wp([0,0,-.08],[.22,.25,1.02],C.black);wp([0,.06,-.84],[.085,.09,.82],C.metal);wp([0,.02,.57],[.24,.27,.45],C.wood);wp([0,-.25+magOut,.02],[.14,.32,.19],C.metal,.12);wp([0,.28,-.12],[.12,.12,.58],C.black);wb([0,.28,-.38],[.115,.115,.18],accent,24,13);wb([0,.28,.15],[.14,.14,.2],C.black,24,13);wp([0,.11+rack,-.4],[.1,.05,.22],C.cream);
-  }
-  wp([0,.02,-(weapon.id==='shotgun'?1.28:weapon.id==='sniper'?1.34:.94)],[.06,.06,.18],accent);
+  const gunScale=.73,gunPoint=v=>{const y=v[1]*gunScale,z=v[2]*gunScale;return rig([gunX+v[0]*gunScale,gunY+y*Math.cos(gunTilt)-z*Math.sin(gunTilt),gunZ+y*Math.sin(gunTilt)+z*Math.cos(gunTilt)]);},gunBox=(v,s,c,rx=0)=>box(gunPoint(v),s,c,angle,gunTilt+rx+rigPitch),gunOval=(v,s,c,n,q)=>poseOvoid(gunPoint(v),s,c,[0,0,0],0,0,0,n,q),gunTube=(a,b,r,c,n)=>tube(gunPoint(a),gunPoint(b),r,c,n);
+  drawWeaponLayout(weapon,poseParts,gunScale,(v,s,c,rx)=>gunBox(v,s,c,rx),(v,s,c,n,q)=>gunOval(v,s,c,segments(n),segments(q)),(a,b,r,c,n)=>gunTube(a,b,r,c,segments(n)),detail);
   }
  }else if(airborne){
   // Harness straps and buckles remain attached while airborne.
@@ -256,24 +291,16 @@ const ctx=$('map').getContext('2d');function minimap(){
  const nearest=pois.reduce((best,p)=>Math.hypot(player.p[0]-p.x,player.p[2]-p.z)<best.d?{p,d:Math.hypot(player.p[0]-p.x,player.p[2]-p.z)}:best,{p:pois[0],d:Infinity});$('mapbox').querySelector('b').textContent=player.air==='bus'?'SKYLINER':nearest.d<55?nearest.p.name:'WILDLANDS';
 }
 function drawFirstPersonArms(root,rotation,profile,parts){
- const cloth=color(window.Duel?.myColor||'577363'),skin=C.skin,point=v=>transform(v,root,rotation[1],rotation[0]+parts.rootTilt);
- const rightShoulder=point([.28,-.48,.12]),rightElbow=point([.34,-.3,-.18]),rightHand=point([.12,-.08,-.08]);
- const leftShoulder=point([-.38,-.5,.08]),leftElbow=point([-.3,-.25,-.3]),leftHand=point([-.1,-.06,-.32+parts.magazine[1]*.24]);
- tube(rightShoulder,rightElbow,.095,cloth,16);ellipsoid(rightElbow,[.105,.105,.105],skin,18,10);tube(rightElbow,rightHand,.082,skin,16);ellipsoid(rightHand,[.105,.09,.12],skin,18,10);
- tube(leftShoulder,leftElbow,.1,cloth,16);ellipsoid(leftElbow,[.108,.108,.108],skin,18,10);tube(leftElbow,leftHand,.085,skin,16);ellipsoid(leftHand,[.105,.09,.12],skin,18,10);
+ const cloth=color(window.Duel?.myColor||'577363'),trim=cloth.map(value=>Math.min(1,value*1.18)),point=v=>transform(v,root,rotation[1],rotation[0]+parts.rootTilt),support=parts.supportHand;
+ const rightShoulder=point([.29,-.47,.12]),rightElbow=point([.34,-.3,-.18]),rightHand=point([.12,-.08,-.08]);
+ const leftShoulder=point([-.38,-.49,.08]),leftElbow=point([-.3+support[0]*.45,-.25+support[1]*.5,-.3+support[2]*.45]),leftHand=point([-.1+support[0],-.06+support[1],-.32+support[2]]);
+ tube(rightShoulder,rightElbow,.12,cloth,22);ellipsoid(rightElbow,[.125,.13,.12],cloth,22,13);tube(rightElbow,rightHand,.108,cloth,22);ellipsoid(rightHand,AVATAR_GEAR.glove.size,C.black,24,14);ellipsoid(point([.12,-.025,-.12]),[.09,.035,.045],C.metal,18,11);
+ tube(leftShoulder,leftElbow,.125,cloth,22);ellipsoid(leftElbow,[.13,.13,.12],cloth,22,13);tube(leftElbow,leftHand,.11,cloth,22);const cuff=point([-.12+support[0]*.8,-.12+support[1]*.8,-.26+support[2]*.8]);ellipsoid(cuff,AVATAR_GEAR.wristCuff.size,trim,20,12);ellipsoid(leftHand,AVATAR_GEAR.glove.size,C.black,24,14);for(const offset of[-.04,0,.04])ellipsoid(point([-.1+support[0]+offset,-.01+support[1],-.4+support[2]]),AVATAR_GEAR.knuckle.size,C.metal,14,9);
 }
 function drawFirstPersonWeapon(profile,state,parts){
- const root=state.position,rotation=state.rotation,scale=profile.presentation.scale,accent=color(profile.color.slice(1)),dark=color('1d2b32'),metal=color('51656d'),point=v=>transform(v.map(n=>n*scale),root,rotation[1],rotation[0]+parts.rootTilt),part=(v,s,c,rx=0)=>box(point(v),s.map(n=>n*scale),c,rotation[1],rotation[0]+parts.rootTilt+rx),round=(v,r,c,n=20,q=12)=>ellipsoid(point(v),r.map(x=>x*scale),c,n,q),mag=[parts.magazine[0],parts.magazine[1],parts.magazine[2]];
- if(profile.id==='ar'){
-  part([0,0,-.22],[.28,.22,.68],metal);part([0,.02,.16],[.22,.25,.34],dark);part([0,-.19,-.16+mag[2]],[.18,.4,.18],accent,-.18);part([0,-.19+mag[1],-.16+mag[2]],[.16,.34,.16],dark,-.18);part([0,.01,-.7],[.16,.14,.48],dark);part([0,.015,-1.05],[.075,.075,.55],metal);part([0,.13,-.3],[.08,.09,.28],accent);part([0,.12,-.72-parts.action*.08],[.045,.07,.12],C.gold);
- }else if(profile.id==='shotgun'){
-  part([0,0,-.28],[.3,.25,.68],metal);part([0,.01,.18],[.25,.28,.45],dark);part([0,.02,-1.02],[.085,.085,1.1],metal);part([0,-.13,-.58-parts.action*.22],[.24,.2,.42],accent);part([0,-.1,-.98],[.07,.07,.85],dark);round([0,.11,-.12],[.07,.07,.16],C.gold,18,10);
- }else if(profile.id==='smg'){
-  part([0,0,-.18],[.3,.27,.55],metal);part([0,.01,.16],[.18,.2,.3],dark);part([0,-.24+mag[1],-.15+mag[2]],[.16,.45,.16],accent,-.04);part([0,.02,-.57],[.15,.15,.32],dark);part([0,.02,-.82],[.09,.09,.25],metal);part([0,.16,-.28-parts.action*.07],[.11,.09,.22],accent);
- }else{
-  part([0,0,-.3],[.28,.23,.78],metal);part([0,.01,.2],[.25,.27,.5],dark);part([0,-.2+mag[1],-.16+mag[2]],[.17,.34,.2],accent,-.12);part([0,.02,-1.05],[.12,.12,.78],dark);part([0,.02,-1.65],[.07,.07,.5],metal);tube(point([0,.22,.1]),point([0,.22,-.62]),.1,dark,20);tube(point([0,.22,.06]),point([0,.22,-.58]),.075,accent,18);round([.14+parts.action*.08,.03,-.12],[.055,.055,.1],C.gold,18,10);
- }
- if(flash>0){const z=profile.id==='sniper'?-1.95:profile.id==='shotgun'?-1.62:profile.id==='smg'?-1.02:-1.38,muzzle=point([0,.02,z]);round([0,.02,z],[.12,.12,.16],color('fff1ad'),16,9);for(let i=0;i<5;i++){const angle=i/5*Math.PI*2;beam(muzzle,add(muzzle,[Math.cos(angle)*.12,Math.sin(angle)*.12,-.22]),.018,C.gold);}}
+ const root=state.position,rotation=state.rotation,scale=profile.presentation.scale,point=v=>transform(v.map(n=>n*scale),root,rotation[1],rotation[0]+parts.rootTilt),drawBox=(v,s,c,rx=0)=>box(point(v),s,c,rotation[1],rotation[0]+parts.rootTilt+rx),drawOval=(v,r,c,n,q)=>ellipsoid(point(v),r,c,n,q),drawTube=(a,b,r,c,n)=>tube(point(a),point(b),r,c,n);
+ drawWeaponLayout(profile,parts,scale,drawBox,drawOval,drawTube,1);
+ if(flash>0){const z=profile.id==='sniper'?-1.71:profile.id==='shotgun'?-1.45:profile.id==='smg'?-0.97:-1.36,muzzle=point([0,.035,z]);ellipsoid(muzzle,[.13,.12,.18],color('fff1ad'),18,11);for(let i=0;i<7;i++){const angle=i/7*Math.PI*2;beam(muzzle,add(muzzle,[Math.cos(angle)*.15,Math.sin(angle)*.15,-.25]),.022,C.gold);}}
  drawFirstPersonArms(root,rotation,profile,parts);
 }
 function drawFirstPersonBlueprint(state){

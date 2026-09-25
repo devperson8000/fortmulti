@@ -54,13 +54,32 @@ test('reload parts eject the magazine and cycle the weapon action',()=>{
  assert.equal(state,original);
  assert.equal(state.stage,'eject');
  assert.ok(state.magazine[1]<-.1);
+ assert.equal(state.magazineVisible,true);
  stepWeaponParts(state,profile,profile.reloadDuration*.2);
  assert.equal(state.stage,'action');
  assert.ok(state.action>0);
+ assert.equal(state.magazineVisible,false);
+ assert.equal(state.freshMagazineVisible,true);
  stepWeaponParts(state,profile,0);
  assert.equal(state.stage,'idle');
  assert.deepEqual(state.magazine,[0,0,0]);
+ assert.deepEqual(state.freshMagazine,[0,0,0]);
  assert.equal(state.action,0);
+});
+
+test('reload hand releases, retrieves and seats a fresh magazine in clear stages',()=>{
+ const profile=WEAPON_PROFILES.ar,state=createWeaponPartState();
+ stepWeaponParts(state,profile,profile.reloadDuration*.76);
+ const released=state.supportHand.slice();
+ stepWeaponParts(state,profile,profile.reloadDuration*.5);
+ const insertion=state.supportHand.slice();
+ assert.equal(state.stage,'insert');
+ assert.ok(state.freshMagazineVisible);
+ assert.ok(state.freshMagazine[0]<0);
+ assert.ok(insertion[1]>released[1]);
+ stepWeaponParts(state,profile,profile.reloadDuration*.04);
+ assert.equal(state.stage,'settle');
+ assert.ok(state.freshMagazineVisible);
 });
 
 test('weapon switching begins lowered and returns to the ready anchor',()=>{

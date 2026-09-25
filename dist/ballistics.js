@@ -17,10 +17,11 @@ export function advanceProjectile(projectile,dt){
  projectile.previous[0]=projectile.position[0];
  projectile.previous[1]=projectile.position[1];
  projectile.previous[2]=projectile.position[2];
+ const verticalSpeed=projectile.velocity[1],gravity=projectile.gravity;
  projectile.position[0]+=projectile.velocity[0]*step;
- projectile.position[1]+=projectile.velocity[1]*step;
+ projectile.position[1]+=verticalSpeed*step-.5*gravity*step*step;
  projectile.position[2]+=projectile.velocity[2]*step;
- projectile.velocity[1]-=projectile.gravity*step;
+ projectile.velocity[1]=verticalSpeed-gravity*step;
  const moved=Math.hypot(
   projectile.position[0]-projectile.previous[0],
   projectile.position[1]-projectile.previous[1],
