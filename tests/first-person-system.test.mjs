@@ -20,14 +20,14 @@ const sample=(overrides={})=>({
  ...overrides
 });
 
-test('gameplay stays first-person from the cabin through energy-wing flight',()=>{
+test('gameplay stays first-person from the cabin through arcade-glider flight',()=>{
  assert.equal(cameraMode(sample({lobby:true})),'lobby');
- for(const air of['ship','riftTransit','rift','wingOpening','winged','wingFolding','landed'])assert.equal(cameraMode(sample({air})),'firstPerson',air);
+ for(const air of['ship','launchTransit','skyDrift','gliderOpening','gliding','gliderFolding','landed'])assert.equal(cameraMode(sample({air})),'firstPerson',air);
  assert.equal(cameraMode(sample({alive:false,spectating:true,air:'ship'})),'spectator');
 });
 
 test('a legacy aerial-to-ground transition blends for 450ms and gates firing',()=>{
- let state={...createCameraPresentation(),mode:'aerial',blend:0,lastAir:'winged',roundToken:1};
+ let state={...createCameraPresentation(),mode:'aerial',blend:0,lastAir:'gliding',roundToken:1};
  state=stepCameraPresentation(state,sample(),.075);assert.equal(state.mode,'transition');assert.ok(state.blend>0&&state.blend<.45);assert.equal(canFireDuringPresentation(state),false);
  state=stepCameraPresentation(state,sample(),.15);assert.ok(state.blend>=.45);assert.equal(canFireDuringPresentation(state),true);
  state=stepCameraPresentation(state,sample(),.30);assert.equal(state.mode,'firstPerson');assert.equal(state.blend,1);
@@ -41,10 +41,10 @@ test('death and a new round reset the presentation deterministically',()=>{
 
 test('the local character stays hidden in first person and remains available to a spectator camera',()=>{
  assert.equal(shouldShowLocalAvatar({mode:'firstPerson',blend:1},'ship',true),false);
- assert.equal(shouldShowLocalAvatar({mode:'firstPerson',blend:1},'winged',true),false);
+ assert.equal(shouldShowLocalAvatar({mode:'firstPerson',blend:1},'gliding',true),false);
  assert.equal(shouldShowLocalAvatar({mode:'transition',blend:.49},'landed',true),true);
  assert.equal(shouldShowLocalAvatar({mode:'transition',blend:.5},'landed',true),false);
- assert.equal(shouldShowLocalAvatar({mode:'spectator',blend:0},'winged',true),true);
+ assert.equal(shouldShowLocalAvatar({mode:'spectator',blend:0},'gliding',true),true);
  assert.equal(shouldShowLocalAvatar({mode:'spectator',blend:0},'landed',false),false);
 });
 

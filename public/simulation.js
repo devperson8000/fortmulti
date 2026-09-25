@@ -1,6 +1,7 @@
 import {WEAPON_ORDER,createLoadout,weaponForSlot,weaponIdForSlot,isWeaponSlot,isBuildSlot,buildTypeForSlot,currentAmmo,shotSpread,spreadDirection} from './weapon-system.js';
 import {createProjectile,advanceProjectile,segmentSphereTime,segmentAabbTime} from './ballistics.js';
-import {SKYSHIP_TIMELINE,AETHER_FLIGHT,skyshipSequenceAt,canEnterRift,shouldAutoUnfurl,stepAetherFlight} from './skyship-sequence.js';
+import {SKYSHIP_TIMELINE,ARCADE_FLIGHT,skyshipSequenceAt,canExitCabin,shouldOpenGlider,stepArcadeGlide} from './skyship-sequence.js';
+import {clampCabinPosition} from './skyship-camera.js';
 
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const mix=(a,b,t)=>a+(b-a)*t;
@@ -35,7 +36,7 @@ export class Match{
  }
  skyshipAt(t){const q=clamp(t/SKYSHIP_SECONDS,0,1),ease=q*q*(3-2*q),x=SKYSHIP_START[0]+(SKYSHIP_END[0]-SKYSHIP_START[0])*ease,z=SKYSHIP_START[1]+(SKYSHIP_END[1]-SKYSHIP_START[1])*ease,y=SKYSHIP_ALTITUDE+Math.sin(q*Math.PI)*5+Math.sin(t*.34)*.25,yaw=Math.atan2(-(SKYSHIP_END[0]-SKYSHIP_START[0]),-(SKYSHIP_END[1]-SKYSHIP_START[1]));return {x,y,z,yaw,progress:q,active:q<1,bank:Math.sin(t*.23)*.018,bob:Math.sin(t*.34)*.25,speed:Math.hypot(SKYSHIP_END[0]-SKYSHIP_START[0],SKYSHIP_END[1]-SKYSHIP_START[1])*(6*q*(1-q))/SKYSHIP_SECONDS};}
  shipWorld(local){const c=Math.cos(this.skyship.yaw),s=Math.sin(this.skyship.yaw);return [this.skyship.x+local[0]*c+local[2]*s,this.skyship.y+local[1],this.skyship.z-local[0]*s+local[2]*c];}
- beginRift(p,forced=false){p.air='riftTransit';p.dropState='rift-transit';p.launchProgress=0;p.launchStart=p.p.slice();p.wingsActive=false;p.deploy=0;p.airVelocity=[0,0,0];this.event({type:forced?'rift_auto':'rift_launch',by:p.id,forced});}
+ beginArcadeLaunch(p,forced=false){p.air='launchTransit';p.dropState='arcade-launch';p.launchProgress=0;p.launchStart=p.p.slice();p.wingsActive=false;p.deploy=0;p.airVelocity=[0,0,0];this.event({type:forced?'cabin_autolaunch':'cabin_exit',by:p.id,forced});}
  startRound(waiting=false){
   if(this.disconnected.size){const scoreById=new Map(this.ids.map((id,i)=>[id,this.scores[i]||0]));this.ids=this.ids.filter(id=>!this.disconnected.has(id));this.scores=this.ids.map(id=>scoreById.get(id)||0);this.disconnected.clear();}
   this.round++;this.phase=waiting?'waiting':'ship';this.timer=waiting?0:SKYSHIP_SECONDS;this.elapsed=0;this.dropElapsed=0;this.sequence=skyshipSequenceAt(0);this.structures=[];this.projectiles.length=0;this.winner=undefined;
@@ -49,36 +50,36 @@ export class Match{
  disconnect(id){const p=this.players.find(p=>p.id===id);if(!p||this.disconnected.has(id))return;this.disconnected.add(id);p.hp=0;p.eliminated=true;p.air='landed';this.event({type:'elimination',by:null,hit:id,reason:'disconnect'});if(this.phase==='waiting'){const scoreById=new Map(this.ids.map((pid,i)=>[pid,this.scores[i]||0]));this.ids=this.ids.filter(pid=>pid!==id);this.scores=this.ids.map(pid=>scoreById.get(pid)||0);this.players=this.players.filter(v=>v.id!==id);this.disconnected.delete(id);return;}if(['playing','countdown','ship','flight'].includes(this.phase))this.checkRoundEnd();}
  event(e){this.events.push({...e,id:++this.eventId});if(this.events.length>36)this.events.splice(0,this.events.length-36);}
  hit(p,n){if(p.hp<=0)return;let shield=Math.min(p.shield,n);p.shield-=shield;p.hp=Math.max(0,p.hp-(n-shield));}
- updateAetherJourney(dt){
+ updateCloudlinerJourney(dt){
   this.dropElapsed+=dt;this.skyship=this.skyshipAt(this.dropElapsed);this.timer=Math.max(0,SKYSHIP_SECONDS-this.dropElapsed);this.sequence=skyshipSequenceAt(this.dropElapsed);
   let anyLaunched=false;
   for(let index=0;index<this.players.length;index++){
    const p=this.players[index];if(p.hp<=0)continue;p.lastInput+=dt;const i=p.lastInput>INPUT_STALE_SECONDS?sanitize():p.input;const edgeJump=i.jump&&!p.jumpLatch;p.jumpLatch=i.jump;
    if(p.air==='ship'){
-    const local=p.shipLocal||seatOffset(index);p.shipLocal=local;p.yaw=dampAngle(p.yaw||this.skyship.yaw,i.yaw,7,dt);p.sequence=this.sequence.stage;p.riftBlend=this.sequence.riftBlend;
+    const local=p.shipLocal||seatOffset(index);p.shipLocal=local;p.yaw=dampAngle(p.yaw||this.skyship.yaw,i.yaw,7,dt);p.sequence=this.sequence.stage;p.hatchBlend=this.sequence.hatchBlend;
     if(this.sequence.controls){
      const length=Math.max(1,Math.hypot(i.x,i.z)),speed=(i.sprint?7.2:5.4)*dt/length,c=Math.cos(this.skyship.yaw),s=Math.sin(this.skyship.yaw);
      const dx=(Math.cos(i.yaw)*i.x-Math.sin(i.yaw)*i.z)*speed,dz=(-Math.sin(i.yaw)*i.x-Math.cos(i.yaw)*i.z)*speed;
-     local[0]=clamp(local[0]+dx*c-dz*s,-2,2);local[2]=clamp(local[2]+dx*s+dz*c,-4.25,3.45);
+     local[0]+=dx*c-dz*s;local[2]+=dx*s+dz*c;
     }
-    local[1]=this.sequence.standBlend*.48;p.p=this.shipWorld(local);
-    if(this.sequence.autoLaunch){this.beginRift(p,true);continue;}
-    if(edgeJump&&canEnterRift(this.dropElapsed,local)){this.beginRift(p,false);continue;}
+    p.shipLocal=clampCabinPosition([local[0],0,local[2]]);p.p=this.shipWorld(p.shipLocal);
+    if(this.sequence.autoLaunch){this.beginArcadeLaunch(p,true);continue;}
+    if(edgeJump&&canExitCabin(this.dropElapsed,p.shipLocal)){this.beginArcadeLaunch(p,false);continue;}
     continue;
    }
-   if(p.air==='riftTransit'){
-    anyLaunched=true;p.launchProgress=clamp((p.launchProgress||0)+dt/SKYSHIP_TIMELINE.launchSeconds,0,1);const q=p.launchProgress,ease=q*q*(3-2*q),target=this.shipWorld([(p.shipLocal?.[0]||0)*.7,.25,-8.7]),start=p.launchStart||p.p;p.p=[start[0]+(target[0]-start[0])*ease,start[1]+(target[1]-start[1])*ease+Math.sin(q*Math.PI)*2.6,start[2]+(target[2]-start[2])*ease];p.airVelocity=[(target[0]-start[0])/SKYSHIP_TIMELINE.launchSeconds,0,(target[2]-start[2])/SKYSHIP_TIMELINE.launchSeconds];
-    if(q>=1){p.air='rift';p.dropState='aether-current';p.p=target;p.airVelocity=[0,-AETHER_FLIGHT.riftFall,0];p.launchProgress=1;this.event({type:'rift_arrival',by:p.id});}
+   if(p.air==='launchTransit'){
+    anyLaunched=true;p.launchProgress=clamp((p.launchProgress||0)+dt/SKYSHIP_TIMELINE.launchSeconds,0,1);const q=p.launchProgress,ease=q*q*(3-2*q),target=this.shipWorld([(p.shipLocal?.[0]||0)*.7,.3,7.8]),start=p.launchStart||p.p;p.p=[start[0]+(target[0]-start[0])*ease,start[1]+(target[1]-start[1])*ease+Math.sin(q*Math.PI)*2.6,start[2]+(target[2]-start[2])*ease];p.airVelocity=[(target[0]-start[0])/SKYSHIP_TIMELINE.launchSeconds,0,(target[2]-start[2])/SKYSHIP_TIMELINE.launchSeconds];
+    if(q>=1){p.air='skyDrift';p.dropState='sky-glide';p.p=target;p.airVelocity=[0,-ARCADE_FLIGHT.launchFall,0];p.launchProgress=1;this.event({type:'glide_arrival',by:p.id});}
     continue;
    }
-   if(['rift','wingOpening','winged','wingFolding'].includes(p.air)){
-    anyLaunched=true;p.yaw=dampAngle(p.yaw||0,i.yaw,p.air==='winged'?3.7:5.5,dt);const floor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world,this.groundGrid);p.clearance=Math.max(0,p.p[1]-floor);
-    if(p.air==='rift'&&(edgeJump||shouldAutoUnfurl(p.clearance))){const forced=shouldAutoUnfurl(p.clearance);p.air='wingOpening';p.dropState='wings-opening';p.wingsActive=true;p.deploy=0;this.event({type:'wings_open',by:p.id,forced});}
-    else if(p.air==='winged'&&edgeJump){if(p.clearance>AETHER_FLIGHT.autoUnfurlClearance+AETHER_FLIGHT.foldBuffer){p.air='wingFolding';p.dropState='wings-folding';this.event({type:'wings_fold',by:p.id});}else this.event({type:'wings_fold_blocked',by:p.id});}
-    if(p.air==='wingOpening'){p.deploy=clamp((p.deploy||0)+dt/AETHER_FLIGHT.unfurlSeconds,0,1);if(p.deploy>=1){p.air='winged';p.dropState='winged';p.deploy=1;}}
-    else if(p.air==='winged'){p.deploy=1;p.wingsActive=true;p.dropState='winged';}
-    else if(p.air==='wingFolding'){p.deploy=clamp((p.deploy||1)-dt/AETHER_FLIGHT.foldSeconds,0,1);if(p.deploy<=0){p.air='rift';p.wingsActive=false;p.dropState='aether-current';p.deploy=0;this.event({type:'rift_resume',by:p.id});}}
-    const velocity=stepAetherFlight(p.airVelocity,i,p.deploy,dt);p.airVelocity=velocity;p.vy=velocity[1];p.airSpeed=Math.hypot(...velocity);p.airPitch=damp(p.airPitch||0,i.pitch*.48,4,dt);p.airRoll=damp(p.airRoll||0,-i.x*.27,4.4,dt);
+   if(['skyDrift','gliderOpening','gliding','gliderFolding'].includes(p.air)){
+    anyLaunched=true;p.yaw=dampAngle(p.yaw||0,i.yaw,p.air==='gliding'?3.7:5.5,dt);const floor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world,this.groundGrid);p.clearance=Math.max(0,p.p[1]-floor);
+    if(p.air==='skyDrift'&&(edgeJump||shouldOpenGlider(p.clearance))){const forced=shouldOpenGlider(p.clearance);p.air='gliderOpening';p.dropState='glider-opening';p.wingsActive=true;p.deploy=0;this.event({type:'glider_open',by:p.id,forced});}
+    else if(p.air==='gliding'&&edgeJump){if(p.clearance>ARCADE_FLIGHT.autoOpenClearance+ARCADE_FLIGHT.foldBuffer){p.air='gliderFolding';p.dropState='glider-folding';this.event({type:'glider_fold',by:p.id});}else this.event({type:'glider_fold_blocked',by:p.id});}
+    if(p.air==='gliderOpening'){p.deploy=clamp((p.deploy||0)+dt/ARCADE_FLIGHT.openSeconds,0,1);if(p.deploy>=1){p.air='gliding';p.dropState='gliding';p.deploy=1;}}
+    else if(p.air==='gliding'){p.deploy=1;p.wingsActive=true;p.dropState='gliding';}
+    else if(p.air==='gliderFolding'){p.deploy=clamp((p.deploy||1)-dt/ARCADE_FLIGHT.foldSeconds,0,1);if(p.deploy<=0){p.air='skyDrift';p.wingsActive=false;p.dropState='sky-glide';p.deploy=0;this.event({type:'glider_retract',by:p.id});}}
+    const velocity=stepArcadeGlide(p.airVelocity,i,p.deploy,dt);p.airVelocity=velocity;p.vy=velocity[1];p.airSpeed=Math.hypot(...velocity);p.airPitch=damp(p.airPitch||0,i.pitch*.48,4,dt);p.airRoll=damp(p.airRoll||0,-i.x*.27,4.4,dt);
     p.p[0]=clamp(p.p[0]+velocity[0]*dt,-ISLAND_LIMIT,ISLAND_LIMIT);p.p[2]=clamp(p.p[2]+velocity[2]*dt,-ISLAND_LIMIT,ISLAND_LIMIT);p.p[1]+=velocity[1]*dt;
     const landingFloor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world,this.groundGrid);if(p.p[1]<=landingFloor){p.p[1]=landingFloor;p.vy=0;p.airVelocity=[0,0,0];p.airSpeed=0;p.clearance=0;p.air='landed';p.dropState='landed';p.wingsActive=false;p.deploy=0;p.airPitch=0;p.airRoll=0;this.event({type:'land',by:p.id});}
    }
@@ -211,7 +212,7 @@ export class Match{
   dt=clamp(dt,0,.05);if(this.phase==='done'||this.phase==='paused'||this.phase==='waiting')return;
   const aerial=this.players.some(p=>p.hp>0&&p.air!=='landed');
   if(this.phase==='ship'||this.phase==='flight'||(this.phase==='playing'&&aerial)){
-   this.updateAetherJourney(dt);if(this.phase==='playing'){this.elapsed+=dt;this.tickGroundedPlayers(dt,false);this.finishCombatTick(dt);}return;
+  this.updateCloudlinerJourney(dt);if(this.phase==='playing'){this.elapsed+=dt;this.tickGroundedPlayers(dt,false);this.finishCombatTick(dt);}return;
   }
   if(this.phase==='countdown'||this.phase==='roundover'){this.timer-=dt;if(this.timer<=0){if(this.phase==='countdown')this.phase='playing';else this.startRound(false);}return;}
   this.elapsed+=dt;this.tickGroundedPlayers(dt);this.finishCombatTick(dt);
