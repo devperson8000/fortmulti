@@ -70,3 +70,26 @@ dialog{background:#091f39;color:white;border:1px solid #5c89a970;border-radius:1
 /* Horizon identity */
 #lobby nav .horizon-logo-lobby{flex:0 0 auto;width:clamp(72px,7.1vw,94px);height:clamp(72px,7.1vw,94px);margin:-8px 0;object-fit:contain;filter:drop-shadow(0 6px 16px #020814a8)}
 @media(max-width:760px){#lobby nav .horizon-logo-lobby{width:72px;height:72px;margin:-4px 0}}
+
+
+/* Horizon brandmark: a luminous, softly faded lobby backdrop. */
+#lobby .lobby-logo-backdrop{
+  position:absolute;left:50%;top:43%;z-index:1;
+  width:min(84vw,900px);height:min(84vw,900px);max-height:82vh;
+  object-fit:contain;transform:translate(-50%,-50%);
+  opacity:.56;mix-blend-mode:screen;pointer-events:none;user-select:none;
+  filter:drop-shadow(0 0 22px #70c8ff55) drop-shadow(0 0 58px #ff96382b);
+  -webkit-mask-image:radial-gradient(ellipse 59% 58% at center,#000 46%,transparent 100%);
+  mask-image:radial-gradient(ellipse 59% 58% at center,#000 46%,transparent 100%);
+  animation:horizonMarkIn .9s cubic-bezier(.2,.75,.3,1) both;
+}
+@keyframes horizonMarkIn{
+  from{opacity:0;transform:translate(-50%,-47%) scale(.96)}
+  to{opacity:.56;transform:translate(-50%,-50%) scale(1)}
+}
+@media(max-width:760px){
+  #lobby .lobby-logo-backdrop{top:39%;width:100vw;height:100vw;max-height:70vh;opacity:.5}
+}
+@media(prefers-reduced-motion:reduce){
+  #lobby .lobby-logo-backdrop{animation:none;opacity:.56}
+}
