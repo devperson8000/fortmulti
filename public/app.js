@@ -1,7 +1,7 @@
 import './engine.js';
 import {Connection,Voice,SocialDirectory,uid} from './network.js';
 import {Match,placement,validBuild} from './simulation.js';
-import {orderPartyProfiles} from './lobby-state.js';
+import {lobbyTabState,orderPartyProfiles} from './lobby-state.js';
 import {networkCadence,accumulateInput,acceptSnapshot} from './network-tuning.js';
 
 const $=id=>document.getElementById(id),game=window.Game;
@@ -85,14 +85,20 @@ function updateNetworkChip(){
 }
 function refresh(){
  const party=partyProfiles();window.Duel.myColor=profile.color;window.Duel.party=party;window.Duel.peerColors=colors();
- $('hero-name').textContent=profile.name;$('hero-state').textContent=ready?'READY':'NOT READY';$('hero-state').classList.toggle('ready',ready);
+ $('hero-name').textContent=profile.name;$('character-preview-name').textContent=profile.name+' · CURRENT OUTFIT';$('hero-state').textContent=ready?'READY':'NOT READY';$('hero-state').classList.toggle('ready',ready);
  $('ready').textContent=ready?'CANCEL READY':'READY UP';$('ready').disabled=!conn||party.length<2||!game||!!match;$('mode').disabled=(!!conn&&!host)||!!match;$('room-actions').hidden=!conn;$('connect').hidden=!!conn;
  if(conn){$('room-code').textContent=host?'PRIVATE PARTY · YOU ARE LEADER':'PRIVATE PARTY · MEMBER';$('invite-more').disabled=inMatch()||party.length>=(conn.maxPlayers||8);}
  $('outfit').disabled=inMatch();$('name').disabled=inMatch();$('local').disabled=!!conn;drawPartyCards();renderOnlinePlayers();renderInvites();updateNetworkChip();
 }
 function focusOnline(){const panel=$('social-panel');panel.classList.add('open','attention');panel.setAttribute('aria-hidden','false');$('social-scrim').hidden=false;setTimeout(()=>panel.classList.remove('attention'),800);}
 function closeOnline(){const panel=$('social-panel');panel.classList.remove('open','attention');panel.setAttribute('aria-hidden','true');$('social-scrim').hidden=true;}
-function toggleProfile(force){const open=force??!document.body.classList.contains('profile-open');document.body.classList.toggle('profile-open',open);$('profile-toggle').classList.toggle('active',open);}
+function selectLobbyTab(tab){
+ const state=lobbyTabState(tab),tabs=[['lobby-play-toggle','play'],['profile-toggle','outfit'],['character-preview-toggle','character']];
+ for(const[id,name]of tabs){const button=$(id),active=name===state.activeTab;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));}
+ document.body.classList.toggle('profile-open',state.profileOpen);document.body.classList.toggle('character-preview-open',state.characterPreview);
+ $('character-preview-panel').hidden=!state.characterPreview;if(window.Duel)window.Duel.characterPreview=state.characterPreview;
+}
+function toggleProfile(force){const open=force??!document.body.classList.contains('profile-open');selectLobbyTab(open?'outfit':'play');}
 function hello(){conn?.send('hello',{name:profile.name,color:profile.color,ready,host:conn.host||null,mode:$('mode').value,match:matchId,voice:voiceWanted,maxPlayers:conn.maxPlayers||8});}
 function everyoneReady(){const party=partyProfiles();return party.length>=2&&party.every(p=>p.ready);}
 
@@ -132,7 +138,7 @@ async function respondInvite(inv,accept){
  finally{renderInvites();refresh();}
 }
 
-function resetMatchState(){match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';window.Duel.lobby=true;document.body.classList.remove('dropping');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear();document.exitPointerLock?.();}
+function resetMatchState(){match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('dropping');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear();document.exitPointerLock?.();}
 function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
 function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);match.beginSkyshipJourney();matchId=uid();matchEpoch=Math.max(Date.now(),matchEpoch+1);snapshotFrame=-1;seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;sendSnapshot();updatePresence();status('Transport departing · stand by for the rear hatch.','success');}
@@ -196,7 +202,7 @@ function receive(m){
  if(m.type==='pong'&&Number.isFinite(d.time)){latencies.set(m.from,Math.max(0,Date.now()-d.time));updateNetworkChip();}
 }
 
-window.Duel={active:true,lobby:true,round:0,myColor:profile.color,party:partyProfiles(),peerColors:{},menu(){game.clear();if(this.lobby)return;showMenu=true;$('match-actions').hidden=false;$('resume').hidden=false;$('rematch').hidden=snapshot?.phase!=='done';$('back-lobby').hidden=false;document.exitPointerLock?.();},preview(){const p=game.pose(),i=game.input();return placement(p,i,game.world);},valid(s){return !!snapshot&&validBuild(s,snapshot.structures,snapshot.players,game.world);},render(dt){if(snapshot&&conn)game.apply(snapshot,conn.id,colors(),dt);}};
+window.Duel={active:true,lobby:true,characterPreview:false,round:0,myColor:profile.color,party:partyProfiles(),peerColors:{},menu(){game.clear();if(this.lobby)return;showMenu=true;$('match-actions').hidden=false;$('resume').hidden=false;$('rematch').hidden=snapshot?.phase!=='done';$('back-lobby').hidden=false;document.exitPointerLock?.();},preview(){const p=game.pose(),i=game.input();return placement(p,i,game.world);},valid(s){return !!snapshot&&validBuild(s,snapshot.structures,snapshot.players,game.world);},render(dt){if(snapshot&&conn)game.apply(snapshot,conn.id,colors(),dt);}};
 
 $('create').onclick=()=>connect(true);
 $('join').onclick=()=>connect(false);
@@ -204,7 +210,7 @@ $('leave').onclick=$('forfeit').onclick=()=>leave();
 $('invite-more').onclick=focusOnline;
 $('open-online').onclick=$('social-toggle').onclick=$('footer-social').onclick=focusOnline;
 $('social-close').onclick=$('social-scrim').onclick=closeOnline;
-$('profile-toggle').onclick=()=>toggleProfile();$('profile-close').onclick=()=>toggleProfile(false);
+$('lobby-play-toggle').onclick=()=>selectLobbyTab('play');$('profile-toggle').onclick=()=>toggleProfile();$('profile-close').onclick=()=>toggleProfile(false);$('character-preview-toggle').onclick=()=>selectLobbyTab('character');
 $('online-refresh').onclick=()=>social?pollSocial():startSocial();
 $('ready').onclick=()=>{if(!conn||match)return;ready=!ready;game?.startAudio();hello();refresh();if(host)start();};
 $('name').onchange=$('name').onblur=()=>{profile.name=cleanName($('name').value);$('name').value=profile.name;writeStore('duel-profile',profile);ready=false;hello();refresh();updatePresence();};

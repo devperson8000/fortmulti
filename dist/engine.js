@@ -20,7 +20,8 @@ let graphicsSelection=['auto','low','medium','high'].includes(readSetting('sunny
 const V=(x=0,y=0,z=0)=>[x,y,z],add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]),mul=(a,s)=>a.map(v=>v*s),dot=(a,b)=>a.reduce((v,x,i)=>v+x*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],length=a=>Math.hypot(...a),norm=a=>mul(a,1/(length(a)||1)),clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),mix=(a,b,t)=>a+(b-a)*t;
 let seed=428;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
 const color=h=>[parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255];
-const C={grass:color('83b946'),darkGrass:color('55963e'),rock:color('a8ad9b'),trunk:color('785943'),leaves:color('3a8748'),pine:color('4d9f56'),cream:color('f5e3af'),teal:color('408f90'),red:color('e37b58'),road:color('747b77'),line:color('eee4b8'),skin:color('d69e72'),vest:color('577363'),pants:color('645c4e'),black:color('283e45'),metal:color('4d6670'),blue:color('58d6ed'),wood:color('bf9058'),gold:color('e9c95f'),glass:color('80d7ee'),cable:color('b9c8cf')};
+const C={grass:color('83b946'),darkGrass:color('55963e'),rock:color('a8ad9b'),trunk:color('785943'),leaves:color('3a8748'),pine:color('4d9f56'),cream:color('f5e3af'),teal:color('408f90'),red:color('e37b58'),road:color('747b77'),line:color('eee4b8'),skin:color('d69e72'),vest:color('414c40'),pants:color('54574c'),black:color('2d3933'),metal:color('4d6670'),blue:color('58d6ed'),wood:color('bf9058'),gold:color('e9c95f'),glass:color('80d7ee'),cable:color('b9c8cf')};
+const AVATAR_COLORS={helmet:color('303a35'),pouch:color('4b5347'),webbing:color('666d59'),faceDetail:color('40362f'),sole:color('202824')};
 const vertex=`attribute vec3 aPosition;attribute vec3 aColor;uniform mat4 uMatrix;uniform vec3 uEye;varying vec3 vColor;varying float vFog;void main(){gl_Position=uMatrix*vec4(aPosition,1.);vColor=aColor;vFog=clamp((distance(aPosition,uEye)-90.)/190.,0.,.86);}`;
 const fragment=`precision mediump float;varying vec3 vColor;varying float vFog;void main(){gl_FragColor=vec4(mix(vColor,vec3(.62,.83,.86),vFog),1.);}`;
 function shader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}
@@ -148,14 +149,14 @@ function character(p,angle,phase,col,enemy=false,air='landed',deploy=1,pose='com
  const weapon=WEAPON_PROFILES[anim.weapon]||WEAPON_PROFILES.ar,reloadP=anim.reload?reloadProgress(anim.reload,weapon.slot):0,equipP=clamp((anim.equip||0)/weapon.equipDuration,0,1),aimP=anim.aim?1:0;
  const poseParts=stepWeaponParts(characterWeaponPartState,weapon,anim.reload||0),reloadWave=Math.sin(Math.PI*clamp(reloadP/.92,0,1)),breath=Math.sin(time*1.65+phase*.05)*.012,localSway=anim.local?[mouseSwayX*.0015,mouseSwayY*.0012]:[0,0];
  const gunX=mix(.28,.1,aimP)+localSway[0],gunY=1.56+breath-localSway[1]-.34*equipP+.08*reloadWave,gunZ=-.7+(anim.recoil||0)*1.25+.16*equipP,gunTilt=poseParts.rootTilt+.75*equipP;
- // Rounded, fitted "trail runner" kit uses the same smooth silhouette at
- // every distance, with only its segment budget reduced for faraway players.
- const cloth=col.map(v=>v*.78),trim=col.map(v=>Math.min(1,v*1.16)),hair=color('263b44'),avatarMaterial=name=>name==='base'?col:name==='cloth'?cloth:name==='trim'?trim:name==='pants'?C.pants:name==='skin'?skin:name==='hair'?hair:name==='dark'?C.black:name==='metal'?C.metal:name==='gold'?C.gold:name==='glass'?C.glass:name==='accent'?(enemy?C.red:C.blue):C.metal;
+ // Restrained field colors keep the recognizable soldier silhouette clean at
+ // every distance while the selected uniform color remains player-specific.
+ const cloth=col.map(v=>v*.78),trim=AVATAR_COLORS.webbing,avatarMaterial=name=>name==='base'?col:name==='cloth'?cloth:name==='trim'?trim:name==='pants'?C.pants:name==='skin'?skin:name==='face-detail'?AVATAR_COLORS.faceDetail:name==='helmet'?AVATAR_COLORS.helmet:name==='carrier'?C.vest:name==='pouch'?AVATAR_COLORS.pouch:name==='webbing'?AVATAR_COLORS.webbing:name==='dark'?C.black:name==='metal'?C.metal:C.metal;
  for(const piece of AVATAR_MODEL_PARTS){for(const side of piece.mirror?[-1,1]:[1]){const sign=piece.mirror?side:1,material=avatarMaterial(piece.material);if(piece.shape==='tube'){limb([piece.from[0]*sign,piece.from[1],piece.from[2]],[piece.to[0]*sign,piece.to[1],piece.to[2]],piece.size[0],material);}else{roundPart([piece.position[0]*sign,piece.position[1],piece.position[2]],piece.size,material,segments(piece.sides),segments(piece.rings));}}}
  // The legs trail and sway through the arcade glide.
  for(const side of[-1,1]){
   const hip=[side*.19,.96,0],neutralKnee=[side*.34,.57,.17+sway*side],glideKnee=[side*.28,.58,.15+sway*side],neutralAnkle=[side*.48,.18,.08-sway*side],glideAnkle=[side*.36,.16,.28-sway*side],knee=airborne?neutralKnee.map((v,k)=>mix(v,glideKnee[k],open)):[side*.19,.56,step*side],ankle=airborne?neutralAnkle.map((v,k)=>mix(v,glideAnkle[k],open)):[side*.18,.16,-.08-step*side];
-  roundPart(hip,[.2,.22,.19],C.pants,26,16);limb(hip,knee,.177,C.pants);const thigh=hip.map((v,k)=>mix(v,knee[k],.43));roundPart([thigh[0],thigh[1],thigh[2]-.105],AVATAR_GEAR.thighPanel.size,cloth,24,14);roundPart(knee,[.18,.19,.165],C.pants,24,14);roundPart([knee[0],knee[1],knee[2]-.145],AVATAR_GEAR.kneeGuard.size,C.metal,24,14);roundPart([knee[0],knee[1],knee[2]-.208],AVATAR_GEAR.kneeGuard.inset,enemy?C.red:C.blue,20,12);limb(knee,ankle,.162,C.pants);roundPart([ankle[0],ankle[1]+.18,ankle[2]-.085],AVATAR_GEAR.shinPanel.size,cloth,22,13);roundPart(ankle,AVATAR_GEAR.boot.ankle,C.black,22,14);roundPart([ankle[0],ankle[1]-.07,ankle[2]-.13],AVATAR_GEAR.boot.toe,C.black,24,14);roundPart([ankle[0],ankle[1]-.155,ankle[2]-.13],AVATAR_GEAR.boot.sole,C.metal,22,13);roundPart([ankle[0],ankle[1]+.08,ankle[2]-.025],[.18,.045,.17],trim,18,11);
+  roundPart(hip,[.2,.22,.19],C.pants,24,14);limb(hip,knee,.167,C.pants);const thigh=hip.map((v,k)=>mix(v,knee[k],.43));roundPart([thigh[0],thigh[1],thigh[2]-.095],AVATAR_GEAR.thighPanel.size,cloth,20,12);roundPart(knee,[.18,.18,.16],C.pants,20,12);roundPart([knee[0],knee[1],knee[2]-.135],AVATAR_GEAR.kneeGuard.size,C.black,20,12);roundPart([knee[0],knee[1],knee[2]-.18],AVATAR_GEAR.kneeGuard.inset,AVATAR_COLORS.pouch,16,10);limb(knee,ankle,.15,C.pants);roundPart([ankle[0],ankle[1]+.17,ankle[2]-.075],AVATAR_GEAR.shinPanel.size,cloth,18,11);roundPart(ankle,AVATAR_GEAR.boot.ankle,C.black,20,12);roundPart([ankle[0],ankle[1]-.065,ankle[2]-.12],AVATAR_GEAR.boot.toe,C.black,20,12);roundPart([ankle[0],ankle[1]-.145,ankle[2]-.12],AVATAR_GEAR.boot.sole,AVATAR_COLORS.sole,18,10);
  }
  // Arms follow the equipped item, including the magazine handoff during reload and a relaxed lobby stance.
  for(const side of[-1,1]){
@@ -165,7 +166,7 @@ function character(p,angle,phase,col,enemy=false,air='landed',deploy=1,pose='com
   else if(anim.building){elbow=[side*.48,1.62,-.27];hand=[side*.32,1.5,-.7];}
   else if(side<0){const reach=weapon.id==='shotgun'?-.98:weapon.id==='sniper'?-1.08:-.88,handOffset=poseParts.supportHand;elbow=[-.45,1.58+.12*aimP+handOffset[1]*.22,-.3+handOffset[2]*.2];hand=[gunX-.18+handOffset[0]*.55,gunY-.02+handOffset[1]*.65,reach+handOffset[2]*.55];}
   else{elbow=[.5,1.58+.1*aimP,-.23];hand=[gunX+.05,gunY-.1,gunZ+.16];}
-  const wrist=elbow.map((value,index)=>mix(value,hand[index],.8));roundPart(shoulder,[.195,.215,.2],col,28,16);limb(shoulder,elbow,.165,cloth);roundPart(elbow,[.147,.16,.145],cloth,22,14);limb(elbow,hand,.13,cloth);roundPart(wrist,AVATAR_GEAR.wristCuff.size,trim,20,12);roundPart(hand,AVATAR_GEAR.glove.size,C.black,22,13);for(const knuckle of[-1,0,1])roundPart([hand[0]+knuckle*.045,hand[1]+.045,hand[2]-.08],AVATAR_GEAR.knuckle.size,C.metal,14,9);
+  const wrist=elbow.map((value,index)=>mix(value,hand[index],.8));roundPart(shoulder,[.185,.195,.18],cloth,22,13);limb(shoulder,elbow,.155,cloth);roundPart(elbow,[.14,.15,.135],cloth,18,11);limb(elbow,hand,.125,cloth);roundPart(wrist,AVATAR_GEAR.wristCuff.size,AVATAR_COLORS.webbing,16,10);roundPart(hand,AVATAR_GEAR.glove.size,C.black,18,11);
  }
  if(!airborne&&pose!=='lobby'&&pose!=='ship'){
   if(anim.building){
@@ -176,7 +177,7 @@ function character(p,angle,phase,col,enemy=false,air='landed',deploy=1,pose='com
   }
  }else if(airborne){
   // Small harness anchors tie the glider panels into the outfit.
-  limb([-.3,1.9,.36],[-.15,1.45,.38],.035,C.blue);limb([.3,1.9,.36],[.15,1.45,.38],.035,C.blue);roundPart([0,1.42,.39],[.21,.055,.05],C.gold,18,10);
+  limb([-.3,1.9,.36],[-.15,1.45,.38],.03,AVATAR_COLORS.webbing);limb([.3,1.9,.36],[.15,1.45,.38],.03,AVATAR_COLORS.webbing);roundPart([0,1.42,.39],[.2,.05,.045],C.vest,16,10);
  }
 }
 
@@ -352,11 +353,11 @@ const ctx=$('map').getContext('2d');function minimap(){
  const nearest=pois.reduce((best,p)=>Math.hypot(player.p[0]-p.x,player.p[2]-p.z)<best.d?{p,d:Math.hypot(player.p[0]-p.x,player.p[2]-p.z)}:best,{p:pois[0],d:Infinity});$('mapbox').querySelector('b').textContent=player.air==='ship'?'CLOUDLINER':nearest.d<55?nearest.p.name:'WILDLANDS';
 }
 function drawFirstPersonArms(root,rotation,profile,parts){
- const cloth=color(window.Duel?.myColor||'577363'),trim=cloth.map(value=>Math.min(1,value*1.18)),point=v=>transform(v,root,rotation[1],rotation[0]+parts.rootTilt),support=parts.supportHand;
+ const cloth=color(window.Duel?.myColor||'577363').map(value=>value*.78),trim=AVATAR_COLORS.webbing,point=v=>transform(v,root,rotation[1],rotation[0]+parts.rootTilt),support=parts.supportHand;
  const rightShoulder=point([.29,-.47,.12]),rightElbow=point([.34,-.3,-.18]),rightHand=point([.12,-.08,-.08]);
  const leftShoulder=point([-.38,-.49,.08]),leftElbow=point([-.3+support[0]*.45,-.25+support[1]*.5,-.3+support[2]*.45]),leftHand=point([-.1+support[0],-.06+support[1],-.32+support[2]]);
- tube(rightShoulder,rightElbow,.12,cloth,22);ellipsoid(rightElbow,[.125,.13,.12],cloth,22,13);tube(rightElbow,rightHand,.108,cloth,22);ellipsoid(rightHand,AVATAR_GEAR.glove.size,C.black,24,14);ellipsoid(point([.12,-.025,-.12]),[.09,.035,.045],C.metal,18,11);
- tube(leftShoulder,leftElbow,.125,cloth,22);ellipsoid(leftElbow,[.13,.13,.12],cloth,22,13);tube(leftElbow,leftHand,.11,cloth,22);const cuff=point([-.12+support[0]*.8,-.12+support[1]*.8,-.26+support[2]*.8]);ellipsoid(cuff,AVATAR_GEAR.wristCuff.size,trim,20,12);ellipsoid(leftHand,AVATAR_GEAR.glove.size,C.black,24,14);for(const offset of[-.04,0,.04])ellipsoid(point([-.1+support[0]+offset,-.01+support[1],-.4+support[2]]),AVATAR_GEAR.knuckle.size,C.metal,14,9);
+ tube(rightShoulder,rightElbow,.12,cloth,20);ellipsoid(rightElbow,[.125,.13,.12],cloth,20,12);tube(rightElbow,rightHand,.108,cloth,20);ellipsoid(rightHand,AVATAR_GEAR.glove.size,C.black,20,12);
+ tube(leftShoulder,leftElbow,.125,cloth,20);ellipsoid(leftElbow,[.13,.13,.12],cloth,20,12);tube(leftElbow,leftHand,.11,cloth,20);const cuff=point([-.12+support[0]*.8,-.12+support[1]*.8,-.26+support[2]*.8]);ellipsoid(cuff,AVATAR_GEAR.wristCuff.size,trim,18,11);ellipsoid(leftHand,AVATAR_GEAR.glove.size,C.black,20,12);
 }
 function drawFirstPersonWeapon(profile,state,parts){
  const root=state.position,rotation=state.rotation,scale=profile.presentation.scale,point=v=>transform(v.map(n=>n*scale),root,rotation[1],rotation[0]+parts.rootTilt),drawBox=(v,s,c,rx=0)=>box(point(v),s,c,rotation[1],rotation[0]+parts.rootTilt+rx),drawOval=(v,r,c,n,q)=>ellipsoid(point(v),r,c,n,q),drawTube=(a,b,r,c,n)=>tube(point(a),point(b),r,c,n);
@@ -405,6 +406,7 @@ if(player.air==='landed'&&shouldShowViewModel(cameraPresentation,player.hp>0,spe
 mapTimer+=dt;if(mapTimer>.1){minimap();mapTimer=0;const angle=(((-yaw*180/Math.PI)%360)+360)%360,dirs=['N','NE','E','SE','S','SW','W','NW'];$('compass').innerHTML=`${dirs[(Math.round(angle/45)+7)%8]} &nbsp; · &nbsp; <strong>${dirs[Math.round(angle/45)%8]}</strong> &nbsp; · &nbsp; ${dirs[(Math.round(angle/45)+1)%8]} <small style="font-size:10px;letter-spacing:1px">${Math.round(angle)}°</small>`;}}
 function drawLobby(){
  const w=Math.round(innerWidth*Math.min(devicePixelRatio,1.5)),h=Math.round(innerHeight*Math.min(devicePixelRatio,1.5));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}
+ if(window.Duel.characterPreview){drawCharacterShowcase(w,h);return;}
  const e=[0,3.45,9.4];gl.clearColor(.025,.075,.16,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(um,false,matrix(e,[0,1.28,.8],w/h,.66));gl.uniform3fv(ue,e);geo.length=0;
  // Original moonlit resort backdrop, kept crisp so the party models remain the visual focus.
  box([0,-.42,.5],[36,.25,27],color('173b55'));box([0,-.25,-7],[34,.06,11],color('20506b'));
@@ -416,6 +418,13 @@ function drawLobby(){
  const party=window.Duel.party||[],spots=[[0,.1,2.15],[-2.8,.03,.45],[2.8,.03,.45],[-5.05,-.02,-.95],[5.05,-.02,-.95],[-7,-.06,-2.15],[7,-.06,-2.15],[0,-.06,-2.5]];
  for(let i=0;i<8;i++){const q=spots[i],member=party[i],pulse=.03+Math.sin(time*2+i)*.025;cone([q[0],q[1]-.24,q[2]],1.18,1.18,.14,color(member?'198ab2':'173d5c'),56);cone([q[0],q[1]-.1,q[2]],.98,.98,.06,color(member?'74ddf6':'2a5570'),56);if(member){cone([q[0],q[1]-.03,q[2]],.73,.73,.035+pulse,color('b8f5ff'),48);character([q[0],q[1]+pulse*.3,q[2]],Math.PI+(i?Math.sign(q[0])*.055:0),0,color(member.color||'577363'),false,'landed',1,'lobby');}else{for(let y=.25;y<2.25;y+=.18)box([q[0],q[1]+y,q[2]],[.055,.035,.055],color('4c86a4'));gem([q[0],q[1]+2.48,q[2]],[.11,.23,.11],color('72bad8'),8);}}
  const data=dynamicData.copy(geo);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);draw(dynamicBuffer,dynamicData.length/6);gl.clearColor(.48,.77,.88,1);
+}
+function drawCharacterShowcase(w,h){
+ const target=[.62,1.16,0],eye=[.62,2.08,6.25];gl.clearColor(.018,.047,.083,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(um,false,matrix(eye,target,w/h,.54));gl.uniform3fv(ue,eye);geo.length=0;
+ box([.6,-.34,-.8],[20,.18,17],color('10283d'));box([.6,3.65,-5.45],[15,8,.3],color('10243a'));
+ cone([.78,-.16,0],1.42,1.42,.22,color('16364d'),64);cone([.78,-.025,0],1.28,1.28,.055,color('5bc9dd'),64);cone([.78,.015,0],1.08,1.08,.05,color('20536b'),64);
+ character([.78,.06,0],Math.PI+time*.22,0,color(window.Duel.myColor||'577363'),false,'landed',1,'lobby');
+ const data=dynamicData.copy(geo);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);draw(dynamicBuffer,dynamicData.length/6);
 }
 window.Game={world:{height,obstacles},input:()=>{const aftYaw=(skyshipData?.yaw||0)+Math.PI,delta=Math.atan2(Math.sin(aftYaw-yaw),Math.cos(aftYaw-yaw)),blend=player.air==='ship'?clamp(skyshipPresentation.rearLookBlend||0,0,1):0,inputYaw=yaw+delta*blend;return {x:(keys.KeyD?1:0)-(keys.KeyA?1:0),z:(keys.KeyW?1:0)-(keys.KeyS?1:0),yaw:inputYaw,pitch,aimYaw:inputYaw+recoilYaw,aimPitch:clamp(pitch+recoilPitch,-.8,.62),rotation:buildRotation,slot,jump:!!keys.Space,sprint:!!keys.ShiftLeft,aim,fire:firing&&canFireDuringPresentation(cameraPresentation),reload:!!keys.KeyR};},clear:()=>{keysClear();$('resume-control').hidden=true;$('game-settings').hidden=true;},look:(a)=>{yaw=a;pitch=-.03;},pose:()=>player,
  apply(s,id,colors,dt=.016){

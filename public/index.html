@@ -35,7 +35,7 @@
 <section id="lobby">
   <nav>
     <img class="horizon-logo horizon-logo-lobby" src="horizon-logo-transparent.webp" alt="Horizon">
-    <div class="lobby-tabs"><button class="active" type="button">PLAY</button><button id="profile-toggle" type="button">OUTFIT</button><button type="button" disabled>QUESTS</button><button type="button" disabled>CAREER</button></div>
+    <div class="lobby-tabs"><button id="lobby-play-toggle" class="active" type="button" aria-pressed="true">PLAY</button><button id="profile-toggle" type="button" aria-pressed="false">OUTFIT</button><button id="character-preview-toggle" type="button" aria-pressed="false">CHARACTER</button><button type="button" disabled>QUESTS</button><button type="button" disabled>CAREER</button></div>
     <button id="social-toggle" type="button"><span>PEOPLE ONLINE</span><b id="online-count">0</b></button>
     <button id="settings" type="button" aria-label="Open multiplayer setup">⚙</button>
   </nav>
@@ -76,6 +76,12 @@
     <p id="party-summary">Create a party or invite someone who is online.</p>
   </section>
   <div id="hero-label"><b id="hero-name">Ranger</b><span id="hero-state">NOT READY</span></div>
+  <aside id="character-preview-panel" hidden aria-live="polite">
+    <small>CHARACTER PREVIEW</small>
+    <h1>FIELD<br>OPERATIVE</h1>
+    <p id="character-preview-name">Ranger · CURRENT OUTFIT</p>
+    <span>MODERN INFANTRY <i></i> LOBBY KIT</span>
+  </aside>
 
   <div id="social-scrim" hidden></div>
   <aside class="social-panel" id="social-panel" aria-hidden="true">

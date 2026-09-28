@@ -36,3 +36,12 @@ test('character and weapon renderers share cached detailed model layouts',async(
  assert.match(source,/const sphereTemplates=new Map\(\)/);
  assert.match(source,/triCoordinates\(/);
 });
+
+test('soldier model materials stay muted in third-person and first-person views',async()=>{
+ const source=await readFile(new URL('../public/engine.js',import.meta.url),'utf8');
+ assert.match(source,/name==='helmet'\?AVATAR_COLORS\.helmet/);
+ assert.match(source,/name==='carrier'\?C\.vest/);
+ assert.match(source,/name==='pouch'\?AVATAR_COLORS\.pouch/);
+ assert.doesNotMatch(source,/AVATAR_GEAR\.knuckle/);
+ assert.doesNotMatch(source,/kneeGuard\.inset,enemy\?C\.red:C\.blue/);
+});
