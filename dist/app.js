@@ -10,7 +10,7 @@ let social=null,onlinePlayers=[],incomingInvites=[],socialBusy=false,socialTimer
 
 const readStore=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null;}};
 const writeStore=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
-let config={...window.SUNNY_CONFIG,...(readStore('duel-config')||{})},profile=readStore('duel-profile')||{name:'Ranger',color:'408faf'};
+let config={...window.HORIZON_CONFIG,...(readStore('duel-config')||{})},profile=readStore('duel-profile')||{name:'Ranger',color:'408faf'};
 $('name').value=profile.name;$('outfit').value=profile.color;
 
 const cleanName=v=>String(v||'Ranger').trim().replace(/\s+/g,' ').slice(0,20)||'Ranger';

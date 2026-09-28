@@ -66,3 +66,7 @@ dialog{background:#091f39;color:white;border:1px solid #5c89a970;border-radius:1
 @media(max-height:720px){.left-panel{bottom:28px}.mode-card{padding:12px;border-radius:18px}.mode-card h1{font-size:23px;margin:5px 0 9px}.mode-card .primary{padding:10px}.social-panel{top:8px;right:8px;height:calc(100vh - 16px)}}
 @media(max-width:760px){#lobby nav{height:60px}.lobby-tabs{height:60px}.left-panel{left:14px;bottom:18px;width:min(278px,calc(100vw - 28px))}.mode-card{border-radius:19px}.social-panel{top:8px;right:8px;width:calc(100vw - 16px);height:calc(100vh - 16px);border-radius:20px}#identity-card{border-radius:18px}.lobby-footer{right:14px}}
 @media(prefers-reduced-motion:reduce){.voice-dot,.social-panel,.party-card,#social-toggle,#settings{animation:none!important;transition:none!important}}
+
+/* Horizon identity */
+#lobby nav .horizon-logo-lobby{flex:0 0 auto;width:clamp(72px,7.1vw,94px);height:clamp(72px,7.1vw,94px);margin:-8px 0;object-fit:contain;filter:drop-shadow(0 6px 16px #020814a8)}
+@media(max-width:760px){#lobby nav .horizon-logo-lobby{width:72px;height:72px;margin:-4px 0}}

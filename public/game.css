@@ -39,3 +39,7 @@ body.menu #scope,body.in-lobby #scope,body.dropping #scope{display:none!importan
 
 /* v7 aerial speed treatment. Geometry supplies the hand/boot contrails; this soft edge pass sells acceleration. */
 body.dropping #vignette:after{content:"";position:absolute;inset:-12%;opacity:0;background:repeating-conic-gradient(from 0deg at 50% 50%,transparent 0 5deg,#d9f8ff18 5.5deg 6deg,transparent 6.5deg 14deg);mask:radial-gradient(circle,transparent 0 24%,#000 57%,transparent 82%);transform:scale(.86);transition:opacity .24s,transform .3s}body.fast-drop #vignette:after{opacity:.72;transform:scale(1.08);animation:dropWind .32s linear infinite}@keyframes dropWind{to{rotate:3deg}}@media(prefers-reduced-motion:reduce){body.fast-drop #vignette:after{animation:none}}
+
+/* Horizon identity */
+.horizon-logo{display:block;object-fit:contain;filter:drop-shadow(0 8px 18px #020814a8)}
+.horizon-logo-hud{width:88px;height:88px;margin:-17px 0 0 -10px}

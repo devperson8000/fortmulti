@@ -1,4 +1,4 @@
--- Sunny Skirmish multiplayer + social party schema.
+-- Horizon multiplayer + social party schema.
 -- Run this entire file in the Supabase SQL editor after every major game update.
 -- Browser clients use anonymous authenticated users plus a public publishable key.
 -- NEVER expose a service-role or secret key to the browser.

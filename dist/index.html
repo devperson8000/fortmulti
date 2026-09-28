@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#081a31">
 <meta name="description" content="A browser-based multiplayer game for up to eight players with private parties, a first-person transport aircraft intro, gliding, building and voice chat.">
-<title>Sunny Skirmish · Multiplayer</title>
+<title>Horizon · Multiplayer</title>
 <link rel="stylesheet" href="game.css">
 <link rel="stylesheet" href="lobby.css">
 </head>
@@ -19,7 +19,7 @@
   </div>
 </div>
 <header>
-  <div class="brand"><b>SUNNY<span>SKIRMISH</span></b><small>MULTIPLAYER / 03</small></div>
+  <div class="brand"><img class="horizon-logo horizon-logo-hud" src="horizon-logo.webp" alt="Horizon"></div>
   <div id="compass">W &nbsp; · &nbsp; NW &nbsp; · &nbsp; <strong>N</strong> &nbsp; · &nbsp; NE &nbsp; · &nbsp; E</div>
   <button id="pause" aria-label="Pause game">Ⅱ</button>
 </header>
@@ -34,7 +34,7 @@
 
 <section id="lobby">
   <nav>
-    <strong>SUNNY <i>SKIRMISH</i></strong>
+    <img class="horizon-logo horizon-logo-lobby" src="horizon-logo.webp" alt="Horizon">
     <div class="lobby-tabs"><button class="active" type="button">PLAY</button><button id="profile-toggle" type="button">OUTFIT</button><button type="button" disabled>QUESTS</button><button type="button" disabled>CAREER</button></div>
     <button id="social-toggle" type="button"><span>PEOPLE ONLINE</span><b id="online-count">0</b></button>
     <button id="settings" type="button" aria-label="Open multiplayer setup">⚙</button>
@@ -109,7 +109,7 @@
 
 <dialog id="setup">
   <h2>Online multiplayer setup</h2>
-  <p>Sunny Skirmish uses Supabase for presence, party invites and private Realtime rooms. Add these public values in Vercel, or save them here for this browser.</p>
+  <p>Horizon uses Supabase for presence, party invites and private Realtime rooms. Add these public values in Vercel, or save them here for this browser.</p>
   <label>Supabase project URL<input id="service-url" placeholder="https://your-project.supabase.co"></label>
   <label>Publishable key<input id="service-key" placeholder="sb_publishable_…"></label>
   <div class="setup-note"><b>Required once per Supabase project</b><span>Run the latest <code>supabase.sql</code> and enable Anonymous Sign-Ins in Authentication settings. Never use a service-role or secret key in the browser.</span></div>

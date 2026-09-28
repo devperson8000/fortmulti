@@ -1,6 +1,8 @@
-# Sunny Skirmish
+# Horizon
 
-Sunny Skirmish is a static, browser-based multiplayer prototype built for Vercel. Every playable sequence stays first person: a staged Cloudliner cabin intro, an animated rear hatch, and a clearly arcade-style glider launch before the island match. Private parties support **2–8 players** with an authoritative leader simulation, online presence and party invites, ready-up, shared building, text chat, optional party voice, reconnect handling and last-player-standing rounds.
+![Horizon logo](public/horizon-logo.webp)
+
+Horizon is a static, browser-based multiplayer prototype built for Vercel. Every playable sequence stays first person: a staged Cloudliner cabin intro, an animated rear hatch, and a clearly arcade-style glider launch before the island match. Private parties support **2–8 players** with an authoritative leader simulation, online presence and party invites, ready-up, shared building, text chat, optional party voice, reconnect handling and last-player-standing rounds.
 
 The multiplayer playability pass keeps the authoritative 30 Hz host simulation while adapting guest input and snapshot traffic to party size. Host-only latency probes, queued action taps, render-side position/rotation interpolation, stale-socket protection and reconnect cleanup keep larger parties below the Supabase Free Realtime event ceiling without making two-player combat feel delayed.
 

@@ -1,9 +1,9 @@
-window.SUNNY_CONFIG={"url":"","key":""};
+window.HORIZON_CONFIG={"url":"","key":""};
 
 (()=>{
  const installBufferReuse=Proto=>{
-  if(!Proto||Proto.__sunnyDynamicReuse)return;
-  Object.defineProperty(Proto,'__sunnyDynamicReuse',{value:true});
+  if(!Proto||(Proto.__horizonDynamicReuse||Proto.__sunnyDynamicReuse))return;
+  Object.defineProperty(Proto,'__horizonDynamicReuse',{value:true});
   const originalBind=Proto.bindBuffer,originalData=Proto.bufferData,originalSub=Proto.bufferSubData;
   if(typeof originalBind!=='function'||typeof originalData!=='function'||typeof originalSub!=='function')return;
   const boundByContext=new WeakMap(),capacityByBuffer=new WeakMap();
