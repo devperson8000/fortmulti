@@ -9,6 +9,7 @@ import {createAutoQuality,sampleAutoQuality,qualityPreset} from './quality-syste
 import {skyshipFirstPersonView,cabinPoint,clampCabinWorldPosition} from './skyship-camera.js';
 import {AVATAR_MODEL_PARTS,AVATAR_GEAR} from './avatar-model.js';
 import {WEAPON_MODELS} from './weapon-model.js';
+import {loadLobbySoldier} from './lobby-soldier.js';
 
 'use strict';
 (()=>{
@@ -28,11 +29,39 @@ function shader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);g
 const program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vertex));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error('Renderer could not start');gl.useProgram(program);
 const ap=gl.getAttribLocation(program,'aPosition'),ac=gl.getAttribLocation(program,'aColor'),um=gl.getUniformLocation(program,'uMatrix'),ue=gl.getUniformLocation(program,'uEye');gl.enableVertexAttribArray(ap);gl.enableVertexAttribArray(ac);gl.enable(gl.DEPTH_TEST);gl.clearColor(.48,.77,.88,1);
 const light=norm([-.6,1,.4]);let geo=[];
+let lobbySoldier=null;
+loadLobbySoldier().then(model=>{lobbySoldier=model;}).catch(error=>console.warn('Lobby soldier asset unavailable; using procedural fallback.',error));
+const lobbySoldierA=[0,0,0],lobbySoldierB=[0,0,0],lobbySoldierC=[0,0,0],lobbySoldierColor=[0,0,0];
+
 function triCoordinates(ax,ay,az,bx,by,bz,cx,cy,cz,col){const abx=bx-ax,aby=by-ay,abz=bz-az,acx=cx-ax,acy=cy-ay,acz=cz-az,nx=aby*acz-abz*acy,ny=abz*acx-abx*acz,nz=abx*acy-aby*acx,length=Math.hypot(nx,ny,nz)||1,shade=.62+.38*Math.max(0,(nx*light[0]+ny*light[1]+nz*light[2])/length),r=col[0]*shade,g=col[1]*shade,b=col[2]*shade;geo.push(ax,ay,az,r,g,b,bx,by,bz,r,g,b,cx,cy,cz,r,g,b);}
 function tri(a,b,c,col){triCoordinates(a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2],col);}
 function quad(a,b,c,d,col){tri(a,b,c,col);tri(a,c,d,col);}
 function transform(p,o,yaw=0,rx=0){let [x,y,z]=p;[y,z]=[y*Math.cos(rx)-z*Math.sin(rx),y*Math.sin(rx)+z*Math.cos(rx)];return [o[0]+x*Math.cos(yaw)+z*Math.sin(yaw),o[1]+y,o[2]-x*Math.sin(yaw)+z*Math.cos(yaw)];}
 function poseTransform(p,o,yaw=0,pitch=0,roll=0,pivot=[0,1.25,0]){let x=p[0]-pivot[0],y=p[1]-pivot[1],z=p[2]-pivot[2];[x,y]=[x*Math.cos(roll)-y*Math.sin(roll),x*Math.sin(roll)+y*Math.cos(roll)];[y,z]=[y*Math.cos(pitch)-z*Math.sin(pitch),y*Math.sin(pitch)+z*Math.cos(pitch)];return transform([x+pivot[0],y+pivot[1],z+pivot[2]],o,yaw);}
+
+function lobbySoldierVertex(source,index,out,origin,scale,cy,sy,cr,sr,pivot,bob,breath){
+ let x=source[index]*scale,y=source[index+1]*scale,z=source[index+2]*scale;
+ y+=bob+Math.max(0,y-pivot*.64)*breath;
+ const py=y-pivot,nx=x*cr-py*sr,ny=x*sr+py*cr+pivot;
+ x=nx;y=ny;
+ out[0]=origin[0]+x*cy+z*sy;out[1]=origin[1]+y;out[2]=origin[2]-x*sy+z*cy;
+}
+function drawLobbySoldier(origin,yaw,scale=1.48,phase=0,showcase=false){
+ const model=lobbySoldier;if(!model)return false;
+ const breathe=Math.sin(time*1.45+phase),bob=breathe*.012,sway=Math.sin(time*.58+phase)*(showcase?.045:.026),lean=Math.sin(time*.72+phase*.7)*.012;
+ const turn=yaw+sway,cy=Math.cos(turn),sy=Math.sin(turn),cr=Math.cos(lean),sr=Math.sin(lean),pivot=.9*scale,breath=breathe*.0022;
+ const positions=model.positions,colors=model.colors;
+ for(let triangle=0;triangle<model.count;triangle++){
+  const p=triangle*9,c=triangle*3;
+  lobbySoldierVertex(positions,p,lobbySoldierA,origin,scale,cy,sy,cr,sr,pivot,bob,breath);
+  lobbySoldierVertex(positions,p+3,lobbySoldierB,origin,scale,cy,sy,cr,sr,pivot,bob,breath);
+  lobbySoldierVertex(positions,p+6,lobbySoldierC,origin,scale,cy,sy,cr,sr,pivot,bob,breath);
+  lobbySoldierColor[0]=Math.min(1,colors[c]*1.1);lobbySoldierColor[1]=Math.min(1,colors[c+1]*1.1);lobbySoldierColor[2]=Math.min(1,colors[c+2]*1.1);
+  tri(lobbySoldierA,lobbySoldierB,lobbySoldierC,lobbySoldierColor);
+ }
+ return true;
+}
+
 const BOX_CORNERS=[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]],BOX_FACES=[[0,3,2,1],[4,5,6,7],[1,2,6,5],[0,4,7,3],[3,7,6,2],[0,1,5,4]],boxScratch=new Float32Array(24);
 function box(o,s,c,yaw=0,rx=0){const cy=Math.cos(yaw),sy=Math.sin(yaw),cr=Math.cos(rx),sr=Math.sin(rx);for(let i=0;i<8;i++){const corner=BOX_CORNERS[i],x=corner[0]*s[0]*.5,y=corner[1]*s[1]*.5,z=corner[2]*s[2]*.5,ry=y*cr-z*sr,rz=y*sr+z*cr,k=i*3;boxScratch[k]=o[0]+x*cy+rz*sy;boxScratch[k+1]=o[1]+ry;boxScratch[k+2]=o[2]-x*sy+rz*cy;}for(const f of BOX_FACES){const a=f[0]*3,b=f[1]*3,d=f[2]*3,e=f[3]*3;triCoordinates(boxScratch[a],boxScratch[a+1],boxScratch[a+2],boxScratch[b],boxScratch[b+1],boxScratch[b+2],boxScratch[d],boxScratch[d+1],boxScratch[d+2],c);triCoordinates(boxScratch[a],boxScratch[a+1],boxScratch[a+2],boxScratch[d],boxScratch[d+1],boxScratch[d+2],boxScratch[e],boxScratch[e+1],boxScratch[e+2],c);}}
 function cone(o,r1,r2,h,c,n=16){for(let i=0;i<n;i++){let a=i/n*Math.PI*2,b=(i+1)/n*Math.PI*2,p=[o[0]+Math.cos(a)*r1,o[1],o[2]+Math.sin(a)*r1],q=[o[0]+Math.cos(b)*r1,o[1],o[2]+Math.sin(b)*r1],s=[o[0]+Math.cos(a)*r2,o[1]+h,o[2]+Math.sin(a)*r2],t=[o[0]+Math.cos(b)*r2,o[1]+h,o[2]+Math.sin(b)*r2];quad(p,s,t,q,c);tri([o[0],o[1]+h,o[2]],t,s,c);}}
@@ -416,14 +445,14 @@ function drawLobby(){
  // Party pads use layered luminous rings instead of card-shaped blocks behind the players.
  // Slot zero is always the local player and is physically closest to the camera. Every invite slot stays behind it.
  const party=window.Duel.party||[],spots=[[0,.1,2.15],[-2.8,.03,.45],[2.8,.03,.45],[-5.05,-.02,-.95],[5.05,-.02,-.95],[-7,-.06,-2.15],[7,-.06,-2.15],[0,-.06,-2.5]];
- for(let i=0;i<8;i++){const q=spots[i],member=party[i],pulse=.03+Math.sin(time*2+i)*.025;cone([q[0],q[1]-.24,q[2]],1.18,1.18,.14,color(member?'198ab2':'173d5c'),56);cone([q[0],q[1]-.1,q[2]],.98,.98,.06,color(member?'74ddf6':'2a5570'),56);if(member){cone([q[0],q[1]-.03,q[2]],.73,.73,.035+pulse,color('b8f5ff'),48);character([q[0],q[1]+pulse*.3,q[2]],Math.PI+(i?Math.sign(q[0])*.055:0),0,color(member.color||'577363'),false,'landed',1,'lobby');}else{for(let y=.25;y<2.25;y+=.18)box([q[0],q[1]+y,q[2]],[.055,.035,.055],color('4c86a4'));gem([q[0],q[1]+2.48,q[2]],[.11,.23,.11],color('72bad8'),8);}}
+ for(let i=0;i<8;i++){const q=spots[i],member=party[i],pulse=.03+Math.sin(time*2+i)*.025;cone([q[0],q[1]-.24,q[2]],1.18,1.18,.14,color(member?'198ab2':'173d5c'),56);cone([q[0],q[1]-.1,q[2]],.98,.98,.06,color(member?'74ddf6':'2a5570'),56);if(member){cone([q[0],q[1]-.03,q[2]],.73,.73,.035+pulse,color('b8f5ff'),48);const heroAngle=Math.PI+(i?Math.sign(q[0])*.055:0),heroOrigin=[q[0],q[1]+pulse*.3,q[2]];if(i===0){if(!drawLobbySoldier(heroOrigin,heroAngle,1.48,.2))character(heroOrigin,heroAngle,0,color(member.color||'577363'),false,'landed',1,'lobby');}else character(heroOrigin,heroAngle,0,color(member.color||'577363'),false,'landed',1,'lobby');}else{for(let y=.25;y<2.25;y+=.18)box([q[0],q[1]+y,q[2]],[.055,.035,.055],color('4c86a4'));gem([q[0],q[1]+2.48,q[2]],[.11,.23,.11],color('72bad8'),8);}}
  const data=dynamicData.copy(geo);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);draw(dynamicBuffer,dynamicData.length/6);gl.clearColor(.48,.77,.88,1);
 }
 function drawCharacterShowcase(w,h){
  const target=[.62,1.16,0],eye=[.62,2.08,6.25];gl.clearColor(.018,.047,.083,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(um,false,matrix(eye,target,w/h,.54));gl.uniform3fv(ue,eye);geo.length=0;
  box([.6,-.34,-.8],[20,.18,17],color('10283d'));box([.6,3.65,-5.45],[15,8,.3],color('10243a'));
  cone([.78,-.16,0],1.42,1.42,.22,color('16364d'),64);cone([.78,-.025,0],1.28,1.28,.055,color('5bc9dd'),64);cone([.78,.015,0],1.08,1.08,.05,color('20536b'),64);
- character([.78,.06,0],Math.PI+time*.22,0,color(window.Duel.myColor||'577363'),false,'landed',1,'lobby');
+ if(!drawLobbySoldier([.78,.06,0],Math.PI,1.58,.85,true))character([.78,.06,0],Math.PI,0,color(window.Duel.myColor||'577363'),false,'landed',1,'lobby');
  const data=dynamicData.copy(geo);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);draw(dynamicBuffer,dynamicData.length/6);
 }
 window.Game={world:{height,obstacles},input:()=>{const aftYaw=(skyshipData?.yaw||0)+Math.PI,delta=Math.atan2(Math.sin(aftYaw-yaw),Math.cos(aftYaw-yaw)),blend=player.air==='ship'?clamp(skyshipPresentation.rearLookBlend||0,0,1):0,inputYaw=yaw+delta*blend;return {x:(keys.KeyD?1:0)-(keys.KeyA?1:0),z:(keys.KeyW?1:0)-(keys.KeyS?1:0),yaw:inputYaw,pitch,aimYaw:inputYaw+recoilYaw,aimPitch:clamp(pitch+recoilPitch,-.8,.62),rotation:buildRotation,slot,jump:!!keys.Space,sprint:!!keys.ShiftLeft,aim,fire:firing&&canFireDuringPresentation(cameraPresentation),reload:!!keys.KeyR};},clear:()=>{keysClear();$('resume-control').hidden=true;$('game-settings').hidden=true;},look:(a)=>{yaw=a;pitch=-.03;},pose:()=>player,
