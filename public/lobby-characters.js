@@ -62,7 +62,7 @@ if(canvas){
   return {
    id:member.id,holder,model,mixer,idleAction,walkAction,fingerAction,rig,phase,slot:index,
    randomState:hash(`${member.id||index}:horizon-lobby`)||1,
-   saluteActive:false,saluteStarted:0,nextSaluteAt:now+1.15+index*.16
+   saluteActive:false,saluteStarted:0,nextSaluteAt:now+.85+index*.16
   };
  }
  function ensureInstances(party){
@@ -108,14 +108,16 @@ if(canvas){
  }
  function applySalute(instance,state){
   const {rightArm,rightForeArm,rightHand}=instance.rig,amount=state.amount;
-  if(instance.fingerAction)instance.fingerAction.setEffectiveWeight(amount*.92);
+  if(instance.fingerAction)instance.fingerAction.setEffectiveWeight(amount);
   if(amount<=.001||!rightArm||!rightForeArm||!rightHand)return;
-  targetElbow.set(-.42,1.37,-.18);instance.model.localToWorld(targetElbow);
-  targetHand.set(-.22-state.flick*.16,1.69+state.flick*.025,-.205-state.flick*.055);instance.model.localToWorld(targetHand);
+  // This rig's RIGHT arm lives on +X. Keep the elbow outside the torso and bring
+  // the hand to the right side of the visor/forehead instead of crossing the body.
+  targetElbow.set(.43,1.48,-.19);instance.model.localToWorld(targetElbow);
+  targetHand.set(.15+state.flick*.18,1.705+state.flick*.02,-.175-state.flick*.08);instance.model.localToWorld(targetHand);
   rotateBoneToward(rightArm,rightForeArm,targetElbow,amount);
   instance.model.updateMatrixWorld(true);
   rotateBoneToward(rightForeArm,rightHand,targetHand,amount);
-  additiveRotate(rightHand,-.10-state.flick*.12,.08,.16+state.flick*.18,amount);
+  additiveRotate(rightHand,-.18-state.flick*.16,-.06,.22+state.flick*.24,amount);
  }
  function applyIdleLayers(instance,time,salute){
   const rig=instance.rig,phase=instance.phase;
