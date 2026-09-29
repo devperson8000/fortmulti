@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkinned} from 'three/addons/utils/SkeletonUtils.js';
+import {resolveLobbyRig,sampleSaluteFingerPose} from './lobby-rig.js';
 
 const canvas=document.getElementById('lobby-characters');
 if(canvas){
@@ -22,7 +23,7 @@ if(canvas){
  const instances=new Map(),clock=new THREE.Clock();
  const vA=new THREE.Vector3(),vB=new THREE.Vector3(),vC=new THREE.Vector3(),vD=new THREE.Vector3(),targetElbow=new THREE.Vector3(),targetHand=new THREE.Vector3();
  const qA=new THREE.Quaternion(),qB=new THREE.Quaternion(),qC=new THREE.Quaternion();
- let template=null,idleClip=null,walkClip=null,saluteFingerClip=null,started=false;
+ let template=null,idleClip=null,walkClip=null,saluteFingerPose=[],started=false,rigWarningShown=false;
 
  const clamp01=value=>Math.max(0,Math.min(1,value));
  const smooth=value=>{value=clamp01(value);return value*value*(3-2*value);};
@@ -37,30 +38,28 @@ if(canvas){
   camera.updateProjectionMatrix();
  }
  function findRig(model){
-  const bone=name=>model.getObjectByName(`mixamorig:${name}`)||null;
-  return {
-   hips:bone('Hips'),spine:bone('Spine'),spine1:bone('Spine1'),spine2:bone('Spine2'),neck:bone('Neck'),head:bone('Head'),
-   rightShoulder:bone('RightShoulder'),rightArm:bone('RightArm'),rightForeArm:bone('RightForeArm'),rightHand:bone('RightHand'),
-   rightIndex1:bone('RightHandIndex1'),rightMiddle1:bone('RightHandMiddle1'),rightRing1:bone('RightHandRing1'),rightPinky1:bone('RightHandPinky1'),
-   leftFoot:bone('LeftFoot'),rightFoot:bone('RightFoot'),leftToe:bone('LeftToeBase'),rightToe:bone('RightToeBase')
-  };
+  return resolveLobbyRig(model);
  }
  function disposeInstance(instance){instance.mixer.stopAllAction();scene.remove(instance.holder);}
  function createInstance(member,index){
   const model=cloneSkinned(template),holder=new THREE.Group(),rig=findRig(model);
+  const fingerTargets=saluteFingerPose.map(({name,quaternion})=>({name,bone:model.getObjectByName(name)||null,quaternion:quaternion.clone()}));
+  if(!rigWarningShown){
+   const missing=['rightShoulder','rightArm','rightForeArm','rightHand','rightIndex1','rightMiddle1'].filter(name=>!rig[name]);
+   missing.push(...fingerTargets.filter(target=>!target.bone).map(target=>target.name));
+   if(missing.length){console.error('Horizon lobby Soldier rig is missing runtime bones:',missing);rigWarningShown=true;}
+  }
   model.traverse(object=>{if(object.isMesh){object.frustumCulled=false;object.castShadow=false;object.receiveShadow=false;}});
   holder.add(model);scene.add(holder);
   const mixer=new THREE.AnimationMixer(model);
   const idleAction=mixer.clipAction(idleClip);idleAction.enabled=true;idleAction.setEffectiveWeight(.95);idleAction.play();
   const walkAction=walkClip?mixer.clipAction(walkClip):null;
   if(walkAction){walkAction.enabled=true;walkAction.setEffectiveWeight(.05);walkAction.setEffectiveTimeScale(.16);walkAction.play();}
-  const fingerAction=saluteFingerClip?mixer.clipAction(saluteFingerClip):null;
-  if(fingerAction){fingerAction.enabled=true;fingerAction.setEffectiveWeight(0);fingerAction.play();fingerAction.paused=true;fingerAction.time=Math.min(.25,saluteFingerClip.duration*.25);}
   const phase=(index*.91+(String(member.id||'').length*.37))%(idleClip.duration||1),now=performance.now()/1000;
   idleAction.time=phase;
   if(walkAction)walkAction.time=(phase*1.73)%(walkClip.duration||1);
   return {
-   id:member.id,holder,model,mixer,idleAction,walkAction,fingerAction,rig,phase,slot:index,
+   id:member.id,holder,model,mixer,idleAction,walkAction,fingerTargets,rig,phase,slot:index,
    randomState:hash(`${member.id||index}:horizon-lobby`)||1,
    saluteActive:false,saluteStarted:0,nextSaluteAt:now+.85+index*.16
   };
@@ -108,16 +107,15 @@ if(canvas){
  }
  function applySalute(instance,state){
   const {rightShoulder,rightArm,rightForeArm,rightHand,rightRing1,rightPinky1}=instance.rig,amount=state.amount;
-  if(instance.fingerAction)instance.fingerAction.setEffectiveWeight(amount);
   if(amount<=.001||!rightArm||!rightForeArm||!rightHand)return;
 
-  // These quaternions are solved specifically from Soldier.glb's real bind pose.
-  // Full weight places the right hand clearly beside the forehead instead of relying
-  // on subtle IK corrections that can be swallowed by the base Idle animation.
+  // Apply local bone overrides after mixer.update(). At full weight, the verified
+  // Soldier pose moves the wrist from below the chest to the forehead beside the head.
   const armTarget=qB.set(.4095411,0,-.0013047,.9122907);
   const forearmTarget=qC.set(.5717739,0,-.5741454,.5860305);
   rightArm.quaternion.slerp(armTarget,amount);
   rightForeArm.quaternion.slerp(forearmTarget,amount);
+  for(const target of instance.fingerTargets)if(target.bone)target.bone.quaternion.slerp(target.quaternion,amount);
 
   // Lift the shoulder slightly and angle the palm/fingers toward the visor.
   additiveRotate(rightShoulder,-.015,-.015,-.075,amount);
@@ -161,6 +159,8 @@ if(canvas){
    instance.idleAction.setEffectiveWeight(1-walkWeight);
    if(instance.walkAction)instance.walkAction.setEffectiveWeight(walkWeight);
    applyIdleLayers(instance,time,salute);
+   // The mixer rewrites its tracked bones at the start of every frame. Keep these
+   // direct pose overrides after that update so Idle cannot erase the salute.
    applySalute(instance,salute);
   }
  }
@@ -188,8 +188,11 @@ if(canvas){
    walkClip=gltf.animations.find(clip=>clip.name==='Walk')||null;
    const tPose=gltf.animations.find(clip=>clip.name==='TPose')||null;
    if(tPose){
-    const tracks=tPose.tracks.filter(track=>track.name.includes('mixamorig:RightHandIndex')||track.name.includes('mixamorig:RightHandMiddle'));
-    if(tracks.length)saluteFingerClip=new THREE.AnimationClip('HorizonTwoFingerSalute',tPose.duration,tracks);
+    const sampleTime=Math.min(.25,tPose.duration*.25);
+    saluteFingerPose=sampleSaluteFingerPose(tPose,sampleTime).map(({name,quaternion})=>({
+     name,quaternion:new THREE.Quaternion().fromArray(quaternion).normalize()
+    }));
+    if(!saluteFingerPose.length)console.error('Horizon lobby Soldier TPose is missing sanitized index/middle finger rotations.');
    }
    if(!idleClip){console.error('Horizon lobby Soldier is missing its Idle animation.');return;}
    if(!started){started=true;frame();}
