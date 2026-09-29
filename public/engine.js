@@ -9,7 +9,6 @@ import {createAutoQuality,sampleAutoQuality,qualityPreset} from './quality-syste
 import {skyshipFirstPersonView,cabinPoint,clampCabinWorldPosition} from './skyship-camera.js';
 import {AVATAR_MODEL_PARTS,AVATAR_GEAR} from './avatar-model.js';
 import {WEAPON_MODELS} from './weapon-model.js';
-import {loadLobbySoldier} from './lobby-soldier.js';
 
 'use strict';
 (()=>{
@@ -29,9 +28,6 @@ function shader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);g
 const program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vertex));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error('Renderer could not start');gl.useProgram(program);
 const ap=gl.getAttribLocation(program,'aPosition'),ac=gl.getAttribLocation(program,'aColor'),um=gl.getUniformLocation(program,'uMatrix'),ue=gl.getUniformLocation(program,'uEye');gl.enableVertexAttribArray(ap);gl.enableVertexAttribArray(ac);gl.enable(gl.DEPTH_TEST);gl.clearColor(.48,.77,.88,1);
 const light=norm([-.6,1,.4]);let geo=[];
-let lobbySoldier=null;
-loadLobbySoldier().then(model=>{lobbySoldier=model;}).catch(error=>console.warn('Lobby soldier asset unavailable; using procedural fallback.',error));
-const lobbySoldierA=[0,0,0],lobbySoldierB=[0,0,0],lobbySoldierC=[0,0,0],lobbySoldierColor=[0,0,0];
 
 function triCoordinates(ax,ay,az,bx,by,bz,cx,cy,cz,col){const abx=bx-ax,aby=by-ay,abz=bz-az,acx=cx-ax,acy=cy-ay,acz=cz-az,nx=aby*acz-abz*acy,ny=abz*acx-abx*acz,nz=abx*acy-aby*acx,length=Math.hypot(nx,ny,nz)||1,shade=.62+.38*Math.max(0,(nx*light[0]+ny*light[1]+nz*light[2])/length),r=col[0]*shade,g=col[1]*shade,b=col[2]*shade;geo.push(ax,ay,az,r,g,b,bx,by,bz,r,g,b,cx,cy,cz,r,g,b);}
 function tri(a,b,c,col){triCoordinates(a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2],col);}
@@ -445,14 +441,14 @@ function drawLobby(){
  // Party pads use layered luminous rings instead of card-shaped blocks behind the players.
  // Slot zero is always the local player and is physically closest to the camera. Every invite slot stays behind it.
  const party=window.Duel.party||[],spots=[[0,.1,2.15],[-2.8,.03,.45],[2.8,.03,.45],[-5.05,-.02,-.95],[5.05,-.02,-.95],[-7,-.06,-2.15],[7,-.06,-2.15],[0,-.06,-2.5]];
- for(let i=0;i<8;i++){const q=spots[i],member=party[i],pulse=.03+Math.sin(time*2+i)*.025;cone([q[0],q[1]-.24,q[2]],1.18,1.18,.14,color(member?'198ab2':'173d5c'),56);cone([q[0],q[1]-.1,q[2]],.98,.98,.06,color(member?'74ddf6':'2a5570'),56);if(member){cone([q[0],q[1]-.03,q[2]],.73,.73,.035+pulse,color('b8f5ff'),48);const heroAngle=Math.PI+(i?Math.sign(q[0])*.055:0),heroOrigin=[q[0],q[1]+pulse*.3,q[2]];if(i===0){if(!drawLobbySoldier(heroOrigin,heroAngle,1.48,.2))character(heroOrigin,heroAngle,0,color(member.color||'577363'),false,'landed',1,'lobby');}else character(heroOrigin,heroAngle,0,color(member.color||'577363'),false,'landed',1,'lobby');}else{for(let y=.25;y<2.25;y+=.18)box([q[0],q[1]+y,q[2]],[.055,.035,.055],color('4c86a4'));gem([q[0],q[1]+2.48,q[2]],[.11,.23,.11],color('72bad8'),8);}}
+ for(let i=0;i<8;i++){const q=spots[i],member=party[i],pulse=.03+Math.sin(time*2+i)*.025;cone([q[0],q[1]-.24,q[2]],1.18,1.18,.14,color(member?'198ab2':'173d5c'),56);cone([q[0],q[1]-.1,q[2]],.98,.98,.06,color(member?'74ddf6':'2a5570'),56);if(member){cone([q[0],q[1]-.03,q[2]],.73,.73,.035+pulse,color('b8f5ff'),48);const heroAngle=Math.PI+(i?Math.sign(q[0])*.055:0),heroOrigin=[q[0],q[1]+pulse*.3,q[2]];if(i!==0)character(heroOrigin,heroAngle,0,color(member.color||'577363'),false,'landed',1,'lobby');}else{for(let y=.25;y<2.25;y+=.18)box([q[0],q[1]+y,q[2]],[.055,.035,.055],color('4c86a4'));gem([q[0],q[1]+2.48,q[2]],[.11,.23,.11],color('72bad8'),8);}}
  const data=dynamicData.copy(geo);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);draw(dynamicBuffer,dynamicData.length/6);gl.clearColor(.48,.77,.88,1);
 }
 function drawCharacterShowcase(w,h){
  const target=[.62,1.16,0],eye=[.62,2.08,6.25];gl.clearColor(.018,.047,.083,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(um,false,matrix(eye,target,w/h,.54));gl.uniform3fv(ue,eye);geo.length=0;
  box([.6,-.34,-.8],[20,.18,17],color('10283d'));box([.6,3.65,-5.45],[15,8,.3],color('10243a'));
  cone([.78,-.16,0],1.42,1.42,.22,color('16364d'),64);cone([.78,-.025,0],1.28,1.28,.055,color('5bc9dd'),64);cone([.78,.015,0],1.08,1.08,.05,color('20536b'),64);
- if(!drawLobbySoldier([.78,.06,0],Math.PI,1.58,.85,true))character([.78,.06,0],Math.PI,0,color(window.Duel.myColor||'577363'),false,'landed',1,'lobby');
+ // The CHARACTER tab uses the same animated Soldier.glb overlay as the main lobby.
  const data=dynamicData.copy(geo);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);draw(dynamicBuffer,dynamicData.length/6);
 }
 window.Game={world:{height,obstacles},input:()=>{const aftYaw=(skyshipData?.yaw||0)+Math.PI,delta=Math.atan2(Math.sin(aftYaw-yaw),Math.cos(aftYaw-yaw)),blend=player.air==='ship'?clamp(skyshipPresentation.rearLookBlend||0,0,1):0,inputYaw=yaw+delta*blend;return {x:(keys.KeyD?1:0)-(keys.KeyA?1:0),z:(keys.KeyW?1:0)-(keys.KeyS?1:0),yaw:inputYaw,pitch,aimYaw:inputYaw+recoilYaw,aimPitch:clamp(pitch+recoilPitch,-.8,.62),rotation:buildRotation,slot,jump:!!keys.Space,sprint:!!keys.ShiftLeft,aim,fire:firing&&canFireDuringPresentation(cameraPresentation),reload:!!keys.KeyR};},clear:()=>{keysClear();$('resume-control').hidden=true;$('game-settings').hidden=true;},look:(a)=>{yaw=a;pitch=-.03;},pose:()=>player,
