@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkinned} from 'three/addons/utils/SkeletonUtils.js';
-import {resolveLobbyRig,sampleSaluteFingerPose} from './lobby-rig.js';
+import {buildForeheadSaluteProbes,resolveLobbyRig,SALUTE_FINGER_CURLS,sampleRightHandFingerPose} from './lobby-rig.js';
 
 const canvas=document.getElementById('lobby-characters');
 if(canvas){
@@ -23,6 +23,7 @@ if(canvas){
  const instances=new Map(),clock=new THREE.Clock();
  const vA=new THREE.Vector3(),vB=new THREE.Vector3(),vC=new THREE.Vector3(),vD=new THREE.Vector3(),targetElbow=new THREE.Vector3(),targetHand=new THREE.Vector3();
  const qA=new THREE.Quaternion(),qB=new THREE.Quaternion(),qC=new THREE.Quaternion();
+ const saluteRaycaster=new THREE.Raycaster(),saluteCurlByName=new Map(SALUTE_FINGER_CURLS.map(curl=>[curl.name,curl]));
  let template=null,idleClip=null,walkClip=null,saluteFingerPose=[],started=false,rigWarningShown=false;
 
  const clamp01=value=>Math.max(0,Math.min(1,value));
@@ -43,10 +44,19 @@ if(canvas){
  function disposeInstance(instance){instance.mixer.stopAllAction();scene.remove(instance.holder);}
  function createInstance(member,index){
   const model=cloneSkinned(template),holder=new THREE.Group(),rig=findRig(model);
-  const fingerTargets=saluteFingerPose.map(({name,quaternion})=>({name,bone:model.getObjectByName(name)||null,quaternion:quaternion.clone()}));
+  const sampledFingerPose=new Map(saluteFingerPose.map(({name,quaternion})=>[name,quaternion]));
+  const fingerTargets=[];
+  for(const digit of ['Thumb','Index','Middle','Ring','Pinky'])for(let joint=1;joint<=4;joint++){
+   const bone=rig[`right${digit}${joint}`];
+   if(!bone)continue;
+   const curl=saluteCurlByName.get(bone.name)||null;
+   fingerTargets.push({name:bone.name,bone,quaternion:(sampledFingerPose.get(bone.name)||bone.quaternion).clone(),curl});
+  }
+  const saluteBones=[rig.rightShoulder,rig.rightArm,rig.rightForeArm,rig.rightHand,...fingerTargets.map(target=>target.bone)].filter(Boolean);
+  const foreheadMeshes=[];
+  model.traverse(object=>{if(object.isSkinnedMesh&&object.skeleton.bones.some(bone=>bone.name==='mixamorigHead'))foreheadMeshes.push(object);});
   if(!rigWarningShown){
-   const missing=['rightShoulder','rightArm','rightForeArm','rightHand','rightIndex1','rightMiddle1'].filter(name=>!rig[name]);
-   missing.push(...fingerTargets.filter(target=>!target.bone).map(target=>target.name));
+   const missing=['rightShoulder','rightArm','rightForeArm','rightHand',...['Thumb','Index','Middle','Ring','Pinky'].flatMap(digit=>[1,2,3,4].map(joint=>`right${digit}${joint}`))].filter(name=>!rig[name]);
    if(missing.length){console.error('Horizon lobby Soldier rig is missing runtime bones:',missing);rigWarningShown=true;}
   }
   model.traverse(object=>{if(object.isMesh){object.frustumCulled=false;object.castShadow=false;object.receiveShadow=false;}});
@@ -59,7 +69,7 @@ if(canvas){
   idleAction.time=phase;
   if(walkAction)walkAction.time=(phase*1.73)%(walkClip.duration||1);
   return {
-   id:member.id,holder,model,mixer,idleAction,walkAction,fingerTargets,rig,phase,slot:index,
+   id:member.id,holder,model,mixer,idleAction,walkAction,fingerTargets,saluteBones,foreheadMeshes,salutePose:null,rig,phase,slot:index,
    randomState:hash(`${member.id||index}:horizon-lobby`)||1,
    saluteActive:false,saluteStarted:0,nextSaluteAt:now+.85+index*.16
   };
@@ -76,14 +86,14 @@ if(canvas){
   for(const [id,instance] of instances)if(!active.has(id)){disposeInstance(instance);instances.delete(id);}
  }
  function saluteState(instance,time){
-  if(!instance.saluteActive&&time>=instance.nextSaluteAt){instance.saluteActive=true;instance.saluteStarted=time;}
+  if(!instance.saluteActive&&time>=instance.nextSaluteAt){instance.saluteActive=true;instance.saluteStarted=time;instance.salutePose=null;}
   if(!instance.saluteActive)return {amount:0,flick:0};
   const elapsed=time-instance.saluteStarted;
   if(elapsed<.42)return {amount:easeOut(elapsed/.42),flick:0};
   if(elapsed<1.12)return {amount:1,flick:0};
   if(elapsed<1.28){const t=smooth((elapsed-1.12)/.16);return {amount:1,flick:t};}
   if(elapsed<1.68){const t=smooth((elapsed-1.28)/.40);return {amount:1-t,flick:1-t};}
-  instance.saluteActive=false;
+  instance.saluteActive=false;instance.salutePose=null;
   instance.nextSaluteAt=time+16+rand01(instance)*18;
   return {amount:0,flick:0};
  }
@@ -92,8 +102,9 @@ if(canvas){
   bone.updateWorldMatrix(true,true);
   child.updateWorldMatrix(true,true);
   bone.getWorldPosition(vA);child.getWorldPosition(vB);
-  vC.copy(vB).sub(vA).normalize();vD.copy(target).sub(vA).normalize();
+  vC.copy(vB).sub(vA);vD.copy(target).sub(vA);
   if(vC.lengthSq()<1e-8||vD.lengthSq()<1e-8)return;
+  vC.normalize();vD.normalize();
   qA.setFromUnitVectors(vC,vD);
   bone.getWorldQuaternion(qB);qC.copy(qA).multiply(qB);
   if(bone.parent){bone.parent.getWorldQuaternion(qA).invert();qC.premultiply(qA);}
@@ -105,26 +116,97 @@ if(canvas){
   qA.setFromEuler(new THREE.Euler(x*weight,y*weight,z*weight,'XYZ'));
   bone.quaternion.multiply(qA);
  }
+ function updateSkinnedMatrices(model){
+  model.updateMatrixWorld(true);
+  model.traverse(object=>{if(object.isSkinnedMesh)object.skeleton.update();});
+ }
+ function getForeheadTargets(instance){
+  const {head,rightShoulder}=instance.rig;
+  if(!head||!rightShoulder)return null;
+  updateSkinnedMatrices(instance.model);
+  head.getWorldPosition(vA);rightShoulder.getWorldPosition(vB);
+  const probes=buildForeheadSaluteProbes(vA.toArray(),vB.toArray(),camera.position.toArray(),instance.holder.scale.x);
+  const faceDirection=new THREE.Vector3(...probes.direction).normalize();
+  const fallbackDistance=.32*(instance.holder.scale.x/1.78);
+  return probes.probes.map(probe=>{
+   const fallback=new THREE.Vector3(...probe).addScaledVector(faceDirection,fallbackDistance);
+   if(!instance.foreheadMeshes.length)return fallback;
+   const origin=new THREE.Vector3(...probe).addScaledVector(faceDirection,1);
+   saluteRaycaster.set(origin,faceDirection.clone().negate());
+   saluteRaycaster.near=0;saluteRaycaster.far=1.8;
+   const hit=saluteRaycaster.intersectObjects(instance.foreheadMeshes,false)[0];
+   if(!hit)return fallback;
+   const normal=hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+   if(normal.dot(faceDirection)<0)normal.negate();
+   return hit.point.clone().addScaledVector(normal,.003);
+  });
+ }
+ function alignSaluteHand(instance,tips,targets){
+  const {rightHand}=instance.rig;
+  if(!rightHand||!tips[0]||!tips[1])return;
+  rightHand.updateWorldMatrix(true,true);
+  tips[0].getWorldPosition(vA);tips[1].getWorldPosition(vB);vC.copy(vA).sub(vB);
+  vA.copy(targets[0]).sub(targets[1]);
+  if(vA.lengthSq()<1e-8||vC.lengthSq()<1e-8)return;
+  qA.setFromUnitVectors(vC.normalize(),vA.normalize());
+  rightHand.getWorldQuaternion(qB);qC.copy(qA).multiply(qB);
+  if(rightHand.parent){rightHand.parent.getWorldQuaternion(qA).invert();qC.premultiply(qA);}
+  rightHand.quaternion.copy(qC);rightHand.updateWorldMatrix(false,true);
+ }
+ function solveSalutePose(instance){
+  const {rightShoulder,rightArm,rightForeArm,rightHand,rightIndex4,rightMiddle4}=instance.rig;
+  if(!rightShoulder||!rightArm||!rightForeArm||!rightHand||!rightIndex4||!rightMiddle4)return new Map();
+
+  // Start from a complete two-finger salute pose, then solve its tips onto the
+  // Soldier's actual forehead surface. All results are reapplied after Idle.
+  rightArm.quaternion.set(.4095411,0,-.0013047,.9122907);
+  rightForeArm.quaternion.set(.5717739,0,-.5741454,.5860305);
+  additiveRotate(rightShoulder,-.015,-.015,-.075);
+  additiveRotate(rightHand,-.24,-.08,.28);
+  for(const target of instance.fingerTargets){
+   target.bone.quaternion.copy(target.quaternion);
+   if(target.curl){
+    qA.setFromAxisAngle(vA.fromArray(target.curl.axis),target.curl.angle);
+    target.bone.quaternion.multiply(qA);
+   }
+  }
+
+  const targets=getForeheadTargets(instance);
+  if(targets){
+   const tips=[rightIndex4,rightMiddle4];
+   alignSaluteHand(instance,tips,targets);
+   updateSkinnedMatrices(instance.model);
+   rightHand.updateWorldMatrix(true,true);
+   tips[0].getWorldPosition(vA);tips[1].getWorldPosition(vB);vA.add(vB).multiplyScalar(.5);
+   const midpointEffector=new THREE.Object3D();rightHand.add(midpointEffector);
+   midpointEffector.position.copy(rightHand.worldToLocal(vA.clone()));
+   const targetCenter=targets[0].clone().add(targets[1]).multiplyScalar(.5);
+   const chain=[rightForeArm,rightArm,rightShoulder];
+   for(let pass=0;pass<8;pass++){
+    alignSaluteHand(instance,tips,targets);
+    for(const joint of chain){
+     rotateBoneToward(joint,midpointEffector,targetCenter,1);
+     rotateBoneToward(joint,midpointEffector,targetCenter,1);
+    }
+   }
+   rightHand.remove(midpointEffector);
+  }
+  instance.model.updateMatrixWorld(true);
+  return new Map(instance.saluteBones.map(bone=>[bone.name,bone.quaternion.clone()]));
+ }
  function applySalute(instance,state){
-  const {rightShoulder,rightArm,rightForeArm,rightHand,rightRing1,rightPinky1}=instance.rig,amount=state.amount;
-  if(amount<=.001||!rightArm||!rightForeArm||!rightHand)return;
-
-  // Apply local bone overrides after mixer.update(). At full weight, the verified
-  // Soldier pose moves the wrist from below the chest to the forehead beside the head.
-  const armTarget=qB.set(.4095411,0,-.0013047,.9122907);
-  const forearmTarget=qC.set(.5717739,0,-.5741454,.5860305);
-  rightArm.quaternion.slerp(armTarget,amount);
-  rightForeArm.quaternion.slerp(forearmTarget,amount);
-  for(const target of instance.fingerTargets)if(target.bone)target.bone.quaternion.slerp(target.quaternion,amount);
-
-  // Lift the shoulder slightly and angle the palm/fingers toward the visor.
-  additiveRotate(rightShoulder,-.015,-.015,-.075,amount);
-  additiveRotate(rightHand,-.24-state.flick*.22,-.08,.28+state.flick*.30,amount);
-
-  // Curl the unused fingers so the index + middle pair reads as a deliberate
-  // two-finger salute even at normal lobby camera distance.
-  additiveRotate(rightRing1,0,0,-.72,amount);
-  additiveRotate(rightPinky1,0,0,-.86,amount);
+  const amount=state.amount;
+  if(amount<=.001||!instance.saluteBones.length)return;
+  const basePose=instance.saluteBones.map(bone=>[bone,bone.quaternion.clone()]);
+  if(!instance.salutePose){
+   instance.salutePose=solveSalutePose(instance);
+   for(const [bone,quaternion] of basePose)bone.quaternion.copy(quaternion);
+  }
+  for(const bone of instance.saluteBones){
+   const target=instance.salutePose.get(bone.name);
+   if(target)bone.quaternion.slerp(target,amount);
+  }
+  additiveRotate(instance.rig.rightHand,-state.flick*.22,-state.flick*.08,state.flick*.30,amount);
  }
  function applyIdleLayers(instance,time,salute){
   const rig=instance.rig,phase=instance.phase;
@@ -189,10 +271,10 @@ if(canvas){
    const tPose=gltf.animations.find(clip=>clip.name==='TPose')||null;
    if(tPose){
     const sampleTime=Math.min(.25,tPose.duration*.25);
-    saluteFingerPose=sampleSaluteFingerPose(tPose,sampleTime).map(({name,quaternion})=>({
+    saluteFingerPose=sampleRightHandFingerPose(tPose,sampleTime).map(({name,quaternion})=>({
      name,quaternion:new THREE.Quaternion().fromArray(quaternion).normalize()
     }));
-    if(!saluteFingerPose.length)console.error('Horizon lobby Soldier TPose is missing sanitized index/middle finger rotations.');
+    if(!saluteFingerPose.length)console.error('Horizon lobby Soldier TPose is missing sanitized right-hand finger rotations.');
    }
    if(!idleClip){console.error('Horizon lobby Soldier is missing its Idle animation.');return;}
    if(!started){started=true;frame();}

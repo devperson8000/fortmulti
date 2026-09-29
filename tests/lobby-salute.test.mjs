@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {resolveLobbyRig,sampleSaluteFingerPose,selectSaluteFingerTracks} from '../public/lobby-rig.js';
+import {
+ buildForeheadSaluteProbes,
+ SALUTE_FINGER_CURLS,
+ resolveLobbyRig,
+ sampleSaluteFingerPose,
+ sampleRightHandFingerPose,
+ selectSaluteFingerTracks,
+ selectRightHandFingerTracks
+} from '../public/lobby-rig.js';
 
 function makeRigModel(){
  const root={name:'Soldier',children:[]};
@@ -104,4 +112,46 @@ test('samples only actual index and middle quaternion tracks from the T-pose cli
   ['mixamorigRightHandIndex1.quaternion',.0083],
   ['mixamorigRightHandMiddle2.quaternion',.0083]
  ]);
+});
+
+test('aims two contact probes at the right temple and scales them with the lobby model',()=>{
+ const head=[.78,2.69,.09],shoulder=[.68,2.60,0],camera=[.62,2.08,6.25];
+ const preview=buildForeheadSaluteProbes(head,shoulder,camera,1.78);
+ const party=buildForeheadSaluteProbes(head,shoulder,camera,1.46);
+ assert.equal(preview.probes.length,2);
+ assert.ok(preview.center[0]<head[0]);
+ assert.ok(preview.center[1]>head[1]);
+ assert.ok(preview.probes.every(point=>point[2]<head[2]));
+ const gap=Math.hypot(...preview.probes[0].map((value,index)=>value-preview.probes[1][index]));
+ const partyGap=Math.hypot(...party.probes[0].map((value,index)=>value-party.probes[1][index]));
+ assert.ok(gap>.04&&gap<.06);
+ assert.ok(partyGap<gap);
+ assert.ok(preview.direction[2]>.99);
+});
+
+test('samples the entire right hand so closed fingers can override Idle at every joint',()=>{
+ const tracks=[];
+ for(const digit of ['Thumb','Index','Middle','Ring','Pinky']){
+  for(let joint=1;joint<=4;joint++){
+   tracks.push({name:`mixamorigRightHand${digit}${joint}.quaternion`,createInterpolant(){return {evaluate(){return [0,0,joint/10,1];}};}});
+  }
+ }
+ tracks.push({name:'mixamorigRightHand.quaternion',createInterpolant(){throw new Error('wrist rotation is not a finger track');}});
+ tracks.push({name:'mixamorig:RightHandIndex1.quaternion',createInterpolant(){throw new Error('source names retain colons');}});
+ const pose=sampleRightHandFingerPose({tracks},.01);
+ assert.equal(selectRightHandFingerTracks({tracks}).length,20);
+ assert.equal(pose.length,20);
+ assert.ok(pose.some(target=>target.name==='mixamorigRightHandPinky4'));
+ assert.ok(pose.some(target=>target.name==='mixamorigRightHandThumb4'));
+});
+
+test('curls every thumb, ring and pinky joint while leaving the index and middle free',()=>{
+ const targets=SALUTE_FINGER_CURLS;
+ assert.deepEqual([...new Set(targets.map(target=>target.name.match(/RightHand(Thumb|Ring|Pinky)/)?.[1]))].sort(),['Pinky','Ring','Thumb']);
+ for(const digit of ['Thumb','Ring','Pinky']){
+  const joints=targets.filter(target=>target.name.includes(`RightHand${digit}`)).map(target=>Number(target.name.match(/(\d)$/)?.[1]));
+  assert.deepEqual(joints,[1,2,3,4]);
+ }
+ assert.ok(targets.every(target=>Number.isFinite(target.angle)&&target.axis.length===3));
+ assert.ok(!targets.some(target=>/RightHand(Index|Middle)/.test(target.name)));
 });
