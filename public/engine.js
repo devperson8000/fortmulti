@@ -441,7 +441,7 @@ function drawLobby(){
  // Party pads use layered luminous rings instead of card-shaped blocks behind the players.
  // Slot zero is always the local player and is physically closest to the camera. Every invite slot stays behind it.
  const party=window.Duel.party||[],spots=[[0,.1,2.15],[-2.8,.03,.45],[2.8,.03,.45],[-5.05,-.02,-.95],[5.05,-.02,-.95],[-7,-.06,-2.15],[7,-.06,-2.15],[0,-.06,-2.5]];
- for(let i=0;i<8;i++){const q=spots[i],member=party[i],pulse=.03+Math.sin(time*2+i)*.025;cone([q[0],q[1]-.24,q[2]],1.18,1.18,.14,color(member?'198ab2':'173d5c'),56);cone([q[0],q[1]-.1,q[2]],.98,.98,.06,color(member?'74ddf6':'2a5570'),56);if(member){cone([q[0],q[1]-.03,q[2]],.73,.73,.035+pulse,color('b8f5ff'),48);const heroAngle=Math.PI+(i?Math.sign(q[0])*.055:0),heroOrigin=[q[0],q[1]+pulse*.3,q[2]];if(i!==0)character(heroOrigin,heroAngle,0,color(member.color||'577363'),false,'landed',1,'lobby');}else{for(let y=.25;y<2.25;y+=.18)box([q[0],q[1]+y,q[2]],[.055,.035,.055],color('4c86a4'));gem([q[0],q[1]+2.48,q[2]],[.11,.23,.11],color('72bad8'),8);}}
+ for(let i=0;i<8;i++){const q=spots[i],member=party[i],pulse=.03+Math.sin(time*2+i)*.025;cone([q[0],q[1]-.24,q[2]],1.18,1.18,.14,color(member?'198ab2':'173d5c'),56);cone([q[0],q[1]-.1,q[2]],.98,.98,.06,color(member?'74ddf6':'2a5570'),56);if(member){cone([q[0],q[1]-.03,q[2]],.73,.73,.035+pulse,color('b8f5ff'),48);}else{for(let y=.25;y<2.25;y+=.18)box([q[0],q[1]+y,q[2]],[.055,.035,.055],color('4c86a4'));gem([q[0],q[1]+2.48,q[2]],[.11,.23,.11],color('72bad8'),8);}}
  const data=dynamicData.copy(geo);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);draw(dynamicBuffer,dynamicData.length/6);gl.clearColor(.48,.77,.88,1);
 }
 function drawCharacterShowcase(w,h){
