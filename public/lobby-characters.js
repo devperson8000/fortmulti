@@ -53,11 +53,15 @@ if(canvas){
    const index=instance.slot,local=index===0;
    instance.holder.visible=preview?local:index<party.length;
    if(!instance.holder.visible)continue;
-   const base=preview?[.78,.06,0]:regularSpots[index],scale=preview?1.3:1.16,drift=Math.sin(time*.85+instance.phase)*.012;
+   const base=preview?[.78,.06,0]:regularSpots[index];
+   const scale=preview?1.78:(local?1.62:1.46);
+   const drift=Math.sin(time*.85+instance.phase)*.012;
    instance.holder.position.set(base[0],base[1]+drift,base[2]);
    instance.holder.scale.setScalar(scale);
-   // Soldier.glb faces +Z by default. Point +Z horizontally at the active lobby camera.
+   // Object3D.lookAt points +Z at the target, while Soldier.glb's chest/front faces -Z.
+   // Aim at the lobby camera, then flip 180° so the soldier's FACE/CHEST points at the camera.
    instance.holder.lookAt(camera.position.x,instance.holder.position.y,camera.position.z);
+   instance.holder.rotateY(Math.PI);
    instance.model.rotation.z=Math.sin(time*.52+instance.phase)*.008;
   }
  }
