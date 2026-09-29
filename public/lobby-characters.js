@@ -40,7 +40,7 @@ if(canvas){
   const bone=name=>model.getObjectByName(`mixamorig:${name}`)||null;
   return {
    hips:bone('Hips'),spine:bone('Spine'),spine1:bone('Spine1'),spine2:bone('Spine2'),neck:bone('Neck'),head:bone('Head'),
-   rightArm:bone('RightArm'),rightForeArm:bone('RightForeArm'),rightHand:bone('RightHand'),
+   rightShoulder:bone('RightShoulder'),rightArm:bone('RightArm'),rightForeArm:bone('RightForeArm'),rightHand:bone('RightHand'),
    rightIndex1:bone('RightHandIndex1'),rightMiddle1:bone('RightHandMiddle1'),rightRing1:bone('RightHandRing1'),rightPinky1:bone('RightHandPinky1'),
    leftFoot:bone('LeftFoot'),rightFoot:bone('RightFoot'),leftToe:bone('LeftToeBase'),rightToe:bone('RightToeBase')
   };
@@ -80,10 +80,10 @@ if(canvas){
   if(!instance.saluteActive&&time>=instance.nextSaluteAt){instance.saluteActive=true;instance.saluteStarted=time;}
   if(!instance.saluteActive)return {amount:0,flick:0};
   const elapsed=time-instance.saluteStarted;
-  if(elapsed<.34)return {amount:easeOut(elapsed/.34),flick:0};
-  if(elapsed<1.04)return {amount:1,flick:0};
-  if(elapsed<1.20){const t=smooth((elapsed-1.04)/.16);return {amount:1,flick:t};}
-  if(elapsed<1.62){const t=smooth((elapsed-1.20)/.42);return {amount:1-t,flick:1-t};}
+  if(elapsed<.42)return {amount:easeOut(elapsed/.42),flick:0};
+  if(elapsed<1.12)return {amount:1,flick:0};
+  if(elapsed<1.28){const t=smooth((elapsed-1.12)/.16);return {amount:1,flick:t};}
+  if(elapsed<1.68){const t=smooth((elapsed-1.28)/.40);return {amount:1-t,flick:1-t};}
   instance.saluteActive=false;
   instance.nextSaluteAt=time+16+rand01(instance)*18;
   return {amount:0,flick:0};
@@ -107,17 +107,26 @@ if(canvas){
   bone.quaternion.multiply(qA);
  }
  function applySalute(instance,state){
-  const {rightArm,rightForeArm,rightHand}=instance.rig,amount=state.amount;
+  const {rightShoulder,rightArm,rightForeArm,rightHand,rightRing1,rightPinky1}=instance.rig,amount=state.amount;
   if(instance.fingerAction)instance.fingerAction.setEffectiveWeight(amount);
   if(amount<=.001||!rightArm||!rightForeArm||!rightHand)return;
-  // This rig's RIGHT arm lives on +X. Keep the elbow outside the torso and bring
-  // the hand to the right side of the visor/forehead instead of crossing the body.
-  targetElbow.set(.43,1.48,-.19);instance.model.localToWorld(targetElbow);
-  targetHand.set(.15+state.flick*.18,1.705+state.flick*.02,-.175-state.flick*.08);instance.model.localToWorld(targetHand);
-  rotateBoneToward(rightArm,rightForeArm,targetElbow,amount);
-  instance.model.updateMatrixWorld(true);
-  rotateBoneToward(rightForeArm,rightHand,targetHand,amount);
-  additiveRotate(rightHand,-.18-state.flick*.16,-.06,.22+state.flick*.24,amount);
+
+  // These quaternions are solved specifically from Soldier.glb's real bind pose.
+  // Full weight places the right hand clearly beside the forehead instead of relying
+  // on subtle IK corrections that can be swallowed by the base Idle animation.
+  const armTarget=qB.set(.4095411,0,-.0013047,.9122907);
+  const forearmTarget=qC.set(.5717739,0,-.5741454,.5860305);
+  rightArm.quaternion.slerp(armTarget,amount);
+  rightForeArm.quaternion.slerp(forearmTarget,amount);
+
+  // Lift the shoulder slightly and angle the palm/fingers toward the visor.
+  additiveRotate(rightShoulder,-.015,-.015,-.075,amount);
+  additiveRotate(rightHand,-.24-state.flick*.22,-.08,.28+state.flick*.30,amount);
+
+  // Curl the unused fingers so the index + middle pair reads as a deliberate
+  // two-finger salute even at normal lobby camera distance.
+  additiveRotate(rightRing1,0,0,-.72,amount);
+  additiveRotate(rightPinky1,0,0,-.86,amount);
  }
  function applyIdleLayers(instance,time,salute){
   const rig=instance.rig,phase=instance.phase;
