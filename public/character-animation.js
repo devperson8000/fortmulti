@@ -19,7 +19,7 @@ export function createAnimationBlend(state='idle'){
 function supportedState(state,supported){
  const has=name=>supported instanceof Set?supported.has(name):Array.isArray(supported)?supported.includes(name):Boolean(supported?.[name]);
  if(has(state))return state;
- const fallback=state==='run'?'walk':'idle';
+ const fallback=['run','crouch','pod-enter','pod-exit'].includes(state)?'walk':'idle';
  return has(fallback)?fallback:'idle';
 }
 
