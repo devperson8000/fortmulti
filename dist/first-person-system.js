@@ -1,0 +1,47 @@
+const clamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
+
+export function createCameraPresentation(){
+ return {mode:'firstPerson',blend:1,elapsed:0,lastAir:'ship',roundToken:null};
+}
+
+export function cameraMode({lobby=false,air='landed',alive=true,spectating=false}={}){
+ if(lobby)return 'lobby';
+ if(!alive||spectating)return 'spectator';
+ return 'firstPerson';
+}
+
+export function stepCameraPresentation(prior,sample={},dt=.016){
+ const state=prior||createCameraPresentation();
+ const nextRound=state.roundToken!==null&&sample.roundToken!==state.roundToken;
+ if(nextRound){
+  return {...createCameraPresentation(),mode:cameraMode(sample),roundToken:sample.roundToken,lastAir:sample.air||'ship'};
+ }
+ const direct=cameraMode(sample);
+ return {mode:direct,blend:direct==='firstPerson'?1:0,elapsed:0,lastAir:sample.air||'landed',roundToken:sample.roundToken};
+}
+
+export const canFireDuringPresentation=state=>state?.mode==='firstPerson';
+
+export function createCameraBlendOutput(){
+ return {eye:[0,0,0],target:[0,0,-1]};
+}
+
+export function blendCameraViews(thirdEye,thirdTarget,firstEye,firstTarget,presentation,output=createCameraBlendOutput()){
+ const blend=presentation?.mode==='firstPerson'?1:presentation?.mode==='transition'?clamp01(presentation.blend):0;
+ for(let axis=0;axis<3;axis++){
+  output.eye[axis]=thirdEye[axis]+(firstEye[axis]-thirdEye[axis])*blend;
+  output.target[axis]=thirdTarget[axis]+(firstTarget[axis]-thirdTarget[axis])*blend;
+ }
+ return output;
+}
+
+export function shouldShowLocalAvatar(presentation,air='landed',alive=true){
+ if(!alive)return false;
+ if(presentation?.mode==='firstPerson')return false;
+ return ['spectator','lobby','transition'].includes(presentation?.mode);
+}
+
+export function shouldShowViewModel(presentation,alive=true,spectating=false,scoped=false){
+ if(!alive||spectating||scoped)return false;
+ return presentation?.mode==='firstPerson';
+}
