@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {WEAPON_PROFILES} from '../public/weapon-system.js';
 import {createViewModelState,stepViewModel,reloadStage,createWeaponPartState,stepWeaponParts,createFirstPersonHandPose} from '../public/view-model.js';
 import {WEAPON_MODELS} from '../public/weapon-model.js';
+import * as viewModel from '../public/view-model.js';
 
 const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
 
@@ -108,6 +109,21 @@ test('first-person support hand reaches the magazine and returns to the fore-end
  assert.ok(distance(reload,[magazine[0],magazine[1]-.1,magazine[2]])<.13,'support glove should meet the magazine during insertion');
  stepWeaponParts(parts,profile,0);
  assert.ok(distance(createFirstPersonHandPose(profile,parts).support.palm,ready)<.001,'support glove must return to its fore-end grip');
+});
+
+test('first-person GLB trigger stays on the firing finger and each asset fits its weapon slot',()=>{
+ const createPose=viewModel.createFirstPersonAssetPose;
+ assert.equal(typeof createPose,'function','first-person GLB assets need a testable camera-space pose');
+ const profile=WEAPON_PROFILES.ar,state={position:[.34,-.34,-.78],rotation:[.12,-.08,.03]},parts={rootTilt:-.42};
+ const pose=createPose(profile,state,parts,.8),hand=createFirstPersonHandPose(profile,createWeaponPartState());
+ assert.deepEqual(pose.position,state.position);
+ assert.deepEqual(pose.rotation,[-.3,-.08,0]);
+ assert.equal(pose.scale,1.6875);
+ assert.ok(distance(hand.shooting.digits[0].to,pose.trigger)<.03,'the trigger pivot must meet the index fingertip');
+ for(const weapon of Object.values(WEAPON_PROFILES)){
+  const fitted=createPose(weapon,state,{rootTilt:0},.8);
+  assert.ok(Math.abs(fitted.scale*.8-1.35*weapon.presentation.scale)<1e-9,`${weapon.id} should keep a consistent first-person length`);
+ }
 });
 
 test('weapon switching begins lowered and returns to the ready anchor',()=>{
