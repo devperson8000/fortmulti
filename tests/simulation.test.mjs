@@ -29,6 +29,15 @@ test('ship walking respects the available deck bounds and sprint scaling',()=>{
  const match=new Match(world,['a','b']);match.beginDeployment();const p=match.players[0];p.shipLocal=[7.9,0,12];match.input('a',{yaw:0,x:1,z:-1});tick(match,.5);assert.ok(p.shipLocal[0]<=8&&p.shipLocal[2]<=14&&p.shipLocal.every(Number.isFinite));
 });
 
+test('ship character animation is idle at rest and only walks or runs while moving',()=>{
+ const match=new Match(world,['a','b']);match.beginDeployment();const player=match.players[0];
+ match.input('a',{yaw:0});match.tick(.05);assert.equal(player.animationState,'idle');
+ match.input('a',{yaw:0,sprint:true});match.tick(.05);assert.equal(player.animationState,'idle');
+ match.input('a',{yaw:0,z:1});match.tick(.05);assert.equal(player.animationState,'walk');
+ match.input('a',{yaw:0,z:1,sprint:true});match.tick(.05);assert.equal(player.animationState,'run');
+ match.input('a',{yaw:0});match.tick(.05);assert.equal(player.animationState,'idle');
+});
+
 test('deployment readiness survives a peer disconnect and releases reserved pods safely',()=>{
  const match=new Match(world,['a','b','c']);match.beginDeployment();match.chooseLanding('a',{x:25,z:30});match.chooseLanding('b',{x:-25,z:35});
  for(const[id,index]of[['a',0],['b',1]]){const pod=SHIP_PODS[index],p=match.players.find(v=>v.id===id);p.shipLocal=[pod.x,0,pod.z+2.2];p.p=match.shipWorld(p.shipLocal);assert.equal(match.enterPod(id),true);}
