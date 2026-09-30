@@ -138,28 +138,40 @@ async function respondInvite(inv,accept){
  finally{renderInvites();refresh();}
 }
 
-function resetMatchState(){match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('dropping');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear();document.exitPointerLock?.();}
+function resetMatchState(){match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';$('deployment-ui').hidden=true;window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('deployment','dropping');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear();document.exitPointerLock?.();}
 function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
-function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);match.beginSkyshipJourney();matchId=uid();matchEpoch=Math.max(Date.now(),matchEpoch+1);snapshotFrame=-1;seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;sendSnapshot();updatePresence();status('Transport departing · stand by for the rear hatch.','success');}
+function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);match.beginDeployment();matchId=uid();matchEpoch=Math.max(Date.now(),matchEpoch+1);snapshotFrame=-1;seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;sendSnapshot();updatePresence();status('Deployment ship secured · choose a landing zone and enter a pod.','success');}
 function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;const data={id:matchId,epoch:matchEpoch,frame:snapshotFrame+1,state};conn.send('snapshot',data);apply(data);}
+const LANDING_POIS=[{name:'SUNCREST',x:0,z:0},{name:'HARBOR REACH',x:-202,z:76},{name:'NEON GROVE',x:184,z:82},{name:'CROWN CITADEL',x:126,z:-188},{name:'DUSTY DEPOT',x:-92,z:-178},{name:'PINEWATCH',x:8,z:202}];
+function renderLandingMap(s,me){
+ const canvas=$('landing-map'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,pad=30,scaleX=(w-pad*2)/584,scaleZ=(h-pad*2)/584,map=(x,z)=>[w/2+x*scaleX,h/2+z*scaleZ];
+ ctx.clearRect(0,0,w,h);const bg=ctx.createLinearGradient(0,0,w,h);bg.addColorStop(0,'#122d43');bg.addColorStop(1,'#081927');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+ ctx.strokeStyle='#8dc0ce16';ctx.lineWidth=1;for(let i=0;i<=10;i++){const x=pad+i*(w-pad*2)/10,y=pad+i*(h-pad*2)/10;ctx.beginPath();ctx.moveTo(x,pad);ctx.lineTo(x,h-pad);ctx.stroke();ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke();}
+ ctx.save();ctx.translate(w/2,h/2);ctx.fillStyle='#667e54';ctx.beginPath();ctx.ellipse(0,0,292*scaleX,292*scaleZ*.96,-.12,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#c8bb87';ctx.lineWidth=7;ctx.stroke();ctx.strokeStyle='#a6c98a';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,0,246*scaleX,247*scaleZ*.96,-.12,0,Math.PI*2);ctx.stroke();
+ ctx.strokeStyle='#bcbca3';ctx.lineWidth=3;ctx.beginPath();for(const [a,b] of [[[-42,4],[-180,69]],[[45,6],[161,71]],[[28,-37],[113,-165]],[[-21,-39],[-80,-156]],[[7,45],[8,178]]]){ctx.moveTo(a[0]*scaleX,a[1]*scaleZ);ctx.lineTo(b[0]*scaleX,b[1]*scaleZ);}ctx.stroke();ctx.restore();
+ ctx.font='700 10px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
+ for(const poi of LANDING_POIS){const [x,y]=map(poi.x,poi.z);ctx.beginPath();ctx.fillStyle='#ffe19a';ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#142b36';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#edf3e0';ctx.shadowColor='#061421';ctx.shadowBlur=4;ctx.fillText(poi.name,x,y-8);}
+ const dest=window.Game?.landingChoice?.()||me?.destination;if(dest){const [x,y]=map(dest.x,dest.z);ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fillStyle='#60dafa55';ctx.fill();ctx.strokeStyle='#b8f8ff';ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.moveTo(x-14,y);ctx.lineTo(x+14,y);ctx.moveTo(x,y-14);ctx.lineTo(x,y+14);ctx.stroke();}
+ ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='#d9edf0a0';ctx.font='700 9px Arial';ctx.fillText('N',w/2-4,8);ctx.fillText('ISLAND GRID · 1 UNIT / KM',14,h-19);
+ const picked=dest&&LANDING_POIS.reduce((best,poi)=>Math.hypot(dest.x-poi.x,dest.z-poi.z)<best.distance?{poi,distance:Math.hypot(dest.x-poi.x,dest.z-poi.z)}:best,{poi:LANDING_POIS[0],distance:Infinity});$('landing-destination').textContent=dest?`${picked.poi.name} · ${Math.round(dest.x)}, ${Math.round(dest.z)}`:'SELECT A DROP ZONE';
+ $('landing-roster').textContent=s.players.filter(p=>p.hp>0).map(p=>`${playerName(p.id)} · ${p.deploymentState==='pod_ready'||p.deploymentState==='both_ready'?'POD READY':p.destination?'DESTINATION SET':'CHOOSING'}`).join('   /   ');
+}
+function updateDeploymentUI(s,me){const active=s.phase==='deployment';$('deployment-ui').hidden=!active;if(!active)return;const state=me?.deploymentState||'landing_selection',mapOpen=!me?.pod&&['landing_selection','pod_available'].includes(state);$('landing-picker').hidden=!mapOpen;$('pod-status').textContent=me?.pod?`POD ${me.pod} · ${state.replaceAll('_',' ').toUpperCase()}`:me?.destination?'DESTINATION LOCKED IN · WALK TO A LIT POD':'CHOOSE YOUR DROP ZONE';$('pod-hint').textContent=me?.pod?'Stand by. The sequence begins automatically when every player is sealed.':'Move through the ship · Press E at an available pod';renderLandingMap(s,me);}
 function roundBanner(s){
  const me=s.players.find(p=>p.id===conn.id);
- if(s.phase==='ship'||s.phase==='flight'||(s.phase==='playing'&&me?.air!=='landed')){
-  if(me?.air==='ship'){
-   const stage=s.sequence?.stage||me.sequence||'seated',local=me.shipLocal||[0,0,0],atHatch=Math.abs(local[0])<=1.55&&local[2]>=4.6;
-   if(stage==='seated')return 'TRANSPORT IN FLIGHT · HOLD ON';
-   if(stage==='rising')return 'STAND UP · WATCH THE REAR RAMP';
-   if(stage==='hatch-opening')return 'REAR RAMP LOWERING · STAND BY';
-   if(stage==='arcade-launch')return 'LEAVING THE TRANSPORT';
-   return `${atHatch?'AT THE RAMP · SPACE TO JUMP':'RAMP OPEN · MOVE DOWN THE AISLE'} · ${Math.ceil(s.timer||0)}s`;
-  }
-  if(me?.air==='launchTransit')return 'JUMPING · STEADY YOUR VIEW';
-  if(me?.air==='skyDrift')return 'FREEFALL · SPACE TO OPEN GLIDER';
-  if(me?.air==='gliderOpening')return `GLIDER OPENING · ${Math.round((me.deploy||0)*100)}%`;
-  if(me?.air==='gliderFolding')return `GLIDER FOLDING · ${Math.round((me.deploy||0)*100)}%`;
-  if(me?.air==='gliding')return (me.clearance||0)>57?'GLIDE · SPACE TO FOLD':'GLIDE · '+Math.max(0,Math.round(me.clearance||0))+' M · GLIDER LOCKED';
-  return 'LANDED · YOU CAN PLAY NOW';
+ if(s.phase==='deployment'){
+  const stage=s.deployment?.stage||'landing_selection';
+  if(stage==='both_ready')return 'ALL OPERATORS SEALED · PREPARING DROP';
+  if(stage==='pod_sealing')return 'POD SEALING · STAND BY';
+  if(stage==='launching')return 'DEPLOYMENT POD LAUNCHING';
+  if(stage==='transition')return 'DESCENT · HOLD POSITION';
+  if(stage==='landed')return 'POD LANDED · PRESSURE EQUALIZING';
+  if(stage==='pod_opening')return 'POD OPENING · STAND BY';
+  if(stage==='exiting')return 'EXIT POD · MOVE OUT';
+  if(me?.deploymentState==='entering_pod')return 'POD ENTRY · ALIGNING';
+  if(me?.deploymentState==='pod_ready')return 'POD READY · WAITING FOR SQUAD';
+  return me?.destination?'DESTINATION SET · ENTER A DEPLOYMENT POD':'SELECT A LANDING ZONE';
  }
  if(s.phase==='countdown')return `ROUND ${s.round} · ${Math.max(1,Math.ceil(s.timer))}`;
  if(s.phase==='roundover'){if(s.winner<0)return 'ROUND DRAW';const winner=s.players[s.winner];return winner?.id===conn.id?'ROUND WON':`${playerName(winner?.id)} WON THE ROUND`;}
@@ -168,7 +180,7 @@ function roundBanner(s){
  if(me?.hp<=0)return 'ELIMINATED · SPECTATING';return '';
 }
 function apply(data){
- if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn||!acceptSnapshot(matchId,snapshotFrame,data.id,data.frame,matchEpoch,data.epoch))return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;matchEpoch=data.epoch;snapshotFrame=data.frame;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('dropping',s.phase==='ship'||s.phase==='flight'||localPlayer.air!=='landed');$('lobby').hidden=true;
+ if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn||!acceptSnapshot(matchId,snapshotFrame,data.id,data.frame,matchEpoch,data.epoch))return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;matchEpoch=data.epoch;snapshotFrame=data.frame;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('deployment',s.phase==='deployment');document.body.classList.toggle('dropping',s.phase==='deployment'&&['pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(s.deployment?.stage));$('lobby').hidden=true;updateDeploymentUI(s,localPlayer);
  if(fresh||window.Duel.round!==s.round){const me=s.players.find(p=>p.id===conn.id);game.look(me?.yaw||0);seenEvent=0;window.Duel.round=s.round;showMenu=false;$('match-actions').hidden=true;updatePresence();}
  $('round-banner').textContent=roundBanner(s);for(const e of s.events||[])if(e.id>seenEvent){game.effect(e,conn.id);seenEvent=e.id;}
  if(s.phase==='done'){showMenu=true;$('match-actions').hidden=false;$('resume').hidden=true;$('rematch').hidden=false;$('back-lobby').hidden=false;document.exitPointerLock?.();}else if(!showMenu)$('match-actions').hidden=true;refresh();
@@ -213,6 +225,9 @@ $('social-close').onclick=$('social-scrim').onclick=closeOnline;
 $('lobby-play-toggle').onclick=()=>selectLobbyTab('play');$('profile-toggle').onclick=()=>toggleProfile();$('profile-close').onclick=()=>toggleProfile(false);$('character-preview-toggle').onclick=()=>selectLobbyTab('character');
 $('online-refresh').onclick=()=>social?pollSocial():startSocial();
 $('ready').onclick=()=>{if(!conn||match)return;ready=!ready;game?.startAudio();hello();refresh();if(host)start();};
+function chooseLanding(x,z){if(!game?.setLanding(x,z))return;const me=snapshot?.players.find(player=>player.id===conn?.id);if(snapshot&&me)updateDeploymentUI(snapshot,{...me,destination:{x,z}});}
+$('landing-map').onclick=e=>{const rect=e.currentTarget.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width,z=(e.clientY-rect.top)/rect.height;if(x<.058||x>.942||z<.088||z>.912)return;chooseLanding(((x-.058)/.884-.5)*584,((z-.088)/.824-.5)*584);};
+for(const button of document.querySelectorAll('[data-landing]'))button.onclick=()=>{const key=button.dataset.landing,poi=({suncrest:LANDING_POIS[0],harbor:LANDING_POIS[1],neon:LANDING_POIS[2],citadel:LANDING_POIS[3],depot:LANDING_POIS[4],pinewatch:LANDING_POIS[5]})[key];if(poi)chooseLanding(poi.x,poi.z);};
 $('name').onchange=$('name').onblur=()=>{profile.name=cleanName($('name').value);$('name').value=profile.name;writeStore('duel-profile',profile);ready=false;hello();refresh();updatePresence();};
 $('outfit').onchange=()=>{profile.color=cleanColor($('outfit').value);writeStore('duel-profile',profile);ready=false;hello();refresh();updatePresence();};
 $('mode').onchange=()=>{if(!host&&conn)return;ready=false;for(const p of peers.values())p.ready=false;if(conn)conn.send('mode',{mode:$('mode').value});hello();refresh();status('Match mode changed · everyone needs to ready up again.');};

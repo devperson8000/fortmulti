@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#081a31">
-<meta name="description" content="A browser-based multiplayer game for up to eight players with private parties, a first-person transport aircraft intro, gliding, building and voice chat.">
+<meta name="description" content="A browser-based multiplayer battle royale with a stationary deployment ship, selectable pod drops, building and voice chat.">
 <title>Horizon · Multiplayer</title>
 <link rel="stylesheet" href="game.css">
 <link rel="stylesheet" href="lobby.css">
 </head>
 <body class="in-lobby">
-<canvas id="game" aria-label="First-person multiplayer adventure with a transport cabin intro, gliding and lobby"></canvas>
-<div id="vignette"></div><div id="damage"></div>
+<canvas id="game" aria-label="First-person multiplayer battle royale inside the deployment ship and on the island"></canvas>
+<div id="vignette"></div><div id="damage"></div><div id="deployment-fade" aria-hidden="true"></div>
 <div id="scope" aria-hidden="true">
   <div class="scope-lens">
     <svg viewBox="0 0 600 600" role="presentation"><circle cx="300" cy="300" r="286"/><path d="M300 0v244M300 356v244M0 300h244M356 300h244"/><path class="scope-fine" d="M270 300h60M300 270v60M282 330l18-30 18 30M255 370h90M270 405h60"/></svg>
@@ -23,14 +23,23 @@
   <div id="compass">W &nbsp; · &nbsp; NW &nbsp; · &nbsp; <strong>N</strong> &nbsp; · &nbsp; NE &nbsp; · &nbsp; E</div>
   <button id="pause" aria-label="Pause game">Ⅱ</button>
 </header>
-<aside id="mapbox"><canvas id="map" width="180" height="180" aria-label="Minimap"></canvas><b>SUNCREST</b><div><span id="time">FLIGHT</span><span id="remaining">1 LEFT</span><span id="score">◎ 0</span></div></aside>
+<aside id="mapbox"><canvas id="map" width="180" height="180" aria-label="Minimap"></canvas><b>SUNCREST</b><div><span id="time">DEPLOYMENT</span><span id="remaining">1 LEFT</span><span id="score">◎ 0</span></div></aside>
 <div id="mission" style="display:none"><small>PRIVATE PARTY</small><b>Own the island.</b><span>Drop, build and be the last player standing.</span></div>
 <div id="notice" role="status"></div><div id="crosshair"><i></i><i></i><i></i><i></i></div><div id="hitmarker">×</div><div id="damagevalue"></div><div id="buildhelp"></div>
 <section id="health"><div><span>▰ SHIELD</span><b id="shieldtext">100</b></div><div class="bar"><i id="shieldbar"></i></div><div><span>✚ HEALTH</span><b id="hptext">100</b></div><div class="bar green"><i id="hpbar"></i></div></section>
 <section id="inventory"><div class="ammo"><span id="ammotext">30</span><small id="ammocap">/ 30</small><b id="weaponlabel">STRIKER AR</b><em id="reload-stage">READY</em><i id="reload-progress"></i></div><div class="slots weapon-slots"><button class="selected rare" data-slot="1"><kbd>1</kbd><span>⌁</span><small>AR</small></button><button class="epic" data-slot="2"><kbd>2</kbd><span>═</span><small>SHOTGUN</small></button><button class="uncommon" data-slot="3"><kbd>3</kbd><span>≋</span><small>SMG</small></button><button class="legendary" data-slot="4"><kbd>4</kbd><span>—</span><small>SNIPER</small></button><button class="build-slot" data-slot="5"><kbd>5</kbd><span>▥</span><small>WALL</small></button><button class="build-slot" data-slot="6"><kbd>6</kbd><span>◩</span><small>RAMP</small></button><div class="wood"><b id="wood">150</b><small>MATERIAL</small></div></div></section>
-<footer>W A S D <span>move / steer</span> &nbsp; MOUSE <span>look / steer</span> &nbsp; LMB <span>fire</span> &nbsp; RMB <span>aim / scope</span> &nbsp; SPACE <span>launch / open or fold glider</span> &nbsp; SHIFT <span>sprint / glide boost</span> &nbsp; R <span>reload</span> &nbsp; 1–4 <span>weapons</span> &nbsp; Q / 5–6 <span>build</span> &nbsp; G <span>rotate</span> &nbsp; ESC <span>menu</span></footer>
+<footer>W A S D <span>move</span> &nbsp; MOUSE <span>look</span> &nbsp; E <span>enter pod</span> &nbsp; LMB <span>fire</span> &nbsp; RMB <span>aim / scope</span> &nbsp; SPACE <span>jump</span> &nbsp; SHIFT <span>sprint</span> &nbsp; R <span>reload</span> &nbsp; 1–4 <span>weapons</span> &nbsp; Q / 5–6 <span>build</span> &nbsp; G <span>rotate</span> &nbsp; ESC <span>menu</span></footer>
 <div hidden id="overlay"><button id="play"></button><p id="eyebrow"></p><p id="heading"></p><p id="intro"></p></div>
-<div id="touch"><div><button data-key="KeyW">▲</button><br><button data-key="KeyA">◀</button><button data-key="KeyS">▼</button><button data-key="KeyD">▶</button></div><div><button id="touchjump">JUMP</button><button id="touchfire">FIRE</button></div></div>
+<div id="touch"><div><button data-key="KeyW">▲</button><br><button data-key="KeyA">◀</button><button data-key="KeyS">▼</button><button data-key="KeyD">▶</button></div><div><button id="touchinteract" data-key="KeyE">ENTER POD</button><button id="touchjump">JUMP</button><button id="touchfire">FIRE</button></div></div>
+
+<section id="deployment-ui" hidden aria-live="polite">
+  <div id="landing-picker">
+    <div class="deployment-title"><small>DEPLOYMENT CONTROL</small><b>Choose your drop zone</b><span id="landing-destination">SELECT A DROP ZONE</span></div>
+    <canvas id="landing-map" width="520" height="340" aria-label="Choose a landing position on the island map"></canvas>
+    <div class="landing-quick-picks"><button data-landing="suncrest">SUNCREST</button><button data-landing="harbor">HARBOR REACH</button><button data-landing="neon">NEON GROVE</button><button data-landing="citadel">CROWN CITADEL</button><button data-landing="depot">DUSTY DEPOT</button><button data-landing="pinewatch">PINEWATCH</button></div>
+  </div>
+  <div id="pod-status-card"><small>STAGING SHIP · STATIONARY</small><b id="pod-status">CHOOSE YOUR DROP ZONE</b><span id="pod-hint">Move through the ship · Press E at an available pod</span><i id="landing-roster"></i></div>
+</section>
 
 <section id="lobby">
   <canvas id="lobby-characters" aria-hidden="true"></canvas>

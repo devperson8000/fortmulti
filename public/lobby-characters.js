@@ -263,7 +263,7 @@ if(canvas){
   renderer.render(scene,camera);
  }
  new GLTFLoader().load(
-  'https://raw.githubusercontent.com/mrdoob/three.js/ec28dfc233171c29a0c95a75ecebf23bf0de5794/examples/models/gltf/Soldier.glb',
+  '/models/Soldier.glb',
   gltf=>{
    template=gltf.scene;
    idleClip=gltf.animations.find(clip=>clip.name==='Idle')||gltf.animations[0];
