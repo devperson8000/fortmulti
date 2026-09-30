@@ -56,7 +56,7 @@ export function smoothAngle(current,target,dt=.016){
 
 export function accumulateInput(pending,current={}){
  const fire=Boolean(current.fire||pending?.fire),firePulse=Boolean(pending?.firePulse||(pending?.fire&&!current.fire));
- return {...current,fire,firePulse,jump:Boolean(current.jump||pending?.jump),reload:Boolean(current.reload||pending?.reload)};
+ return {...current,fire,firePulse,jump:Boolean(current.jump||pending?.jump),interact:Boolean(current.interact||pending?.interact),reload:Boolean(current.reload||pending?.reload),landing:current.landing||pending?.landing||null};
 }
 
 export function isActiveSocket(owner,socket){

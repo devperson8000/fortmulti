@@ -97,3 +97,18 @@ body.character-preview-open .lobby-tabs button:not(:disabled){display:inline-fle
  #character-preview-panel{left:14px;top:auto;bottom:18px;transform:none;width:min(190px,calc(48vw - 14px));padding:12px;border-radius:15px}
  #character-preview-panel>small{font-size:6.5px;letter-spacing:1.2px}#character-preview-panel h1{font-size:21px;margin:6px 0 10px}#character-preview-panel p{font-size:8px;margin-bottom:10px}#character-preview-panel>span{font-size:5.5px;letter-spacing:.55px;gap:5px}
 }
+
+/* Shared rigged lobby character layer. All party members use Soldier.glb here. */
+#lobby-characters{
+ position:absolute;
+ inset:0;
+ width:100%;
+ height:100%;
+ z-index:3;
+ display:block;
+ pointer-events:none;
+ background:transparent;
+ filter:drop-shadow(0 16px 14px #02091655);
+}
+body.character-preview-open #lobby-characters{z-index:6}
+@media(prefers-reduced-motion:reduce){#lobby-characters{filter:none}}

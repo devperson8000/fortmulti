@@ -1,7 +1,4 @@
 const clamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
-const ease=value=>{const t=clamp01(value);return t*t*(3-2*t);};
-
-export const LANDING_TRANSITION_SECONDS=.45;
 
 export function createCameraPresentation(){
  return {mode:'firstPerson',blend:1,elapsed:0,lastAir:'ship',roundToken:null};
@@ -15,23 +12,15 @@ export function cameraMode({lobby=false,air='landed',alive=true,spectating=false
 
 export function stepCameraPresentation(prior,sample={},dt=.016){
  const state=prior||createCameraPresentation();
- const step=Math.max(0,Math.min(.25,Number(dt)||0));
  const nextRound=state.roundToken!==null&&sample.roundToken!==state.roundToken;
  if(nextRound){
   return {...createCameraPresentation(),mode:cameraMode(sample),roundToken:sample.roundToken,lastAir:sample.air||'ship'};
  }
  const direct=cameraMode(sample);
- const landed=sample.air==='landed';
- const justLanded=landed&&state.lastAir!=='landed'&&state.mode==='aerial'&&direct==='firstPerson';
- if(justLanded||state.mode==='transition'){
-  const elapsed=justLanded?step:state.elapsed+step;
-  const raw=clamp01(elapsed/LANDING_TRANSITION_SECONDS);
-  return {mode:raw>=1?'firstPerson':'transition',blend:ease(raw),elapsed,lastAir:'landed',roundToken:sample.roundToken};
- }
  return {mode:direct,blend:direct==='firstPerson'?1:0,elapsed:0,lastAir:sample.air||'landed',roundToken:sample.roundToken};
 }
 
-export const canFireDuringPresentation=state=>state?.mode==='firstPerson'||(state?.mode==='transition'&&(state.blend||0)>=.45);
+export const canFireDuringPresentation=state=>state?.mode==='firstPerson';
 
 export function createCameraBlendOutput(){
  return {eye:[0,0,0],target:[0,0,-1]};
@@ -49,12 +38,10 @@ export function blendCameraViews(thirdEye,thirdTarget,firstEye,firstTarget,prese
 export function shouldShowLocalAvatar(presentation,air='landed',alive=true){
  if(!alive)return false;
  if(presentation?.mode==='firstPerson')return false;
- if(air!=='landed')return true;
- if(['spectator','lobby','aerial'].includes(presentation?.mode))return true;
- return presentation?.mode==='transition'&&(presentation.blend||0)<.5;
+ return ['spectator','lobby','transition'].includes(presentation?.mode);
 }
 
 export function shouldShowViewModel(presentation,alive=true,spectating=false,scoped=false){
  if(!alive||spectating||scoped)return false;
- return presentation?.mode==='firstPerson'||(presentation?.mode==='transition'&&(presentation.blend||0)>=.45);
+ return presentation?.mode==='firstPerson';
 }

@@ -1,0 +1,44 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { DEPLOYMENT_TIMELINE, DEPLOYMENT_STATES, createDeploymentClock, stepDeploymentClock, deploymentStageAt, safeLandingPoint } from '../public/deployment-sequence.js';
+import { SHIP_PODS, clampShipPosition, moveInShip } from '../public/deployment-ship.js';
+
+const world={height:(x,z)=>Math.sin(x*.02)+Math.cos(z*.02),obstacles:[{min:[-5,-2,-5],max:[5,15,5]}]};
+
+test('deployment timeline covers seal, three-second descent, black transition, landing, opening and exit',()=>{
+ assert.deepEqual(DEPLOYMENT_STATES,['ship_waiting','landing_selection','pod_available','entering_pod','pod_ready','both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','match_active']);
+ assert.ok(DEPLOYMENT_TIMELINE.launchSeconds>=3&&DEPLOYMENT_TIMELINE.launchSeconds<=3.25);
+ assert.ok(DEPLOYMENT_TIMELINE.fadeAt>2.3&&DEPLOYMENT_TIMELINE.fadeAt<DEPLOYMENT_TIMELINE.launchSeconds);
+ assert.equal(deploymentStageAt(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.fadeAt),'transition');
+ assert.equal(deploymentStageAt(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds),'landed');
+ assert.equal(deploymentStageAt(Infinity),'pod_sealing');
+});
+
+test('cinematic clock advances smoothly between slower multiplayer snapshots and never runs backward',()=>{
+ let clock=createDeploymentClock();
+ clock=stepDeploymentClock(clock,{sequenceId:'1:1',serverElapsed:0,active:true},.016);
+ for(let i=0;i<30;i++)clock=stepDeploymentClock(clock,{sequenceId:'1:1',serverElapsed:0,active:true},.016);
+ const before=clock.elapsed;
+ clock=stepDeploymentClock(clock,{sequenceId:'1:1',serverElapsed:.55,active:true},.016);
+ assert.ok(clock.elapsed>=before&&clock.elapsed<.7);
+ clock=stepDeploymentClock(clock,{sequenceId:'1:2',serverElapsed:0,active:true},.016);
+ assert.equal(clock.elapsed,.016,'a new deployment sequence resets its presentation clock');
+});
+
+test('safe landing rejects non-finite coordinates and finds unoccupied ground inside island bounds',()=>{
+ assert.equal(safeLandingPoint([Infinity,0],world),null);
+ const target=safeLandingPoint([0,0],world);
+ assert.ok(target&&target.x!==0,'the building footprint at the requested point must be avoided');
+ assert.ok(Math.abs(target.x)<=292&&Math.abs(target.z)<=292);
+ assert.ok(Number.isFinite(target.y));
+ const second=safeLandingPoint([0,0],world,[target]);
+ assert.ok(Math.hypot(second.x-target.x,second.z-target.z)>1.4);
+});
+
+test('ship movement is constrained by walls and deployment pod shells',()=>{
+ assert.deepEqual(clampShipPosition([999,0,999]),[8,0,14]);
+ const wall=moveInShip([7.4,0,0],[3,0,0]);
+ assert.ok(wall[0]<=8);
+ const pod=SHIP_PODS[0],approach=[pod.x,pod.z+2.7],blocked=moveInShip([approach[0],0,approach[1]],[0,0,-1.2],pod.id);
+ assert.ok(Math.hypot(blocked[0]-pod.x,blocked[2]-pod.z)>=1.2,'player capsule stays outside pod shell');
+});
