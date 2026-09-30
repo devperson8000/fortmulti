@@ -76,6 +76,19 @@ export function createFirstPersonHandPose(profile,parts){
  };
 }
 
+// The licensed GLBs are mounted at their trigger bone, so the existing glove
+// pose stays attached to the weapon instead of being replaced by the avatar's
+// third-person arms. assetLength is the GLB's measured longest dimension.
+export function createFirstPersonAssetPose(profile,state,parts,assetLength=1){
+ const hand=createFirstPersonHandPose(profile,parts),trigger=hand.shooting.digits[0].to;
+ return {
+  position:state.position.slice(),
+  rotation:[state.rotation[0]+(parts?.rootTilt||0),state.rotation[1],0],
+  scale:(1.35*profile.presentation.scale)/Math.max(.001,assetLength),
+  trigger:trigger.slice()
+ };
+}
+
 export function stepWeaponParts(state,profile,remaining){
  const stage=reloadStage(profile,remaining),progress=remaining>0?clamp(1-remaining/profile.reloadDuration,0,1):1;
  state.stage=stage;state.progress=progress;state.magazine.fill(0);state.freshMagazine.fill(0);state.supportHand.fill(0);state.magazineRotation=0;state.freshMagazineRotation=0;state.magazineVisible=stage==='idle'||stage==='release'||stage==='eject';state.freshMagazineVisible=stage==='insert'||stage==='action'||stage==='settle';state.action=0;state.rootTilt=0;
