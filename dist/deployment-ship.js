@@ -15,6 +15,7 @@ export const SHIP_COLLIDERS=Object.freeze([
 
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 const blocked=(x,z)=>SHIP_COLLIDERS.some(box=>x>box.min[0]-.42&&x<box.max[0]+.42&&z>box.min[2]-.42&&z<box.max[2]+.42);
+const insidePod=(x,z,ignorePod)=>SHIP_PODS.some(pod=>pod.id!==ignorePod&&Math.hypot(x-pod.x,z-pod.z)<pod.radius+.43);
 
 export function clampShipPosition(local){
  const x=Number.isFinite(local?.[0])?local[0]:0,z=Number.isFinite(local?.[2])?local[2]:Number.isFinite(local?.[1])?local[1]:0;
@@ -23,9 +24,9 @@ export function clampShipPosition(local){
 
 export function moveInShip(local,delta,ignorePod=null){
  let [x,,z]=clampShipPosition(local);const dx=Number.isFinite(delta?.[0])?delta[0]:0,dz=Number.isFinite(delta?.[2])?delta[2]:Number.isFinite(delta?.[1])?delta[1]:0;
- const candidates=[[x+dx,z],[x,z+dz]];
- for(const pod of SHIP_PODS){if(pod.id===ignorePod)continue;const ox=candidates[0][0]-pod.x,oz=candidates[0][1]-pod.z,d=Math.hypot(ox,oz),minimum=pod.radius+.43;if(d<minimum&&d>0){candidates[0][0]=pod.x+ox/d*minimum;candidates[0][1]=pod.z+oz/d*minimum;}}
- for(const [cx,cz] of candidates){const nx=clamp(cx,-8,8),nz=clamp(cz,-14,14);if(!blocked(nx,nz)&&!SHIP_PODS.some(pod=>pod.id!==ignorePod&&Math.hypot(nx-pod.x,nz-pod.z)<pod.radius+.43)){x=nx;z=nz;}}
+ const collides=(cx,cz)=>blocked(cx,cz)||insidePod(cx,cz,ignorePod);
+ const nextX=clamp(x+dx,-8,8);if(!collides(nextX,z))x=nextX;
+ const nextZ=clamp(z+dz,-14,14);if(!collides(x,nextZ))z=nextZ;
  return [x,0,z];
 }
 
