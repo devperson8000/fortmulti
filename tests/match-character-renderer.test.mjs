@@ -24,5 +24,15 @@ test('locomotion blends instead of snapping and unsupported poses fall back clea
 
 test('the raw WebGL game keeps local first-person guns and renders animated GLB peers',async()=>{
  const engine=await readFile(new URL('../public/engine.js',import.meta.url),'utf8'),renderer=await readFile(new URL('../public/match-character-renderer.js',import.meta.url),'utf8');
- assert.match(engine,/getContext\('webgl2'/);assert.match(engine,/drawFirstPersonViewModel\(profile\)/);assert.match(engine,/matchCharacterRenderer\.update\(entities/);assert.match(engine,/matchCharacterRenderer\.render\(/);assert.match(renderer,/WEAPON_FILES/);assert.match(renderer,/instance\.mixer\.update/);
+ assert.match(engine,/getContext\('webgl2'/);assert.match(engine,/drawFirstPersonViewModel\(profile(?:,|\))/);assert.match(engine,/matchCharacterRenderer\.update\(entities/);assert.match(engine,/matchCharacterRenderer\.render\(/);assert.match(renderer,/WEAPON_FILES/);assert.match(renderer,/instance\.mixer\.update/);
+});
+
+test('first-person rendering can draw a cached GLB after the raw arm viewmodel pass',async()=>{
+ const engine=await readFile(new URL('../public/engine.js',import.meta.url),'utf8'),renderer=await readFile(new URL('../public/match-character-renderer.js',import.meta.url),'utf8');
+ const hands=engine.indexOf('drawFirstPersonViewModel(profile,'),weapon=engine.indexOf('matchCharacterRenderer.renderFirstPersonWeapon(');
+ assert.ok(hands>=0,'the first-person arm pass should remain in the game renderer');
+ assert.ok(weapon>hands,'the cached Three.js weapon must share the first-person depth pass after the arms');
+ assert.match(engine,/hasFirstPersonWeapon\(profile\.id\)/,'the procedural weapon must remain as an asset-loading fallback');
+ assert.match(renderer,/firstPersonInstances/,'first-person GLBs should be cloned and cached per weapon');
+ assert.match(renderer,/weaponTemplates\.get\(weaponId\)/,'first-person views must use the bundled licensed weapon files');
 });
