@@ -21,3 +21,10 @@ test('animation layers blend smoothly, stay normalized and ignore unsupported cl
  assert.equal(fallback.state,'idle');
  assert.ok(fallback.weights.run>0);
 });
+
+test('pod entry, pod exit and crouch use the supplied locomotion clips when dedicated clips are absent',()=>{
+ const supported=new Set(['idle','walk','run']);
+ for(const state of ['pod-enter','pod-exit','crouch']){
+  assert.equal(stepAnimationBlend(createAnimationBlend('idle'),{state,supported},.08).state,'walk',state);
+ }
+});
