@@ -42,3 +42,9 @@ test('ship movement is constrained by walls and deployment pod shells',()=>{
  const pod=SHIP_PODS[0],approach=[pod.x,pod.z+2.7],blocked=moveInShip([approach[0],0,approach[1]],[0,0,-1.2],pod.id);
  assert.ok(Math.hypot(blocked[0]-pod.x,blocked[2]-pod.z)>=1.2,'player capsule stays outside pod shell');
 });
+
+test('ship movement preserves diagonal input instead of snapping to aisle lines',()=>{
+ const moved=moveInShip([0,0,0],[1.2,0,.8]);
+ assert.ok(moved[0]>.9,'lateral movement remains responsive');
+ assert.ok(moved[2]>.6,'forward movement remains responsive');
+});
