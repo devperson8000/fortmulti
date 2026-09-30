@@ -2,7 +2,7 @@ import {WEAPON_PROFILES,WEAPON_ORDER,BUILD_SLOTS,createLoadout,weaponForSlot,wea
 import {advanceMotionTrack,smoothAngle,selectViewPlayer} from './network-tuning.js';
 import {ReusableFloatBuffer} from './render-buffer.js';
 import {createCameraPresentation,stepCameraPresentation,canFireDuringPresentation,createCameraBlendOutput,blendCameraViews,shouldShowLocalAvatar,shouldShowViewModel} from './first-person-system.js';
-import {createViewModelState,stepViewModel,createWeaponPartState,stepWeaponParts,reloadStage} from './view-model.js';
+import {createViewModelState,stepViewModel,createWeaponPartState,stepWeaponParts,reloadStage,createFirstPersonHandPose} from './view-model.js';
 import {createEffectPool} from './effect-pool.js';
 import {acceptEventId} from './multiplayer-runtime.js';
 import {createAutoQuality,sampleAutoQuality,qualityPreset} from './quality-system.js';
@@ -336,11 +336,17 @@ const ctx=$('map').getContext('2d');function minimap(){
  const nearest=pois.reduce((best,p)=>Math.hypot(player.p[0]-p.x,player.p[2]-p.z)<best.d?{p,d:Math.hypot(player.p[0]-p.x,player.p[2]-p.z)}:best,{p:pois[0],d:Infinity});$('mapbox').querySelector('b').textContent=player.air==='ship'?'STAGING SHIP':player.air==='pod'?'DEPLOYMENT POD':nearest.d<55?nearest.p.name:'WILDLANDS';
 }
 function drawFirstPersonArms(root,rotation,profile,parts){
- const cloth=color(window.Duel?.myColor||'577363').map(value=>value*.78),trim=AVATAR_COLORS.webbing,point=v=>transform(v,root,rotation[1],rotation[0]+parts.rootTilt),support=parts.supportHand;
- const rightShoulder=point([.29,-.47,.12]),rightElbow=point([.34,-.3,-.18]),rightHand=point([.12,-.08,-.08]);
- const leftShoulder=point([-.38,-.49,.08]),leftElbow=point([-.3+support[0]*.45,-.25+support[1]*.5,-.3+support[2]*.45]),leftHand=point([-.1+support[0],-.06+support[1],-.32+support[2]]);
- tube(rightShoulder,rightElbow,.12,cloth,20);ellipsoid(rightElbow,[.125,.13,.12],cloth,20,12);tube(rightElbow,rightHand,.108,cloth,20);ellipsoid(rightHand,AVATAR_GEAR.glove.size,C.black,20,12);
- tube(leftShoulder,leftElbow,.125,cloth,20);ellipsoid(leftElbow,[.13,.13,.12],cloth,20,12);tube(leftElbow,leftHand,.11,cloth,20);const cuff=point([-.12+support[0]*.8,-.12+support[1]*.8,-.26+support[2]*.8]);ellipsoid(cuff,AVATAR_GEAR.wristCuff.size,trim,18,11);ellipsoid(leftHand,AVATAR_GEAR.glove.size,C.black,20,12);
+ const scale=profile.presentation.scale,cloth=color(window.Duel?.myColor||'577363').map(value=>value*.78),trim=AVATAR_COLORS.webbing,stitch=color('899078'),point=v=>transform(v.map(value=>value*scale),root,rotation[1],rotation[0]+parts.rootTilt),size=v=>v.map(value=>value*scale),pose=createFirstPersonHandPose(profile,parts);
+ const ball=(at,r,col,n=20,rings=12)=>ellipsoid(point(at),size(r),col,n,rings),limb=(a,b,r,col,n=18)=>tube(point(a),point(b),r*scale,col,n);
+ const renderArm=(arm,side)=>{
+  const seam=cloth.map(value=>value*.67),palmSize=side<0?[.145,.09,.16]:[.135,.105,.16];
+  ball(arm.shoulder,[.19,.195,.17],cloth,22,13);limb(arm.shoulder,arm.elbow,.155,cloth,20);ball(arm.elbow,[.145,.15,.135],cloth,20,12);limb(arm.elbow,arm.wrist,.122,cloth,20);
+  const seamA=arm.shoulder.map((value,index)=>mix(value,arm.elbow[index],.18)+(index===0?side*.105:0)),seamB=arm.shoulder.map((value,index)=>mix(value,arm.elbow[index],.82)+(index===0?side*.105:0));limb(seamA,seamB,.012,seam,10);
+  ball(arm.cuff,[.148,.061,.125],trim,18,11);const cuffMark=arm.cuff.map((value,index)=>value+(index===0?side*.022:0));ball(cuffMark,[.018,.065,.09],stitch,12,8);
+  ball(arm.palm,palmSize,C.black,20,12);
+  for(const finger of arm.digits){limb(finger.from,finger.to,finger.radius,C.black,12);ball(finger.to,[finger.radius,finger.radius,finger.radius],C.black,12,8);}
+ };
+ renderArm(pose.shooting,1);renderArm(pose.support,-1);
 }
 function drawFirstPersonWeapon(profile,state,parts){
  const root=state.position,rotation=state.rotation,scale=profile.presentation.scale,point=v=>transform(v.map(n=>n*scale),root,rotation[1],rotation[0]+parts.rootTilt),drawBox=(v,s,c,rx=0)=>box(point(v),s,c,rotation[1],rotation[0]+parts.rootTilt+rx),drawOval=(v,r,c,n,q)=>ellipsoid(point(v),r,c,n,q),drawTube=(a,b,r,c,n)=>tube(point(a),point(b),r,c,n);
