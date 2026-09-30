@@ -26,6 +26,18 @@ test('players must select distinct destinations before reserving an available ne
  assert.equal(match.chooseLanding('a',{x:-40,z:50}),false,'destination is locked once pod entry begins');
 });
 
+test('a player can walk diagonally out of the aisle and interact with a deployment pod',()=>{
+ const match=new Match(world,['a','b']);match.beginDeployment();
+ assert.equal(match.chooseLanding('a',{x:-40,z:50}),true);
+ match.input('a',{yaw:0,x:-1,z:-.5});tick(match,.85);
+ const player=match.players[0];
+ assert.ok(player.shipLocal[0]<-4.5,'the player moves laterally out of the center aisle');
+ assert.ok(player.shipLocal[2]>-2.4,'the player advances toward the pod');
+ match.input('a',{yaw:0,interact:true});match.tick(.05);
+ assert.equal(player.deploymentState,'entering_pod');
+ assert.ok(player.pod,'an available pod is reserved');
+});
+
 test('both connected players auto-deploy to their own destinations only after both pods are ready',()=>{
  const match=new Match(world,['a','b']);match.beginDeployment();
  readyPlayer(match,'a',0,{x:30,z:40});readyPlayer(match,'b',1,{x:-80,z:65});
