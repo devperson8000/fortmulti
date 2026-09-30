@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {WEAPON_PROFILES} from '../public/weapon-system.js';
-import {createViewModelState,stepViewModel,reloadStage,createWeaponPartState,stepWeaponParts} from '../public/view-model.js';
+import {createViewModelState,stepViewModel,reloadStage,createWeaponPartState,stepWeaponParts,createFirstPersonHandPose} from '../public/view-model.js';
+import {WEAPON_MODELS} from '../public/weapon-model.js';
+
+const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
 
 test('each weapon exposes immutable first-person presentation tuning',()=>{
  for(const profile of Object.values(WEAPON_PROFILES)){
@@ -80,6 +83,31 @@ test('reload hand releases, retrieves and seats a fresh magazine in clear stages
  stepWeaponParts(state,profile,profile.reloadDuration*.04);
  assert.equal(state.stage,'settle');
  assert.ok(state.freshMagazineVisible);
+});
+
+test('first-person gloves anchor to each weapon grip and fore-end',()=>{
+ for(const profile of Object.values(WEAPON_PROFILES)){
+  const parts=createWeaponPartState(),pose=createFirstPersonHandPose(profile,parts),model=WEAPON_MODELS[profile.id].parts;
+  const grip=model.find(part=>part.id==='grip').position;
+  const foreEnd=model.find(part=>part.id==='handguard'||part.id==='fore-end').position;
+  assert.ok(distance(pose.shooting.palm,grip)<.13,`${profile.id} firing hand should wrap its grip`);
+  assert.ok(distance(pose.support.palm,[foreEnd[0],foreEnd[1]-.075,foreEnd[2]])<.04,`${profile.id} support hand should wrap its fore-end`);
+  assert.ok(distance(pose.shooting.wrist,pose.shooting.palm)>.08);
+  assert.ok(distance(pose.support.wrist,pose.support.palm)>.08);
+ }
+});
+
+test('first-person support hand reaches the magazine and returns to the fore-end on reload',()=>{
+ const profile=WEAPON_PROFILES.ar,parts=createWeaponPartState();
+ const ready=createFirstPersonHandPose(profile,parts).support.palm;
+ stepWeaponParts(parts,profile,profile.reloadDuration*.5);
+ const reload=createFirstPersonHandPose(profile,parts).support.palm;
+ const magazine=WEAPON_MODELS.ar.parts.find(part=>part.id==='magazine').position;
+ assert.equal(parts.stage,'insert');
+ assert.ok(distance(reload,ready)>.2,'support glove must leave its ready grip');
+ assert.ok(distance(reload,[magazine[0],magazine[1]-.1,magazine[2]])<.13,'support glove should meet the magazine during insertion');
+ stepWeaponParts(parts,profile,0);
+ assert.ok(distance(createFirstPersonHandPose(profile,parts).support.palm,ready)<.001,'support glove must return to its fore-end grip');
 });
 
 test('weapon switching begins lowered and returns to the ready anchor',()=>{
