@@ -5,7 +5,7 @@ const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const mix=(from,to,t)=>from+(to-from)*t;
 
 export function createViewModelState(){
- return {position:[0,0,0],rotation:[0,0,0],recoil:0,swayX:0,swayY:0,bobPhase:0,stage:'idle'};
+ return {position:[0,0,0],rotation:[0,0,0],recoil:0,swayX:0,swayY:0,bobPhase:0,movement:0,sprint:0,ads:0,stage:'idle'};
 }
 
 export function reloadStage(profile,remaining){
@@ -24,11 +24,13 @@ export function stepViewModel(state,input,dt){
  state.recoil=damp(state.recoil,0,11,step);
  state.swayX=damp(state.swayX,clamp(input.mouseX||0,-24,24)*p.sway*.01,10,step);
  state.swayY=damp(state.swayY,clamp(input.mouseY||0,-24,24)*p.sway*.01,10,step);
- state.bobPhase+=(input.moving||0)*step*9;
+ state.movement=damp(state.movement,clamp(input.moving||0,0,1),12,step);
+ state.ads=damp(state.ads,input.aiming?1:0,14,step);state.sprint=damp(state.sprint,input.sprinting&&!input.aiming&&!input.reloading?1:0,10,step);
+ state.bobPhase+=state.movement*step*(input.sprinting?12:9);
  state.stage=reloadStage(profile,input.reloading||0);
- const anchor=input.aiming?p.adsAnchor:p.anchor,bob=Math.sin(state.bobPhase)*p.bob*(input.moving||0),sprint=input.sprinting?1:0,equip=clamp((input.equipRemaining||0)/profile.equipDuration,0,1);
- state.position[0]=damp(state.position[0],anchor[0]+state.swayX+p.sprint[0]*sprint,16,step);
- state.position[1]=damp(state.position[1],anchor[1]+bob+p.sprint[1]*sprint-.48*equip,16,step);
+ const anchor=p.anchor.map((v,i)=>mix(v,p.adsAnchor[i],state.ads)),bob=Math.sin(state.bobPhase*2)*p.bob*state.movement*(1-state.ads*.85),sprint=state.sprint,equip=clamp((input.equipRemaining||0)/profile.equipDuration,0,1);
+ state.position[0]=damp(state.position[0],anchor[0]+state.swayX*(1-state.ads*.8)+Math.cos(state.bobPhase)*p.bob*.5*state.movement*(1-state.ads)+p.sprint[0]*sprint,16,step);
+ state.position[1]=damp(state.position[1],anchor[1]+bob+(input.landing||0)*-.045+p.sprint[1]*sprint-.48*equip,16,step);
  state.position[2]=damp(state.position[2],anchor[2]+p.recoil[0]*state.recoil+p.sprint[2]*sprint,18,step);
  state.rotation[0]=damp(state.rotation[0],p.recoil[1]*state.recoil+.45*sprint+.65*equip,18,step);
  state.rotation[1]=damp(state.rotation[1],state.swayX*.8,14,step);
@@ -83,7 +85,7 @@ export function createFirstPersonAssetPose(profile,state,parts,assetLength=1){
  const hand=createFirstPersonHandPose(profile,parts),trigger=hand.shooting.digits[0].to;
  return {
   position:state.position.slice(),
-  rotation:[state.rotation[0]+(parts?.rootTilt||0),state.rotation[1],0],
+  rotation:[state.rotation[0]+(parts?.rootTilt||0),state.rotation[1],state.rotation[2]],
   scale:(1.35*profile.presentation.scale)/Math.max(.001,assetLength),
   trigger:trigger.slice()
  };

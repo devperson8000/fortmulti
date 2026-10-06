@@ -1,3 +1,5 @@
+import {createContactShadow} from './character-lighting.js';
+import {createMotionPresentation,stepMotionPresentation} from './visual-presentation.js';
 import {createSoldierArms,poseSoldierArms,poseArmChain} from './soldier-arms.js';
 import {createHeldItem} from './held-items.js';
 import {createFirstPersonHandPose,handAttachmentScale} from './view-model.js';
@@ -16,15 +18,15 @@ export class MatchCharacterRenderer{
  constructor(gl,canvas,{modelUrl='/models/Soldier.glb',weaponBase='/models/weapons/'}={}){
   this.canvas=canvas;this.gl=gl;this.weaponBase=weaponBase;this.instances=new Map();this.weaponTemplates=new Map();this.firstPersonInstances=new Map();this.template=null;this.clips=new Map();this.ready=false;this.failed=false;this.width=0;this.height=0;
   this.scene=new THREE.Scene();this.camera=new THREE.PerspectiveCamera(75,1,.15,820);
-  this.scene.add(new THREE.HemisphereLight(0xc6e9ff,0x30372d,1.7));
-  const key=new THREE.DirectionalLight(0xfff1d4,2.35);key.position.set(-18,30,14);this.scene.add(key);
-  const rim=new THREE.DirectionalLight(0x85ddff,1.1);rim.position.set(13,12,-20);this.scene.add(rim);
+  this.scene.fog=new THREE.FogExp2(0xb1d6e3,.0036);this.scene.add(new THREE.HemisphereLight(0xc6e9ff,0x394332,1.3));
+  const key=new THREE.DirectionalLight(0xffedc8,2.05);key.position.set(-18,30,14);this.scene.add(key);
+  const rim=new THREE.DirectionalLight(0x91d6ff,.75);rim.position.set(13,12,-20);this.scene.add(rim);
   this.firstPersonScene=new THREE.Scene();this.firstPersonCamera=new THREE.PerspectiveCamera(62,1,.15,820);this.firstPersonCamera.position.set(0,0,0);this.firstPersonCamera.lookAt(0,0,-1);
   this.firstPersonScene.add(new THREE.HemisphereLight(0xd5edff,0x33302a,1.65));
   const fpKey=new THREE.DirectionalLight(0xffe5bc,2.1);fpKey.position.set(-2,3,2);this.firstPersonScene.add(fpKey);
   const fpRim=new THREE.DirectionalLight(0x83d9ff,1.15);fpRim.position.set(2,1,-4);this.firstPersonScene.add(fpRim);
   this.renderer=new THREE.WebGLRenderer({canvas,context:gl,antialias:false,alpha:false,powerPreference:'high-performance'});
-  this.renderer.autoClear=false;this.renderer.setPixelRatio(1);this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.NoToneMapping;this.renderer.setClearColor(0x000000,0);
+  this.renderer.autoClear=false;this.renderer.setPixelRatio(1);this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.05;this.renderer.setClearColor(0x000000,0);
   this.loader=new GLTFLoader();
   this.loader.load(modelUrl,gltf=>this._loaded(gltf),undefined,error=>{this.failed=true;console.error('Horizon match character model could not load.',error);});
   for(const [id,file] of Object.entries(WEAPON_FILES))this.loader.load(`${weaponBase}${file}`,gltf=>this.weaponTemplates.set(id,gltf.scene),undefined,error=>console.warn(`Horizon ${id} third-person weapon could not load.`,error));
@@ -114,14 +116,14 @@ export class MatchCharacterRenderer{
   model.traverse(object=>{if(object.isBone){bones.set(normBone(object.name),object);if(normBone(object.name)==='mixamorigrighthand')hand=object;}});
   rightArm=bones.get('mixamorigrightarm');rightForeArm=bones.get('mixamorigrightforearm');leftArm=bones.get('mixamorigleftarm');leftForeArm=bones.get('mixamorigleftforearm');
   model.scale.setScalar(this.modelScale);model.traverse(object=>{if(object.isMesh){object.castShadow=false;object.receiveShadow=true;object.frustumCulled=false;}});
-  holder.add(model);this.scene.add(holder);
+  holder.add(model);this.scene.add(holder);const contactShadow=createContactShadow();this.scene.add(contactShadow);
   const animatedPose=new Map([...bones.values()].map(bone=>[bone,bone.quaternion.clone()]));
-  const instance={id,holder,model,mixer,actions,bones,animatedPose,hand,rightArm,rightForeArm,leftArm,leftForeArm,weaponId:'',weaponMount:null,weaponMounts:new Map(),utilityCache:new Map(),blend:createAnimationBlend('idle'),sequenceState:'',fireTime:0,color:source.color||'#6f8470'};
+  const instance={id,holder,model,contactShadow,motion:createMotionPresentation(),mixer,actions,bones,animatedPose,hand,rightArm,rightForeArm,leftArm,leftForeArm,weaponId:'',weaponMount:null,weaponMounts:new Map(),utilityCache:new Map(),blend:createAnimationBlend('idle'),sequenceState:'',fireTime:0,color:source.color||'#6f8470'};
   this._tint(instance,instance.color);return instance;
  }
  _tint(instance,value){
   const tint=new THREE.Color(value||'#6f8470');instance.bodyMaterials=[];
-  instance.model.traverse(object=>{if(!object.isMesh)return;const source=object.material,colorMat=sourceMaterial=>{const material=sourceMaterial.clone();instance.bodyMaterials.push(material);if(material.color)material.color.lerp(tint,.075);return material;};object.material=Array.isArray(source)?source.map(colorMat):colorMat(source);});
+  instance.model.traverse(object=>{if(!object.isMesh)return;const source=object.material,colorMat=sourceMaterial=>{const material=sourceMaterial.clone();instance.bodyMaterials.push(material);if(material.color)material.color.lerp(tint,.055);if('roughness' in material)material.roughness=Math.max(.65,material.roughness);return material;};object.material=Array.isArray(source)?source.map(colorMat):colorMat(source);});
  }
  update(players=[],{localId='',hideId='',phase='playing',dt=.016}={}){
   if(!this.ready)return;
@@ -131,7 +133,8 @@ export class MatchCharacterRenderer{
    const id=String(p.id);active.add(id);let instance=this.instances.get(id);
    if(!instance){instance=this._create(id,p);this.instances.set(id,instance);}
    instance.holder.visible=id!==String(hideId);instance.holder.position.set(p.p?.[0]||0,p.p?.[1]||0,p.p?.[2]||0);instance.holder.rotation.y=Number.isFinite(p.yaw)?p.yaw:0;
-   const animation=characterLocomotion(p);
+   const animation=characterLocomotion(p),motion=stepMotionPresentation(instance.motion,p,dt);instance.model.rotation.x=motion.lean;instance.model.rotation.z=-motion.strafe-motion.turn;
+   const altitude=Math.max(0,p.p[1]-(p.groundY??p.p[1]));instance.contactShadow.visible=p.showShadow!==false&&instance.holder.visible&&p.air==='landed';instance.contactShadow.position.set(p.p[0],(p.groundY??p.p[1])+.025,p.p[2]);instance.contactShadow.material.opacity=.72/(1+altitude*.65);instance.contactShadow.scale.set(1.8+Math.min(altitude,4)*.18,1.3+Math.min(altitude,4)*.12,1);
    const blendState=animation.state==='crouch'&&animation.speed<.18?'idle':animation.state;
    instance.blend=stepAnimationBlend(instance.blend,{state:blendState,supported:this.supportedClips},dt);
    for(const [state,action] of instance.actions){action.setEffectiveWeight(instance.blend.weights[state]||0);if(state==='walk'||state==='run')action.setEffectiveTimeScale(clamp((p.moveSpeed||animation.speed)/(state==='run'?6.8:3.2),.65,1.4));}
@@ -163,12 +166,14 @@ export class MatchCharacterRenderer{
    if(instance.rightForeArm)instance.rightForeArm.rotation.x-=swing*.45+throwing*.65+consuming*.75;
    if(instance.leftArm&&consuming)instance.leftArm.rotation.x-=consuming*.9;
 
+   if(motion.landing>.001){for(const side of ['left','right']){const thigh=instance.bones.get(`mixamorig${side}upleg`),leg=instance.bones.get(`mixamorig${side}leg`);if(thigh)thigh.rotation.x-=motion.landing*.18;if(leg)leg.rotation.x+=motion.landing*.36;}instance.model.position.y=-motion.landing*.07;}else instance.model.position.y=0;
+   const spine=instance.bones.get('mixamorigspine');if(spine)spine.rotation.y+=motion.turn*1.5;
    if(p.crouching){instance.holder.position.y-=.16;for(const key of['mixamorigleftupleg','mixamorigrightupleg']){const bone=instance.bones.get(key);if(bone)bone.rotation.x-=.36;}for(const key of['mixamorigleftleg','mixamorigrightleg']){const bone=instance.bones.get(key);if(bone)bone.rotation.x+=.68;}}
   }
   for(const [id,instance] of this.instances)if(!active.has(id)){this._disposeInstance(instance);this.instances.delete(id);}
  }
  _disposeInstance(instance){
-  instance.mixer.stopAllAction();this.scene.remove(instance.holder);
+  instance.mixer.stopAllAction();this.scene.remove(instance.holder);this.scene.remove(instance.contactShadow);instance.contactShadow?.material.dispose();
   const materials=new Set(),geometries=new Set();
   for(const utility of instance.utilityCache.values())utility.traverse(o=>{if(o.isMesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);}});
   for(const mount of instance.weaponMounts.values()){const muzzle=mount.userData.muzzle;if(muzzle){geometries.add(muzzle.geometry);materials.add(muzzle.material);}}

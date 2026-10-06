@@ -1,3 +1,4 @@
+import {createContactShadow} from './character-lighting.js';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkinned} from 'three/addons/utils/SkeletonUtils.js';
@@ -10,13 +11,13 @@ if(canvas){
  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
  renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
- renderer.toneMappingExposure=.9;
+ renderer.toneMappingExposure=1.02;
 
  const scene=new THREE.Scene();
  const camera=new THREE.PerspectiveCamera(37.815,1,.15,100);
  scene.add(new THREE.HemisphereLight(0xbdeaff,0x1d2730,2.1));
- const key=new THREE.DirectionalLight(0xfff2d8,4.2);key.position.set(-3.5,7,7);scene.add(key);
- const rim=new THREE.DirectionalLight(0x70d9ff,2.4);rim.position.set(5,4,-4);scene.add(rim);
+ const key=new THREE.DirectionalLight(0xffecd1,3.3);key.position.set(-3.5,7,7);scene.add(key);
+ const rim=new THREE.DirectionalLight(0x70d9ff,1.8);rim.position.set(5,4,-4);scene.add(rim);
  const fill=new THREE.DirectionalLight(0x9bbdff,1.25);fill.position.set(-5,2,1);scene.add(fill);
 
  const regularSpots=[[0,.1,2.15],[-2.8,.03,.45],[2.8,.03,.45],[-5.05,-.02,-.95],[5.05,-.02,-.95],[-7,-.06,-2.15],[7,-.06,-2.15],[0,-.06,-2.5]];
@@ -41,7 +42,7 @@ if(canvas){
  function findRig(model){
   return resolveLobbyRig(model);
  }
- function disposeInstance(instance){instance.mixer.stopAllAction();scene.remove(instance.holder);const skeletons=new Set();instance.model.traverse(object=>{if(object.isSkinnedMesh)skeletons.add(object.skeleton);});for(const skeleton of skeletons)skeleton.dispose();}
+ function disposeInstance(instance){instance.mixer.stopAllAction();scene.remove(instance.holder);instance.contactShadow.material.dispose();const skeletons=new Set();instance.model.traverse(object=>{if(object.isSkinnedMesh)skeletons.add(object.skeleton);});for(const skeleton of skeletons)skeleton.dispose();}
  function createInstance(member,index){
   const model=cloneSkinned(template),holder=new THREE.Group(),rig=findRig(model);
   const sampledFingerPose=new Map(saluteFingerPose.map(({name,quaternion})=>[name,quaternion]));
@@ -60,7 +61,7 @@ if(canvas){
    if(missing.length){console.error('Horizon lobby Soldier rig is missing runtime bones:',missing);rigWarningShown=true;}
   }
   model.traverse(object=>{if(object.isMesh){object.frustumCulled=false;object.castShadow=false;object.receiveShadow=false;}});
-  holder.add(model);scene.add(holder);
+  const contactShadow=createContactShadow(1.0,.7);contactShadow.position.y=-.025;holder.add(contactShadow);holder.add(model);scene.add(holder);
   const mixer=new THREE.AnimationMixer(model);
   const idleAction=mixer.clipAction(idleClip);idleAction.enabled=true;idleAction.setEffectiveWeight(.95);idleAction.play();
   const walkAction=walkClip?mixer.clipAction(walkClip):null;
@@ -69,7 +70,7 @@ if(canvas){
   idleAction.time=phase;
   if(walkAction)walkAction.time=(phase*1.73)%(walkClip.duration||1);
   return {
-   id:member.id,holder,model,mixer,idleAction,walkAction,animatedPose:new Map(Object.values(rig).filter(bone=>bone?.quaternion).map(bone=>[bone,bone.quaternion.clone()])),fingerTargets,saluteBones,foreheadMeshes,salutePose:null,rig,phase,slot:index,
+   id:member.id,holder,model,contactShadow,mixer,idleAction,walkAction,animatedPose:new Map(Object.values(rig).filter(bone=>bone?.quaternion).map(bone=>[bone,bone.quaternion.clone()])),fingerTargets,saluteBones,foreheadMeshes,salutePose:null,rig,phase,slot:index,
    randomState:hash(`${member.id||index}:horizon-lobby`)||1,
    saluteActive:false,saluteStarted:0,nextSaluteAt:now+.85+index*.16
   };

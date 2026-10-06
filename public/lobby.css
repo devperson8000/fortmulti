@@ -112,3 +112,18 @@ body.character-preview-open .lobby-tabs button:not(:disabled){display:inline-fle
 }
 body.character-preview-open #lobby-characters{z-index:6}
 @media(prefers-reduced-motion:reduce){#lobby-characters{filter:none}}
+
+/* A calmer frame gives the lit Soldier and party stage visual priority. */
+#lobby nav{background:linear-gradient(180deg,#061426bf,#0a284244 72%,transparent);border-bottom:1px solid #c4effb22}
+.lobby-tabs button{font-weight:850;letter-spacing:1.1px}.lobby-tabs button.active:after{background:linear-gradient(90deg,#78e5ff,#e8fa88);box-shadow:0 0 12px #7bdfff33}
+.mode-card{border-color:#9dd3e077;background:linear-gradient(155deg,#1a4664ed,#0a233cf2 65%);box-shadow:0 18px 45px #020b1b77,inset 0 1px #d4f4ff27}
+.mode-card h1{line-height:.94;font-weight:950;letter-spacing:-1.2px}.mode-card>small{font-size:8px;letter-spacing:1.8px}
+.mode-card .primary{background:linear-gradient(180deg,#f4ff9e,#dcec60);color:#193538;box-shadow:0 4px 0 #82973c,0 10px 23px #071a3d55;transition:transform .14s,box-shadow .14s,filter .14s}
+.mode-card .primary:hover{transform:translateY(-2px);filter:brightness(1.06);box-shadow:0 6px 0 #82973c,0 14px 28px #071a3d66}.mode-card .primary:active{transform:translateY(3px);box-shadow:0 1px 0 #82973c,0 4px 12px #071a3d55}
+#hero-label{top:14%;gap:6px}#hero-label b{font-size:15px;font-weight:900;letter-spacing:.4px}#hero-label span{padding:4px 9px;border-radius:20px;background:#09243a88;border:1px solid #b6e5f126;color:#d7e8ef}
+#hero-label span.ready{background:#253d2088;border-color:#dff58b55;color:#edffa9}
+#character-preview-panel{border-color:#a6e2f174;background:linear-gradient(155deg,#12394cec,#071b31ee)}
+.party-card{transition:transform .16s,border-color .16s,background .16s}.social-panel{transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s}.online-player{transition:background .15s,border-color .15s}
+body:not(.in-lobby) #chatbox{background:#09263be6;box-shadow:0 8px 22px #03162e44}
+@media(max-width:760px){#hero-label{top:13%}#hero-label b{font-size:12px}.mode-card h1{font-size:25px}.mode-card .primary{padding:11px}}
+@media(prefers-reduced-motion:reduce){.mode-card .primary,.social-panel,.party-card,.online-player{transition:none}.mode-card .primary:hover{transform:none}}

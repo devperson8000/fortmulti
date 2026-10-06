@@ -54,3 +54,13 @@ test('switching held items reuses remote meshes and independent weapon skeletons
  p.slot=1;renderer.update([p]);assert.ok(instance.weaponMount===firstGun,'weapon switches must reuse mounts');
  const sourceBones=new Set();gun.scene.traverse(o=>{if(o.isBone)sourceBones.add(o);});firstGun.traverse(o=>{if(o.isSkinnedMesh)assert.ok(o.skeleton.bones.every(b=>!sourceBones.has(b)),'weapon clone must not share source skeleton');});
 });
+
+test('match contact shadows follow ground and presentation motion settles after landing',async()=>{
+ const {MatchCharacterRenderer}=await import('../public/match-character-renderer.js');
+ const renderer=Object.create(MatchCharacterRenderer.prototype);Object.assign(renderer,{scene:new THREE.Scene(),firstPersonScene:new THREE.Scene(),instances:new Map(),weaponTemplates:new Map(),clips:new Map()});renderer._loaded(asset);
+ const p={id:'peer',p:[0,3,0],hp:100,slot:0,weapons:{},air:'landed',deploymentState:'match_active',grounded:false,groundY:0,vy:-15,moveSpeed:5,yaw:0};
+ renderer.update([p]);const instance=renderer.instances.get('peer');assert.ok(instance.contactShadow.visible);assert.equal(instance.contactShadow.position.y,.025);assert.ok(instance.contactShadow.material.opacity<.4);
+ p.p[1]=0;p.vy=0;p.grounded=true;p.moveSpeed=0;renderer.update([p]);assert.ok(instance.model.position.y<0);
+ for(let n=0;n<180;n++)renderer.update([p]);assert.ok(Math.abs(instance.model.position.y)<.001);assert.ok(Math.abs(instance.model.rotation.x)<.001);
+ renderer.update([]);assert.equal(renderer.instances.size,0);assert.ok(!renderer.scene.children.includes(instance.contactShadow));
+});

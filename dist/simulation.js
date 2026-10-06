@@ -111,7 +111,7 @@ export class Match{
   const profile=weaponForSlot(p.slot),state=p.weapons[profile.id];
   if(!state?.ammo){this.reloadWeapon(p);return;}
   state.ammo--;p.ammo=state.ammo;p.cool+=profile.fireInterval;p.sustained=Math.min(5,p.sustained+1);
-  const spread=shotSpread(profile,{aim:i.aim,moving,sustained:p.sustained}),traces=[],hitTotals=new Map(),structureHits=new Map(),camera=this.cameraOrigin(p,i,profile),muzzleZ=profile.id==='sniper'?-1.95:profile.id==='shotgun'?-1.72:-1.48,muzzle=[p.p[0]+.24*Math.cos(i.yaw)+muzzleZ*Math.sin(i.yaw),p.p[1]+1.59,p.p[2]-.24*Math.sin(i.yaw)+muzzleZ*Math.cos(i.yaw)];
+  const spread=shotSpread(profile,{aim:i.aim,moving,sustained:p.sustained}),traces=[],traceHits=[],hitTotals=new Map(),structureHits=new Map(),camera=this.cameraOrigin(p,i,profile),muzzleZ=profile.id==='sniper'?-1.95:profile.id==='shotgun'?-1.72:-1.48,muzzle=[p.p[0]+.24*Math.cos(i.yaw)+muzzleZ*Math.sin(i.yaw),p.p[1]+1.59,p.p[2]-.24*Math.sin(i.yaw)+muzzleZ*Math.cos(i.yaw)];
   if(profile.projectile){
    const viewDirection=spreadDirection(i.aimYaw,i.aimPitch,spread),crosshairTrace=this.traceShot(p,viewDirection,profile.range,camera),toAim=crosshairTrace.end.map((v,k)=>v-muzzle[k]),muzzleDirection=normalize(toAim),projectileId=`${p.id}:${++this.projectileSequence}`;
    this.projectiles.push(createProjectile({id:projectileId,owner:p.id,origin:muzzle,direction:muzzleDirection,speed:profile.projectile.speed,gravity:profile.projectile.gravity,range:profile.range,damage:profile.damage,spawnTick:this.elapsed,maxAge:profile.projectile.maxAge}));
@@ -119,14 +119,14 @@ export class Match{
    return;
   }
   for(let pellet=0;pellet<profile.pellets;pellet++){
-   const viewDirection=spreadDirection(i.aimYaw,i.aimPitch,spread),crosshairTrace=this.traceShot(p,viewDirection,profile.range,camera),toAim=crosshairTrace.end.map((v,k)=>v-muzzle[k]),aimDistance=Math.hypot(...toAim),muzzleDirection=normalize(toAim),trace=this.traceShot(p,muzzleDirection,Math.min(profile.range,aimDistance+.35),muzzle);traces.push(trace.end);
+   const viewDirection=spreadDirection(i.aimYaw,i.aimPitch,spread),crosshairTrace=this.traceShot(p,viewDirection,profile.range,camera),toAim=crosshairTrace.end.map((v,k)=>v-muzzle[k]),aimDistance=Math.hypot(...toAim),muzzleDirection=normalize(toAim),trace=this.traceShot(p,muzzleDirection,Math.min(profile.range,aimDistance+.35),muzzle);traces.push(trace.end);traceHits.push(trace.target?.id||null);
    if(trace.target){const multiplier=trace.critical?1.65:1,damage=Math.round(profile.damage*multiplier),prior=hitTotals.get(trace.target)||{damage:0,critical:false};prior.damage+=damage;prior.critical||=trace.critical;hitTotals.set(trace.target,prior);}
    if(trace.structure)structureHits.set(trace.structure,(structureHits.get(trace.structure)||0)+profile.damage);
   }
   for(const [target,hit] of hitTotals){this.hit(target,hit.damage);if(target.hp<=0&&!target.eliminated){target.eliminated=true;this.event({type:'elimination',by:p.id,hit:target.id,weapon:profile.id});}}
   for(const [structure,damage] of structureHits){structure.hp-=damage;if(structure.hp<=0)this.structures=this.structures.filter(s=>s!==structure);}
   const hits=[...hitTotals].map(([target,hit])=>({id:target.id,...hit}));
-  this.event({type:'shot',by:p.id,weapon:profile.id,a:muzzle,b:traces[0],traces,hits,hit:hits[0]?.id||null,damage:hits.reduce((n,h)=>n+h.damage,0)});
+  this.event({type:'shot',by:p.id,weapon:profile.id,a:muzzle,b:traces[0],traces,traceHits,hits,hit:hits[0]?.id||null,damage:hits.reduce((n,h)=>n+h.damage,0)});
  }
  tickProjectiles(dt){
   for(let index=this.projectiles.length-1;index>=0;index--){

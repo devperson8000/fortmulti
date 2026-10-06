@@ -117,7 +117,7 @@ test('first-person GLB trigger stays on the firing finger and each asset fits it
  const profile=WEAPON_PROFILES.ar,state={position:[.34,-.34,-.78],rotation:[.12,-.08,.03]},parts={rootTilt:-.42};
  const pose=createPose(profile,state,parts,.8),hand=createFirstPersonHandPose(profile,createWeaponPartState());
  assert.deepEqual(pose.position,state.position);
- assert.deepEqual(pose.rotation,[-.3,-.08,0]);
+ assert.deepEqual(pose.rotation,[-.3,-.08,.03]);
  assert.equal(pose.scale,1.6875);
  assert.ok(distance(hand.shooting.digits[0].to,pose.trigger)<.03,'the trigger pivot must meet the index fingertip');
  for(const weapon of Object.values(WEAPON_PROFILES)){
@@ -142,4 +142,9 @@ test('hand attachments retain world size through the Soldier centimeter hierarch
  const localScale=viewModel.handAttachmentScale(inherited,worldLength,sourceLength);
  assert.ok(Math.abs(localScale*inherited*sourceLength-worldLength)<1e-9);
  assert.ok(Math.abs(viewModel.handAttachmentScale(inherited)*inherited-1)<1e-9);
+});
+
+test('GLB weapon retains presentation roll during sprint and recoil',()=>{
+ const pose=viewModel.createFirstPersonAssetPose(WEAPON_PROFILES.ar,{position:[0,0,0],rotation:[.1,.2,.3]},createWeaponPartState(),1);
+ assert.equal(pose.rotation[2],.3);
 });
