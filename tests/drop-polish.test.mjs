@@ -18,7 +18,7 @@ test('two players launch independently to their chosen points after both pods ar
  assert.equal(match.deployment.stage,'both_ready');tick(match,DEPLOYMENT_TIMELINE.readyBeat+DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds*.85);
  assert.equal(match.deployment.stage,'transition');assert.ok(match.players.every(player=>player.p[1]>100),'the reposition remains at the ship while the transition is black');
  tick(match,1);assert.equal(match.deployment.stage,'pod_opening');assert.ok(Math.hypot(match.players[0].p[0]-30,match.players[0].p[2]-40)<2);assert.ok(Math.hypot(match.players[1].p[0]+80,match.players[1].p[2]-65)<2);
- tick(match,5);assert.equal(match.phase,'playing');assert.ok(match.players.every(player=>player.air==='landed'&&player.slot===1));
+ tick(match,5);assert.equal(match.phase,'playing');assert.ok(match.players.every(player=>player.air==='landed'&&player.slot===0));
 });
 
 test('snapshot sequencing rejects late frames while allowing a newer match epoch',()=>{

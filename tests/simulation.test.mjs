@@ -1,10 +1,11 @@
+import {createLoadout} from '../public/weapon-system.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Match,placement,validBuild,sanitize,ground,createGroundGrid,ISLAND_LIMIT,INPUT_STALE_SECONDS} from '../public/simulation.js';
 import {DEPLOYMENT_SHIP,SHIP_PODS} from '../public/deployment-ship.js';
 
 const world={height:()=>0,obstacles:[]};
-const landAll=match=>{match.phase='playing';for(const p of match.players){p.p[1]=0;p.air='landed';p.vy=0;p.deploymentState='match_active';p.slot=1;p.animationState='idle';}};
+const landAll=match=>{match.phase='playing';for(const p of match.players){p.p[1]=0;p.air='landed';p.vy=0;p.deploymentState='match_active';p.slot=1;p.weapons=createLoadout();p.shield=100;p.ammo=30;p.materials={wood:150,stone:0};p.material=150;p.animationState='idle';}};
 const tick=(match,seconds)=>{for(let i=0;i<Math.ceil(seconds/.05);i++)match.tick(.05);};
 
 test('build follows facing in four directions and allows upper-level chains',()=>{
@@ -20,7 +21,7 @@ test('ground queries use local obstacle buckets without changing rooftop height'
 test('a new match starts aboard a fixed ship with combat disabled',()=>{
  const match=new Match(world,['a','b']);assert.equal(match.phase,'waiting');assert.ok(match.players.every(p=>p.air==='ship'&&p.slot===0));assert.ok(match.players.every(p=>p.p[1]===DEPLOYMENT_SHIP.origin[1]));
  assert.equal(match.snapshot().ship.origin[1],DEPLOYMENT_SHIP.origin[1]);assert.equal(match.beginDeployment(),true);match.input('a',{z:1,yaw:0,slot:4,fire:true,reload:true});tick(match,.4);
- assert.equal(match.phase,'deployment');assert.ok(match.players[0].shipLocal[2]<-4.2);assert.equal(match.players[0].slot,0);assert.equal(match.players[0].weapons.sniper.ammo,4);assert.ok(match.players.every(p=>p.p[1]===DEPLOYMENT_SHIP.origin[1]));
+ assert.equal(match.phase,'deployment');assert.ok(match.players[0].shipLocal[2]<-4.2);assert.equal(match.players[0].slot,0);assert.deepEqual(match.players[0].weapons,{});assert.ok(match.players.every(p=>p.p[1]===DEPLOYMENT_SHIP.origin[1]));
 });
 
 test('ship walking respects the available deck bounds and sprint scaling',()=>{
@@ -50,11 +51,11 @@ test('multiplayer rounds end only when one connected player remains',()=>{
 
 test('host simulates hits and ammo during multiplayer combat',()=>{
  const match=new Match(world,['a','b','c']);landAll(match);match.players[0].p=[0,0,0];match.players[1].p=[0,0,-10];match.players[2].p=[20,0,20];const before=match.players[0].ammo;
- for(let i=0;i<20&&match.players[1].hp>0;i++){match.input('a',{yaw:0,aim:true,fire:true});match.tick(.16);}assert.equal(match.players[1].hp,0);assert.ok(match.players[0].ammo<before);assert.equal(match.phase,'playing');
+ for(let i=0;i<20&&match.players[1].hp>0;i++){match.input('a',{slot:1,yaw:0,aim:true,fire:true});match.tick(.16);}assert.equal(match.players[1].hp,0);assert.ok(match.players[0].ammo<before);assert.equal(match.phase,'playing');
 });
 
 test('a wall blocks bullets and loses durability',()=>{
- const match=new Match(world,['a','b']);landAll(match);match.players[0].p=[0,0,0];match.players[1].p=[0,0,-10];match.structures=[{x:0,z:-5,y:0,angle:0,type:2,hp:150}];match.input('a',{yaw:0,fire:true});match.tick(.03);assert.equal(match.players[1].shield,100);assert.equal(match.structures[0].hp,119);
+ const match=new Match(world,['a','b']);landAll(match);match.players[0].p=[0,0,0];match.players[1].p=[0,0,-10];match.structures=[{x:0,z:-5,y:0,angle:0,type:2,hp:150}];match.input('a',{slot:1,yaw:0,fire:true});match.tick(.03);assert.equal(match.players[1].shield,100);assert.equal(match.structures[0].hp,119);
 });
 
 test('the same held fire input places one wall and charges material once',()=>{
@@ -68,14 +69,14 @@ test('crouch, walk, run, jump and fall animation states are synchronized in snap
  for(let i=0;i<15;i++){match.input('a',{jump:false});match.tick(.05);}assert.ok(['fall','idle'].includes(p.animationState));
 });
 
-test('invalid inputs cannot introduce NaN or unbounded movement',()=>{const input=sanitize({x:Infinity,yaw:NaN,z:500,slot:888,landing:[Infinity,0]});assert.equal(input.x,0);assert.equal(input.yaw,0);assert.equal(input.z,1);assert.equal(input.slot,1);assert.equal(input.landing,null);assert.ok(ISLAND_LIMIT>280);});
+test('invalid inputs cannot introduce NaN or unbounded movement',()=>{const input=sanitize({x:Infinity,yaw:NaN,z:500,slot:888,landing:[Infinity,0]});assert.equal(input.x,0);assert.equal(input.yaw,0);assert.equal(input.z,1);assert.equal(input.slot,0);assert.equal(input.landing,null);assert.ok(ISLAND_LIMIT>280);});
 
 test('large-party input stays active between adaptive network updates',()=>{
  assert.ok(INPUT_STALE_SECONDS>=1.3);const match=new Match(world,['a','b']);landAll(match);match.input('a',{yaw:0,z:1});for(let i=0;i<14;i++)match.tick(.05);const midway=match.players[0].p[2];for(let i=0;i<10;i++)match.tick(.05);assert.ok(match.players[0].p[2]<midway-.5);
 });
 
 test('a buffered fire tap produces one automatic shot instead of a sustained burst',()=>{
- const match=new Match(world,['a','b']);landAll(match);match.players[1].p=[50,0,50];match.input('a',{yaw:0,fire:true,firePulse:true});match.tick(.05);const ammo=match.players[0].ammo;for(let i=0;i<20;i++)match.tick(.05);assert.equal(match.players[0].ammo,ammo);
+ const match=new Match(world,['a','b']);landAll(match);match.players[1].p=[50,0,50];match.input('a',{slot:1,yaw:0,fire:true,firePulse:true});match.tick(.05);const ammo=match.players[0].ammo;for(let i=0;i<20;i++)match.tick(.05);assert.equal(match.players[0].ammo,ammo);
 });
 
 test('waiting phase prevents early movement, firing and building',()=>{

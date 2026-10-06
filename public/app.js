@@ -214,7 +214,7 @@ function receive(m){
  if(m.type==='pong'&&Number.isFinite(d.time)){latencies.set(m.from,Math.max(0,Date.now()-d.time));updateNetworkChip();}
 }
 
-window.Duel={active:true,lobby:true,characterPreview:false,round:0,myColor:profile.color,party:partyProfiles(),peerColors:{},menu(){game.clear();if(this.lobby)return;showMenu=true;$('match-actions').hidden=false;$('resume').hidden=false;$('rematch').hidden=snapshot?.phase!=='done';$('back-lobby').hidden=false;document.exitPointerLock?.();},preview(){const p=game.pose(),i=game.input();return placement(p,i,game.world);},valid(s){return !!snapshot&&validBuild(s,snapshot.structures,snapshot.players,game.world);},render(dt){if(snapshot&&conn)game.apply(snapshot,conn.id,colors(),dt);}};
+window.Duel={active:true,lobby:true,characterPreview:false,round:0,myColor:profile.color,party:partyProfiles(),peerColors:{},menu(){game.clear();if(this.lobby)return;showMenu=true;$('match-actions').hidden=false;$('resume').hidden=false;$('rematch').hidden=snapshot?.phase!=='done';$('back-lobby').hidden=false;document.exitPointerLock?.();},preview(){const p=game.pose(),i=game.input();return placement(p,i,game.world,snapshot?.structures||[]);},valid(s){return !!snapshot&&validBuild(s,snapshot.structures,snapshot.players,game.world);},render(dt){if(snapshot&&conn)game.apply(snapshot,conn.id,colors(),dt);}};
 
 $('create').onclick=()=>connect(true);
 $('join').onclick=()=>connect(false);

@@ -4,7 +4,7 @@ import {WEAPON_ORDER,WEAPON_PROFILES,createLoadout,currentAmmo,shotSpread} from 
 import {Match,cameraAimOrigin} from '../public/simulation.js';
 
 const world={height:()=>0,obstacles:[]};
-const playing=()=>{const match=new Match(world,['a','b']);match.phase='playing';for(const p of match.players){p.air='landed';p.p[1]=0;p.deploymentState='match_active';p.slot=1;}match.players[0].p=[0,0,0];match.players[1].p=[0,0,-20];return match;};
+const playing=()=>{const match=new Match(world,['a','b']);match.phase='playing';for(const p of match.players){p.air='landed';p.p[1]=0;p.deploymentState='match_active';p.slot=1;p.weapons=createLoadout();p.shield=100;p.ammo=30;}match.players[0].p=[0,0,0];match.players[1].p=[0,0,-20];return match;};
 
 test('four weapon profiles expose complete combat tuning',()=>{
  assert.deepEqual(WEAPON_ORDER,['ar','shotgun','smg','sniper']);

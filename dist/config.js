@@ -1,4 +1,4 @@
-window.HORIZON_CONFIG={url:'',key:''};
+window.HORIZON_CONFIG={"url":"","key":""};
 
 (()=>{
  const installBufferReuse=Proto=>{

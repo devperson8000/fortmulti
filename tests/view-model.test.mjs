@@ -135,3 +135,11 @@ test('weapon switching begins lowered and returns to the ready anchor',()=>{
  for(let i=0;i<90;i++)stepViewModel(state,{...base,equipRemaining:0},1/60);
  assert.ok(Math.abs(state.position[1]-readyY)<.01);
 });
+
+test('hand attachments retain world size through the Soldier centimeter hierarchy',()=>{
+ assert.equal(typeof viewModel.handAttachmentScale,'function');
+ const inherited=.01*1.08,sourceLength=2.4,worldLength=.82;
+ const localScale=viewModel.handAttachmentScale(inherited,worldLength,sourceLength);
+ assert.ok(Math.abs(localScale*inherited*sourceLength-worldLength)<1e-9);
+ assert.ok(Math.abs(viewModel.handAttachmentScale(inherited)*inherited-1)<1e-9);
+});

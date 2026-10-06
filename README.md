@@ -82,8 +82,8 @@ The island has six regions—**Suncrest, Harbor Reach, Neon Grove, Crown Citadel
 
 ## Match modes
 
-- **Build skirmish:** unlimited building material.
-- **Town royale:** limited material, pickups and a closing storm.
+- **Build skirmish:** harvest wood and stone to construct cover.
+- **Town royale:** chest loot, harvesting and a closing storm.
 
 Rounds are last-player-standing. The first player to 5 round wins takes the match.
 
@@ -162,3 +162,7 @@ npm run check
 ```
 
 The automated suite covers local multi-client room messaging, targeted signaling metadata, online-player discovery and invite acceptance, stationary-ship movement and collision, landing selection, pod reservation, synchronized launch, black-window reposition, pod exit and first-person presentation, crosshair-aligned hitscan fire, sniper projectile travel and collision, bounded effects, adaptive graphics, procedural weapon/reload motion, disconnect cleanup, multiplayer elimination rules, independent magazines, build validation, waiting-state protection, a 45-second combat soak and first-to-five completion.
+
+## Harvest and loot controls
+
+Every match starts with a pickaxe, 100 health, no shield and empty inventory. Click trees for wood or rocks for stone. Press E to open chests or collect each dropped item. 0 selects the pickaxe; 1–4 select collected firearms; 5/6 select walls/ramps; 7/8 select shield cells/med kits; 9 selects shockwaves. Click to use or throw. B switches building material, G rotates builds, X drops the held stack or weapon, and R reloads. Shield cells take 3 seconds for 25 shield; med kits take 5 seconds for full health. Switching cancels use without consuming the item. Shockwaves launch players without damage and protect their next landing.

@@ -1,3 +1,8 @@
+import {gridPlacement,gridBounds,gridValid,rampHeight,rayRamp} from './build-grid.js';
+import {MATERIALS,ITEMS,ITEM_SLOTS,LIMITS,validSlot,beginUse,advanceUse} from './items.js';
+import {createEntityGrid,nearby,aimedEntity} from './resource-system.js';
+import {chestLoot} from './loot-system.js';
+import {SHOCKWAVE,shockwaveImpulse,resolveLanding,throwGrenade} from './shockwave.js';
 import {WEAPON_ORDER,createLoadout,weaponForSlot,weaponIdForSlot,isWeaponSlot,isBuildSlot,buildTypeForSlot,currentAmmo,shotSpread,spreadDirection} from './weapon-system.js';
 import {createProjectile,advanceProjectile,segmentSphereTime,segmentAabbTime} from './ballistics.js';
 import {DEPLOYMENT_TIMELINE,deploymentStageAt,safeLandingPoint} from './deployment-sequence.js';
@@ -8,10 +13,8 @@ const mix=(a,b,t)=>a+(b-a)*t;
 const dist=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
 const normalize=v=>{const n=Math.hypot(...v)||1;return v.map(x=>x/n);};
 export function cameraAimOrigin(p,input,profile){if(p?.air==='landed')return [p.p[0],p.p[1]+1.72,p.p[2]];const yaw=Number.isFinite(input.aimYaw)?input.aimYaw:input.yaw,pitch=Number.isFinite(input.aimPitch)?input.aimPitch:input.pitch,forward=[-Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch)],right=[Math.cos(yaw),0,-Math.sin(yaw)],anchor=[p.p[0],p.p[1]+2.15,p.p[2]],distance=input.aim?(profile.scope ? .16 : 3.15):6.8,shoulder=input.aim?(profile.scope?0:.56):1.05;return anchor.map((v,k)=>v-forward[k]*distance+right[k]*shoulder);}
-export function placement(p,input,world){const angle=Math.round(input.yaw/(Math.PI/2))*Math.PI/2+(input.rotation||0),dx=-Math.sin(angle),dz=-Math.cos(angle),x=Math.round((p.p[0]+dx*5)/5)*5,z=Math.round((p.p[2]+dz*5)/5)*5;return {x,z,y:Math.max(world.height(x,z),Math.floor((p.p[1]+.25)/3.6)*3.6),angle,type:buildTypeForSlot(input.slot),hp:150};}
-export function bounds(s){const r=Math.abs(Math.sin(s.angle))>.5;return {min:[s.x-(r?.22:2.5),s.y,s.z-(r?2.5:.22)],max:[s.x+(r?.22:2.5),s.y+3.6,s.z+(r?2.5:.22)]};}
+export const placement=gridPlacement,bounds=gridBounds,validBuild=gridValid;
 function overlap(a,b){return a.min.every((v,i)=>v<b.max[i]&&a.max[i]>b.min[i]);}
-export function validBuild(s,structures,players,world){if(structures.length>=260||s.y>42)return false;if(structures.some(v=>Math.abs(v.x-s.x)<.1&&Math.abs(v.z-s.z)<.1&&Math.abs(v.y-s.y)<.2&&v.type===s.type&&(s.type!==2||Math.abs(Math.sin(v.angle-s.angle))<.1)))return false;const b=s.type===2?bounds(s):{min:[s.x-2.4,s.y+.15,s.z-2.4],max:[s.x+2.4,s.y+3.5,s.z+2.4]};if(world.obstacles.some(v=>overlap(b,v)))return false;if(s.type===2&&players.some(p=>p.hp>0&&p.air==='landed'&&overlap(b,{min:[p.p[0]-.38,p.p[1],p.p[2]-.38],max:[p.p[0]+.38,p.p[1]+2.3,p.p[2]+.38]})))return false;const floor=world.height(s.x,s.z);return s.y<=floor+.5||structures.some(v=>Math.hypot(v.x-s.x,v.z-s.z)<=5.1&&Math.abs(v.y+3.6-s.y)<.3);}
 const EMPTY_OBSTACLES=[];
 const groundCellKey=(x,z,size)=>Math.floor(x/size)*65536+Math.floor(z/size);
 export function createGroundGrid(obstacles=[],cellSize=24){
@@ -19,9 +22,9 @@ export function createGroundGrid(obstacles=[],cellSize=24){
  for(const box of obstacles){const minX=Math.floor(box.min[0]/size),maxX=Math.floor(box.max[0]/size),minZ=Math.floor(box.min[2]/size),maxZ=Math.floor(box.max[2]/size);for(let x=minX;x<=maxX;x++)for(let z=minZ;z<=maxZ;z++){const key=x*65536+z;let bucket=cells.get(key);if(!bucket)cells.set(key,bucket=[]);bucket.push(box);}}
  return {cellSize:size,cells};
 }
-export function ground(x,z,foot,structures,world,grid=null){let h=world.height(x,z);const candidates=grid?grid.cells.get(groundCellKey(x,z,grid.cellSize))||EMPTY_OBSTACLES:world.obstacles||EMPTY_OBSTACLES;for(const b of candidates){if(x>b.min[0]+.08&&x<b.max[0]-.08&&z>b.min[2]+.08&&z<b.max[2]-.08&&b.max[1]<=foot+.55)h=Math.max(h,b.max[1]);}for(const s of structures){if(s.type!==3)continue;const dx=x-s.x,dz=z-s.z,localX=dx*Math.cos(s.angle)-dz*Math.sin(s.angle),localZ=dx*Math.sin(s.angle)+dz*Math.cos(s.angle);if(Math.abs(localX)<=2.48&&Math.abs(localZ)<=2.5){let v=s.y+(2.5-localZ)*.72;if(v<=foot+.48)h=Math.max(h,v);}}return h;}
+export function ground(x,z,foot,structures,world,grid=null){let h=world.height(x,z);const candidates=grid?grid.cells.get(groundCellKey(x,z,grid.cellSize))||EMPTY_OBSTACLES:world.obstacles||EMPTY_OBSTACLES;for(const b of candidates){if(x>b.min[0]-.001&&x<b.max[0]+.001&&z>b.min[2]-.001&&z<b.max[2]+.001&&b.max[1]<=foot+.55)h=Math.max(h,b.max[1]);}for(const s of structures){if(s.type!==3)continue;const v=rampHeight(s,x,z);if(v!==null&&v<=foot+.55)h=Math.max(h,v);}return h;}
 export function rayBox(o,d,b){let lo=0,hi=500;for(let i=0;i<3;i++){if(Math.abs(d[i])<1e-7){if(o[i]<b.min[i]||o[i]>b.max[i])return Infinity;continue;}let a=(b.min[i]-o[i])/d[i],c=(b.max[i]-o[i])/d[i];if(a>c)[a,c]=[c,a];lo=Math.max(lo,a);hi=Math.min(hi,c);if(hi<lo)return Infinity;}return lo;}
-export function sanitize(i={}){const num=(v,a,b)=>clamp(Number.isFinite(v)?v:0,a,b),yaw=num(i.yaw,-10000,10000),pitch=num(i.pitch,-.9,.7),landing=Array.isArray(i.landing)?{x:Number(i.landing[0]),z:Number(i.landing[1]??i.landing[2])}:i.landing&&typeof i.landing==='object'?{x:Number(i.landing.x),z:Number(i.landing.z)}:null;return {x:num(i.x,-1,1),z:num(i.z,-1,1),yaw,pitch,aimYaw:Number.isFinite(i.aimYaw)?num(i.aimYaw,-10000,10000):yaw,aimPitch:Number.isFinite(i.aimPitch)?num(i.aimPitch,-.9,.7):pitch,rotation:num(i.rotation,-10000,10000),slot:[1,2,3,4,5,6].includes(i.slot)?i.slot:1,jump:!!i.jump,interact:!!i.interact,crouch:!!i.crouch,sprint:!!i.sprint,aim:!!i.aim,fire:!!i.fire,firePulse:!!i.firePulse,reload:!!i.reload,landing:landing&&Number.isFinite(landing.x)&&Number.isFinite(landing.z)?{x:clamp(landing.x,-ISLAND_LIMIT,ISLAND_LIMIT),z:clamp(landing.z,-ISLAND_LIMIT,ISLAND_LIMIT)}:null};}
+export function sanitize(i={}){const num=(v,a,b)=>clamp(Number.isFinite(v)?v:0,a,b),yaw=num(i.yaw,-10000,10000),pitch=num(i.pitch,-.9,.7),landing=Array.isArray(i.landing)?{x:Number(i.landing[0]),z:Number(i.landing[1]??i.landing[2])}:i.landing&&typeof i.landing==='object'?{x:Number(i.landing.x),z:Number(i.landing.z)}:null;return {x:num(i.x,-1,1),z:num(i.z,-1,1),yaw,pitch,aimYaw:Number.isFinite(i.aimYaw)?num(i.aimYaw,-10000,10000):yaw,aimPitch:Number.isFinite(i.aimPitch)?num(i.aimPitch,-.9,.7):pitch,rotation:num(i.rotation,-10000,10000),material:i.material==='stone'?'stone':'wood',drop:!!i.drop,slot:validSlot(i.slot)?i.slot:0,jump:!!i.jump,interact:!!i.interact,crouch:!!i.crouch,sprint:!!i.sprint,aim:!!i.aim,fire:!!i.fire,firePulse:!!i.firePulse,reload:!!i.reload,landing:landing&&Number.isFinite(landing.x)&&Number.isFinite(landing.z)?{x:clamp(landing.x,-ISLAND_LIMIT,ISLAND_LIMIT),z:clamp(landing.z,-ISLAND_LIMIT,ISLAND_LIMIT)}:null};}
 
 export const ISLAND_LIMIT=292,DEPLOYMENT_ALTITUDE=DEPLOYMENT_SHIP.origin[1];
 export const INPUT_STALE_SECONDS=1.6;
@@ -31,13 +34,13 @@ const damp=(from,to,rate,dt)=>from+(to-from)*(1-Math.exp(-rate*dt));
 const dampAngle=(from,to,rate,dt)=>from+Math.atan2(Math.sin(to-from),Math.cos(to-from))*(1-Math.exp(-rate*dt));
 export class Match{
  constructor(world,ids,mode='build'){
-  this.world=world;this.groundGrid=createGroundGrid(world.obstacles||[]);this.ids=[...new Set(ids)].slice(0,8);this.mode=mode;this.scores=this.ids.map(()=>0);this.disconnected=new Set();this.targetScore=5;this.round=0;this.events=[];this.eventId=0;this.projectiles=[];this.projectileSequence=0;this.startRound(true);
+  this.world=world;this.groundGrid=createGroundGrid(world.obstacles||[]);this.collisionGrid=createEntityGrid((world.obstacles||[]).flatMap(box=>{const entries=[];for(let x=Math.floor(box.min[0]/16);x<=Math.floor(box.max[0]/16);x++)for(let z=Math.floor(box.min[2]/16);z<=Math.floor(box.max[2]/16);z++)entries.push({...box,x:x*16+8,z:z*16+8});return entries;}));this.ids=[...new Set(ids)].slice(0,8);this.mode=mode;this.scores=this.ids.map(()=>0);this.disconnected=new Set();this.targetScore=5;this.round=0;this.events=[];this.eventId=0;this.projectiles=[];this.projectileSequence=0;this.startRound(true);
  }
  startRound(waiting=false){
   if(this.disconnected.size){const scoreById=new Map(this.ids.map((id,i)=>[id,this.scores[i]||0]));this.ids=this.ids.filter(id=>!this.disconnected.has(id));this.scores=this.ids.map(id=>scoreById.get(id)||0);this.disconnected.clear();}
   this.round++;this.phase=waiting?'waiting':'deployment';this.timer=0;this.elapsed=0;this.deployment={stage:waiting?'ship_waiting':'landing_selection',elapsed:0,sequenceElapsed:0,sequenceId:`${this.round}:1`,teleported:false,stageElapsed:0};this.deploymentSequence=0;this.podOwners=new Map();this.structures=[];this.projectiles.length=0;this.winner=undefined;
-  this.pickups=this.mode==='town'?[{x:0,z:8,type:'shield'},{x:-22,z:20,type:'wood'},{x:25,z:8,type:'health'},{x:36,z:-18,type:'wood'},{x:-38,z:-9,type:'shield'},{x:8,z:38,type:'health'},{x:-205,z:72,type:'shield'},{x:-188,z:91,type:'wood'},{x:176,z:94,type:'health'},{x:198,z:67,type:'wood'},{x:128,z:-188,type:'shield'},{x:-92,z:-178,type:'health'}]:[];
-  this.players=this.ids.map((id,i)=>{const local=clampShipPosition(seatOffset(i));return {id,p:shipWorld(local),shipLocal:local,yaw:0,vy:0,hp:100,shield:100,weapons:createLoadout(),slot:0,weapon:'ar',ammo:30,material:150,reload:0,equip:0,cool:0,sustained:0,walk:0,aim:false,sprinting:false,crouching:false,animationState:'idle',input:sanitize(),lastInput:0,air:'ship',dropState:'ship_waiting',deploymentState:waiting?'ship_waiting':'landing_selection',destination:null,pod:null,podProgress:0,entryStart:null,landingPosition:null,exitPosition:null,launchProgress:0,jumpLatch:false,interactLatch:false,fireLatch:false,reloadLatch:false,eliminated:false};});
+  this.pickups=[];this.openedChests=new Set();this.resourceHP=new Map();this.resources=this.world.resources||[];this.resourceGrid=createEntityGrid(this.resources);this.chests=this.world.chests||[];this.chestGrid=createEntityGrid(this.chests);this.grenades=[];this.lootSequence=0;
+  this.players=this.ids.map((id,i)=>{const local=clampShipPosition(seatOffset(i));return {id,p:shipWorld(local),shipLocal:local,yaw:0,vy:0,hp:100,shield:0,weapons:{},items:{shield:0,health:0,shockwave:0},materials:{wood:0,stone:0},selectedMaterial:'wood',use:null,impulse:[0,0],shockwaveImmune:false,actionTime:0,slot:0,weapon:null,ammo:0,material:0,reload:0,equip:0,cool:0,sustained:0,walk:0,aim:false,sprinting:false,crouching:false,animationState:'idle',input:sanitize(),lastInput:0,air:'ship',dropState:'ship_waiting',deploymentState:waiting?'ship_waiting':'landing_selection',destination:null,pod:null,podProgress:0,entryStart:null,landingPosition:null,exitPosition:null,launchProgress:0,jumpLatch:false,interactLatch:false,fireLatch:false,reloadLatch:false,eliminated:false};});
   this.events=[];
  }
  beginDeployment(){if(this.phase!=='waiting')return false;this.phase='deployment';this.timer=0;this.deployment={stage:'landing_selection',elapsed:0,sequenceElapsed:0,sequenceId:`${this.round}:${++this.deploymentSequence}`,teleported:false,stageElapsed:0};for(const player of this.players){player.air='ship';player.deploymentState='landing_selection';player.dropState=player.deploymentState;player.slot=0;player.input=sanitize();}this.event({type:'deployment_start'});return true;}
@@ -67,7 +70,7 @@ export class Match{
   else if(this.deployment.stage==='landed'){for(const p of alive){p.deploymentState='landed';p.dropState='landed';p.air='pod';p.animationState='idle';}}
   if(this.deployment.stage==='pod_opening'){for(const p of alive){p.deploymentState='pod_opening';p.dropState='pod_opening';p.air='pod';p.animationState='idle';}}
   if(this.deployment.stage==='exiting'){const exitElapsed=this.deployment.sequenceElapsed-DEPLOYMENT_TIMELINE.launchSeconds-DEPLOYMENT_TIMELINE.landedSeconds-DEPLOYMENT_TIMELINE.openingSeconds,q=clamp(exitElapsed/DEPLOYMENT_TIMELINE.exitSeconds,0,1),ease=q*q*(3-2*q);for(const p of alive){p.deploymentState='exiting';p.dropState='exiting';p.animationState='pod-exit';p.air='pod';const start=p.exitPosition||p.p,pod=SHIP_PODS.find(value=>value.id===p.pod),offset=pod?.side||1;p.p=[start[0]+offset*1.7*ease,start[1]+.16*Math.sin(Math.PI*q),start[2]+.65*ease];}}
-  if(this.deployment.stage==='match_active'){for(const p of alive){if(p.pod)this.podOwners.delete(p.pod);p.p[1]=this.world.height(p.p[0],p.p[2]);p.air='landed';p.deploymentState='match_active';p.dropState='match_active';p.animationState='idle';p.slot=1;p.weapon='ar';p.ammo=currentAmmo(p.weapons,1);p.equip=.32;p.reload=0;p.aim=false;p.pod=null;}this.phase='playing';this.elapsed=0;this.timer=0;this.event({type:'match_active',sequence:this.deployment.sequenceId});}
+  if(this.deployment.stage==='match_active'){for(const p of alive){if(p.pod)this.podOwners.delete(p.pod);p.p[1]=this.world.height(p.p[0],p.p[2]);p.air='landed';p.deploymentState='match_active';p.dropState='match_active';p.animationState='idle';p.slot=0;p.weapon=null;p.ammo=0;p.equip=.32;p.reload=0;p.aim=false;p.pod=null;}this.phase='playing';this.elapsed=0;this.timer=0;this.event({type:'match_active',sequence:this.deployment.sequenceId});}
  }
  checkRoundEnd(){
   if(!['playing','countdown'].includes(this.phase))return false;
@@ -85,7 +88,7 @@ export class Match{
  cameraOrigin(p,i,profile){
   const desired=cameraAimOrigin(p,i,profile),anchor=[p.p[0],p.p[1]+2.15,p.p[2]],delta=desired.map((v,k)=>v-anchor[k]),distance=Math.hypot(...delta),direction=normalize(delta);let nearest=distance;
   for(const b of this.world.obstacles)nearest=Math.min(nearest,rayBox(anchor,direction,b));
-  for(const structure of this.structures){const b=structure.type===2?bounds(structure):{min:[structure.x-2.5,structure.y,structure.z-2.5],max:[structure.x+2.5,structure.y+3.6,structure.z+2.5]};nearest=Math.min(nearest,rayBox(anchor,direction,b));}
+  for(const structure of this.structures)nearest=Math.min(nearest,structure.type===2?rayBox(anchor,direction,bounds(structure)):rayRamp(anchor,direction,structure));
   for(let t=.4;t<nearest;t+=.5)if(anchor[1]+direction[1]*t<this.world.height(anchor[0]+direction[0]*t,anchor[2]+direction[2]*t)){nearest=t;break;}
   const eye=nearest<distance?anchor.map((v,k)=>v+direction[k]*Math.max(.16,nearest-.3)):desired;eye[1]=Math.max(eye[1],this.world.height(eye[0],eye[2])+.55);return eye;
  }
@@ -93,7 +96,7 @@ export class Match{
   const o=origin||[p.p[0],p.p[1]+1.7,p.p[2]];let nearest=range,target=null,structure=null;
   for(const b of this.world.obstacles){const t=rayBox(o,d,b);if(t<nearest)nearest=t;}
   for(let t=.5;t<nearest;t+=.5){if(o[1]+d[1]*t<this.world.height(o[0]+d[0]*t,o[2]+d[2]*t)){nearest=t;break;}}
-  for(const b of this.structures){const bb=b.type===2?bounds(b):{min:[b.x-2.5,b.y,b.z-2.5],max:[b.x+2.5,b.y+3.6,b.z+2.5]},t=rayBox(o,d,bb);if(t<nearest){nearest=t;structure=b;target=null;}}
+  for(const b of this.structures){const t=b.type===2?rayBox(o,d,bounds(b)):rayRamp(o,d,b);if(t<nearest){nearest=t;structure=b;target=null;}}
   for(const other of this.players){
    if(other===p||other.hp<=0)continue;
    const t=rayBox(o,d,{min:[other.p[0]-.43,other.p[1],other.p[2]-.43],max:[other.p[0]+.43,other.p[1]+2.5,other.p[2]+.43]});
@@ -103,6 +106,7 @@ export class Match{
   return {o,end,target,structure,critical:Boolean(target&&end[1]>target.p[1]+1.86)};
  }
  fireWeapon(p,i,moving){
+  if(!isWeaponSlot(p.slot)||!p.weapons[weaponIdForSlot(p.slot)])return;
   const profile=weaponForSlot(p.slot),state=p.weapons[profile.id];
   if(!state?.ammo){this.reloadWeapon(p);return;}
   state.ammo--;p.ammo=state.ammo;p.cool+=profile.fireInterval;p.sustained=Math.min(5,p.sustained+1);
@@ -128,7 +132,7 @@ export class Match{
    const projectile=advanceProjectile(this.projectiles[index],dt),from=projectile.previous,to=projectile.position;
    let nearest=Infinity,target=null,structure=null,terrain=false;
    for(const obstacle of this.world.obstacles||[]){const t=segmentAabbTime(from,to,obstacle.min,obstacle.max);if(t!==null&&t<nearest){nearest=t;target=null;structure=null;terrain=false;}}
-   for(const candidate of this.structures){const box=candidate.type===2?bounds(candidate):{min:[candidate.x-2.5,candidate.y,candidate.z-2.5],max:[candidate.x+2.5,candidate.y+3.6,candidate.z+2.5]},t=segmentAabbTime(from,to,box.min,box.max);if(t!==null&&t<nearest){nearest=t;target=null;structure=candidate;terrain=false;}}
+   for(const candidate of this.structures){const box=candidate.type===2?bounds(candidate):{min:[candidate.x-2.5,candidate.y,candidate.z-2.5],max:[candidate.x+2.5,candidate.y+3.6,candidate.z+2.5]},t=candidate.type===2?segmentAabbTime(from,to,box.min,box.max):rayRamp(from,to.map((v,k)=>v-from[k]),candidate);if(t!==null&&t>=0&&t<=1&&t<nearest){nearest=t;target=null;structure=candidate;terrain=false;}}
    for(const candidate of this.players){
     if(candidate.id===projectile.owner||candidate.hp<=0)continue;
     const t=segmentSphereTime(from,to,[candidate.p[0],candidate.p[1]+1.25,candidate.p[2]],.72);
@@ -150,38 +154,50 @@ export class Match{
    if(projectile.expired){this.event({type:'projectile-expire',projectileId:projectile.id,by:projectile.owner});this.projectiles[index]=this.projectiles.at(-1);this.projectiles.pop();}
   }
  }
+ beginUse(p){return beginUse(p);}
+ advanceUse(p,dt){return advanceUse(p,dt);}
+ harvest(p,i){if(p.hp<=0||p.slot!==0||p.cool>0)return false;p.cool=LIMITS.harvestInterval;p.action='harvest';p.actionTime=.42;this.event({type:'harvest_swing',by:p.id});const node=aimedEntity(p,i,nearby(this.resourceGrid,p.p[0],p.p[2],LIMITS.harvest).filter(n=>(this.resourceHP.get(n.id)??n.hp??100)>0),LIMITS.harvest);if(!node||!this.visibleInteraction(p,node))return false;const hp=Math.max(0,(this.resourceHP.get(node.id)??node.hp??100)-LIMITS.harvestDamage);this.resourceHP.set(node.id,hp);p.materials[node.kind]=Math.min(LIMITS.material,p.materials[node.kind]+MATERIALS[node.kind].yield);this.event({type:'harvest',by:p.id,node:node.id,kind:node.kind,hp,point:[node.x,node.y+1,node.z]});return true;}
+ visibleInteraction(p,e){const from=[p.p[0],p.p[1]+1.4,p.p[2]],target=[e.x,(e.y||0)+.9,e.z],delta=target.map((v,k)=>v-from[k]),distance=Math.hypot(...delta),direction=normalize(delta);return !(this.world.obstacles||[]).some(b=>rayBox(from,direction,b)<distance-.25);}
+ interact(p,i){if(p.hp<=0||p.air!=='landed')return false;const loot=aimedEntity(p,i,this.pickups,LIMITS.interaction);if(loot&&this.visibleInteraction(p,loot))return this.collect(p,loot.id);const chest=aimedEntity(p,i,nearby(this.chestGrid,p.p[0],p.p[2],LIMITS.interaction).filter(c=>!this.openedChests.has(c.id)),LIMITS.interaction);if(!chest||!this.visibleInteraction(p,chest)||this.pickups.length>LIMITS.loot-3)return false;this.openedChests.add(chest.id);this.pickups.push(...chestLoot(chest,this.round));this.event({type:'chest',by:p.id,chest:chest.id});return true;}
+ collect(p,id){const index=this.pickups.findIndex(e=>e.id===id);if(index<0||p.hp<=0)return false;const item=this.pickups[index];if(Math.hypot(item.x-p.p[0],item.z-p.p[2])>LIMITS.interaction||Math.abs((item.y||0)-p.p[1])>2.1||!this.visibleInteraction(p,item))return false;const weapon=WEAPON_ORDER.indexOf(item.type);if(weapon>=0){const profile=weaponForSlot(weapon+1);if(p.weapons[item.type]){const previous=p.weapons[item.type];p.weapons[item.type]={ammo:item.ammo??profile.magazineCapacity,reserve:null};item.ammo=previous.ammo;this.event({type:'pickup',by:p.id,item:item.type});return true;}p.weapons[item.type]={ammo:item.ammo??profile.magazineCapacity,reserve:null};}else{const config=ITEMS[item.type];if(!config||p.items[item.type]+item.count>config.max)return false;p.items[item.type]+=item.count;}this.pickups.splice(index,1);this.event({type:'pickup',by:p.id,item:item.type});return true;}
+ dropItem(p){if(this.pickups.length>=LIMITS.loot)return false;const id=WEAPON_ORDER[p.slot-1]||ITEM_SLOTS[p.slot];if(!id)return false;const weapon=p.weapons[id],count=weapon?1:p.items[id];if(!count)return false;this.pickups.push({id:`drop:${this.round}:${++this.lootSequence}`,type:id,count,ammo:weapon?.ammo,x:p.p[0]-Math.sin(p.yaw)*1.4,y:p.p[1],z:p.p[2]-Math.cos(p.yaw)*1.4});if(weapon)delete p.weapons[id];else p.items[id]=0;p.slot=0;p.reload=0;p.use=null;return true;}
+ throwShockwave(p,i){if(!p.items.shockwave||this.grenades.length>=LIMITS.grenades)return false;p.items.shockwave--;p.action='throw';p.actionTime=.55;p.cool=.65;this.grenades.push(throwGrenade(p,i,`grenade:${this.round}:${++this.lootSequence}`));this.event({type:'throw',by:p.id});return true;}
+ tickGrenades(dt){for(let k=this.grenades.length-1;k>=0;k--){const g=this.grenades[k];g.age+=dt;if(!g.landed){const before=g.position.slice();g.velocity[1]-=SHOCKWAVE.gravity*dt;const after=g.position.map((v,a)=>v+g.velocity[a]*dt);let hit=1;for(const box of this.world.obstacles||[]){const t=segmentAabbTime(before,after,box.min,box.max);if(t!==null)hit=Math.min(hit,t);}for(const s of this.structures){if(s.type===2){const b=bounds(s),t=segmentAabbTime(before,after,b.min,b.max);if(t!==null)hit=Math.min(hit,t);}else{const delta=after.map((v,a)=>v-before[a]),t=rayRamp(before,delta,s);if(t<=1)hit=Math.min(hit,t);}}g.position=before.map((v,a)=>v+(after[a]-v)*hit);const floor=this.world.height(g.position[0],g.position[2]);if(hit<1||g.position[1]<=floor+.1){g.position[1]=Math.max(g.position[1],floor+.1);g.landed=true;}}else g.trigger-=dt;if(g.trigger<=0||g.age>=SHOCKWAVE.maxAge){for(const p of this.players){if(p.hp<=0||p.air!=='landed')continue;const impulse=shockwaveImpulse(g.position,p.p);if(!impulse.some(Boolean))continue;p.impulse=[impulse[0],impulse[2]];p.vy=impulse[1];p.shockwaveImmune=true;p.p[1]+=.12;}this.event({type:'shockwave',by:g.owner,point:g.position.slice()});this.grenades.splice(k,1);}}}
  tickGroundedPlayers(dt,advanceInput=true){
   if(!this.players.some(p=>p.hp>0&&p.air==='landed'))return;
-  const walls=this.world.obstacles.concat(this.structures.filter(s=>s.type===2).map(bounds));
+  const buildWalls=this.structures.filter(s=>s.type===2).map(bounds);
   for(const p of this.players){
    if(p.hp<=0||p.air!=='landed')continue;
    if(advanceInput)p.lastInput+=dt;const i=p.lastInput>INPUT_STALE_SECONDS?sanitize():p.input,edgeFire=i.fire&&!p.fireLatch,edgeReload=i.reload&&!p.reloadLatch;
-   p.fireLatch=i.fire;p.reloadLatch=i.reload;p.cool=Math.max(-.05,p.cool-dt);p.equip=Math.max(0,p.equip-dt);p.sustained=Math.max(0,p.sustained-dt*3.4);
-   if(i.slot!==p.slot&&(isWeaponSlot(i.slot)||isBuildSlot(i.slot))){
+   const edgeInteract=i.interact&&!p.interactLatch,edgeDrop=i.drop&&!p.dropLatch;p.interactLatch=i.interact;p.dropLatch=i.drop;p.selectedMaterial=i.material;p.fireLatch=i.fire;p.reloadLatch=i.reload;p.actionTime=Math.max(0,p.actionTime-dt);p.cool=Math.max(-.05,p.cool-dt);p.equip=Math.max(0,p.equip-dt);p.sustained=Math.max(0,p.sustained-dt*3.4);
+   if(i.slot!==p.slot&&validSlot(i.slot)&&(!isWeaponSlot(i.slot)||p.weapons[weaponIdForSlot(i.slot)])){
     p.slot=i.slot;if(isWeaponSlot(i.slot))p.weapon=weaponIdForSlot(i.slot);p.building=isBuildSlot(i.slot);p.reload=0;p.reloadWeapon=null;p.equip=isWeaponSlot(i.slot)?weaponForSlot(i.slot).equipDuration:.22;if(isWeaponSlot(i.slot))p.cool=Math.max(p.cool,p.equip*.45);this.event({type:'switch',by:p.id,slot:p.slot,weapon:p.weapon,building:p.building});
    }
    if(p.reload>0){p.reload=Math.max(0,p.reload-dt);if(!p.reload&&p.reloadWeapon){const profile=weaponForSlot(WEAPON_ORDER.indexOf(p.reloadWeapon)+1);p.weapons[p.reloadWeapon].ammo=profile.magazineCapacity;p.reloadWeapon=null;}}
+   if(edgeInteract)this.interact(p,i);if(edgeDrop)this.dropItem(p);advanceUse(p,dt);
    if(edgeReload)this.reloadWeapon(p);p.yaw=i.yaw;p.aim=Boolean(i.aim&&isWeaponSlot(p.slot)&&!p.reload);p.crouching=Boolean(i.crouch);p.sprinting=Boolean(i.sprint&&Math.hypot(i.x,i.z)>.05);
-   const inputLength=Math.hypot(i.x,i.z),speed=(p.crouching?3.1:i.sprint?9:6)*(p.aim?.58:1),len=Math.max(1,inputLength),dx=(Math.cos(i.yaw)*i.x-Math.sin(i.yaw)*i.z)/len*speed*dt,dz=(-Math.sin(i.yaw)*i.x-Math.cos(i.yaw)*i.z)/len*speed*dt;
-   const blocked=q=>walls.some(b=>overlap({min:[q[0]-.36,q[1]+.12,q[2]-.36],max:[q[0]+.36,q[1]+2.3,q[2]+.36]},b));let q=[p.p[0]+dx,p.p[1],p.p[2]];if(!blocked(q))p.p[0]=clamp(q[0],-ISLAND_LIMIT,ISLAND_LIMIT);q=[p.p[0],p.p[1],p.p[2]+dz];if(!blocked(q))p.p[2]=clamp(q[2],-ISLAND_LIMIT,ISLAND_LIMIT);
-   const floor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world,this.groundGrid);if(i.jump&&p.p[1]<=floor+.05)p.vy=8;p.vy-=22*dt;p.p[1]+=p.vy*dt;if(p.p[1]<floor){p.p[1]=floor;p.vy=0;}const moved=Math.hypot(dx,dz);p.walk+=moved*1.4;p.animationState=p.p[1]>floor+.08?(p.vy>.45?'jump':'fall'):p.crouching?'crouch':moved>.008?p.sprinting?'run':'walk':'idle';
+   const inputLength=Math.hypot(i.x,i.z),speed=(p.crouching?3.5:i.sprint?10.2:6.8)*(p.aim?.58:1),len=Math.max(1,inputLength),dx=(Math.cos(i.yaw)*i.x-Math.sin(i.yaw)*i.z)/len*speed*dt+(p.impulse?.[0]||0)*dt,dz=(-Math.sin(i.yaw)*i.x-Math.cos(i.yaw)*i.z)/len*speed*dt+(p.impulse?.[1]||0)*dt;
+   const walls=nearby(this.collisionGrid,p.p[0],p.p[2],3).concat(buildWalls);const startX=p.p[0],startZ=p.p[2];const blocked=q=>walls.some(b=>b.max[1]>q[1]+.38&&overlap({min:[q[0]-.36,q[1]+.12,q[2]-.36],max:[q[0]+.36,q[1]+2.3,q[2]+.36]},b));let q=[p.p[0]+dx,p.p[1],p.p[2]];if(!blocked(q))p.p[0]=clamp(q[0],-ISLAND_LIMIT,ISLAND_LIMIT);q=[p.p[0],p.p[1],p.p[2]+dz];if(!blocked(q))p.p[2]=clamp(q[2],-ISLAND_LIMIT,ISLAND_LIMIT);
+   const floor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world,this.groundGrid);if(i.jump&&!p.jumpLatch&&p.p[1]<=floor+.05)p.vy=8.5;p.jumpLatch=i.jump;p.vy-=22*dt;p.p[1]+=p.vy*dt;if(p.p[1]<floor){const damage=resolveLanding(p,p.vy);if(damage)this.event({type:'fall_damage',by:p.id,damage});p.p[1]=floor;p.vy=0;}if(p.impulse){const decay=Math.exp(-dt*(p.p[1]<=floor+.05?9:1.4));p.impulse[0]*=decay;p.impulse[1]*=decay;}const moved=Math.hypot(p.p[0]-startX,p.p[2]-startZ);p.walk+=moved*1.4;p.animationState=p.p[1]>floor+.08?(p.vy>.45?'jump':'fall'):p.crouching?'crouch':moved>.008?p.sprinting?'run':'walk':'idle';
    if(i.fire&&p.cool<=0&&(isBuildSlot(p.slot)||p.equip<=0)){
-    if(isBuildSlot(p.slot)){p.cool=.22;const b=placement(p,{...i,slot:p.slot},this.world);if((this.mode==='build'||p.material>=10)&&validBuild(b,this.structures,this.players,this.world)){this.structures.push(b);if(this.mode!=='build')p.material-=10;this.event({type:'build',by:p.id,structure:b});}}
-    else{const profile=weaponForSlot(p.slot);if(!p.reload&&(profile.automatic||edgeFire))this.fireWeapon(p,i,Math.min(1,inputLength));}
+    if(isBuildSlot(p.slot)){p.cool=.22;const b=placement(p,{...i,slot:p.slot},this.world,this.structures),material=MATERIALS[b.material];if(p.materials[b.material]>=material.cost&&validBuild(b,this.structures,this.players,this.world)){b.id=`build:${this.round}:${++this.lootSequence}`;this.structures.push(b);p.materials[b.material]-=material.cost;this.event({type:'build',by:p.id,structure:b});}}
+    else if(p.slot===0)this.harvest(p,i);
+    else if(p.slot===9&&edgeFire)this.throwShockwave(p,i);
+    else if(ITEM_SLOTS[p.slot]&&edgeFire)beginUse(p);
+    else if(isWeaponSlot(p.slot)){const profile=weaponForSlot(p.slot);if(!p.reload&&(profile.automatic||edgeFire))this.fireWeapon(p,i,Math.min(1,inputLength));}
+
    }
    if(i.firePulse){p.input.fire=false;p.input.firePulse=false;}
-   if(isWeaponSlot(p.slot))p.weapon=weaponIdForSlot(p.slot);p.building=isBuildSlot(p.slot);p.ammo=currentAmmo(p.weapons,p.slot);
+   p.weapon=isWeaponSlot(p.slot)&&p.weapons[weaponIdForSlot(p.slot)]?weaponIdForSlot(p.slot):null;p.material=p.materials.wood;if(p.actionTime>0)p.animationState=p.action||'harvest';else if(p.use)p.animationState='consume';p.building=isBuildSlot(p.slot);p.ammo=currentAmmo(p.weapons,p.slot);
   }
  }
  finishCombatTick(dt){
-  this.tickProjectiles(dt);
+  this.tickProjectiles(dt);this.tickGrenades(dt);
   if(this.mode==='town'){
    const radius=Math.max(18,255-this.elapsed*.58);
    for(const p of this.players){
     if(p.hp<=0)continue;if(Math.hypot(p.p[0],p.p[2])>radius)this.hit(p,7*dt);if(p.air!=='landed')continue;
-    for(let index=this.pickups.length-1;index>=0;index--){const item=this.pickups[index];if(Math.hypot(item.x-p.p[0],item.z-p.p[2])>=2)continue;
-     if(item.type==='shield'&&p.shield<100)p.shield=Math.min(100,p.shield+40);else if(item.type==='health'&&p.hp<100)p.hp=Math.min(100,p.hp+40);else if(item.type==='wood')p.material+=50;else continue;this.pickups.splice(index,1);
-    }
+
    }
   }
   for(const p of this.players)if(p.hp<=0&&!p.eliminated){p.eliminated=true;this.event({type:'elimination',by:null,hit:p.id,reason:'storm'});}this.checkRoundEnd();
@@ -192,5 +208,5 @@ export class Match{
   if(this.phase==='countdown'||this.phase==='roundover'){this.timer-=dt;if(this.timer<=0){if(this.phase==='countdown')this.phase='playing';else this.startRound(false);}return;}
   this.elapsed+=dt;this.tickGroundedPlayers(dt);this.finishCombatTick(dt);
  }
- snapshot(){return {phase:this.phase,timer:this.timer,elapsed:this.elapsed,round:this.round,mode:this.mode,targetScore:this.targetScore,scores:this.scores,winner:this.winner,deployment:{...this.deployment,landings:this.deployment.landings?.map(point=>({...point}))||[]},ship:{...DEPLOYMENT_SHIP,origin:DEPLOYMENT_SHIP.origin.slice()},players:this.players.map(({input,lastInput,jumpLatch,interactLatch,...p})=>p),structures:this.structures,pickups:this.pickups,projectiles:this.projectiles.map(({id,owner,position,velocity,spawnTick})=>({id,owner,position:position.slice(),velocity:velocity.slice(),spawnTick})),events:this.events};}
+ snapshot(){return {phase:this.phase,timer:this.timer,elapsed:this.elapsed,round:this.round,mode:this.mode,targetScore:this.targetScore,scores:this.scores,winner:this.winner,deployment:{...this.deployment,landings:this.deployment.landings?.map(point=>({...point}))||[]},ship:{...DEPLOYMENT_SHIP,origin:DEPLOYMENT_SHIP.origin.slice()},players:this.players.map(({input,lastInput,jumpLatch,interactLatch,...p})=>p),structures:this.structures,pickups:this.pickups,openedChests:[...this.openedChests],resourceHP:[...this.resourceHP],grenades:this.grenades.map(g=>({id:g.id,position:g.position.slice(),velocity:g.velocity.slice()})),projectiles:this.projectiles.map(({id,owner,position,velocity,spawnTick})=>({id,owner,position:position.slice(),velocity:velocity.slice(),spawnTick})),events:this.events};}
 }

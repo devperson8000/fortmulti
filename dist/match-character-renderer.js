@@ -1,3 +1,6 @@
+import {createSoldierArms,poseSoldierArms,poseArmChain} from './soldier-arms.js';
+import {createHeldItem} from './held-items.js';
+import {createFirstPersonHandPose,handAttachmentScale} from './view-model.js';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkinned} from 'three/addons/utils/SkeletonUtils.js';
@@ -33,7 +36,7 @@ export class MatchCharacterRenderer{
   for(const clip of gltf.animations){const state=clipState(clip.name);if(['idle','walk','run','jump','fall','crouch'].includes(state))this.clips.set(state,clip);}
   if(!this.clips.has('idle')&&gltf.animations[0])this.clips.set('idle',gltf.animations[0]);
   if(!this.clips.has('walk')&&this.clips.has('run'))this.clips.set('walk',this.clips.get('run'));
-  this.ready=this.clips.has('idle');
+  this.arms=createSoldierArms(this.template,this.modelScale);this.firstPersonScene.add(this.arms.model);this.utilities=new Map();this.ready=this.clips.has('idle');
  }
  _weaponFor(instance,weaponId){
   if(instance.weaponId===weaponId&&(!weaponId||instance.weaponMount||!this.weaponTemplates.has(weaponId)))return;
@@ -44,9 +47,9 @@ export class MatchCharacterRenderer{
   const source=this.weaponTemplates.get(weaponId),model=source.clone(true),bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
   const dimensions=[size.x,size.y,size.z],longest=dimensions.indexOf(Math.max(...dimensions));
   const grip=new THREE.Group();model.position.sub(center);grip.add(model);
-  const length=Math.max(...dimensions)||1;grip.scale.setScalar(.82/length);
+  const length=Math.max(...dimensions)||1;instance.holder.updateMatrixWorld(true);const handScale=instance.hand.getWorldScale(new THREE.Vector3()).x;grip.scale.setScalar(handAttachmentScale(handScale,.82,length));
   if(longest===0)grip.rotation.y=Math.PI/2;else if(longest===1)grip.rotation.x=Math.PI/2;
-  grip.position.set(.04,-.055,-.08);grip.userData.basePosition=grip.position.clone();grip.userData.baseRotation=grip.rotation.clone();
+  grip.position.set(.04/handScale,-.055/handScale,-.08/handScale);grip.userData.basePosition=grip.position.clone();grip.userData.baseRotation=grip.rotation.clone();
   const muzzle=new THREE.Mesh(new THREE.SphereGeometry(.045,8,6),new THREE.MeshBasicMaterial({color:0xffd78a,transparent:true,opacity:.9}));muzzle.position.set(0,.005,-.51);muzzle.visible=false;grip.add(muzzle);grip.userData.muzzle=muzzle;
   grip.traverse(object=>{if(object.isMesh){object.castShadow=false;object.receiveShadow=false;object.frustumCulled=false;}});
   instance.hand.add(grip);instance.weaponMount=grip;
@@ -75,11 +78,13 @@ export class MatchCharacterRenderer{
   this.firstPersonInstances.set(weaponId,instance);return instance;
  }
  renderFirstPersonWeapon(weaponId,profile,state,parts,{flash=0,dt=.016,width=this.canvas.width,height=this.canvas.height}={}){
-  const instance=this._firstPersonWeapon(weaponId);if(!instance)return false;
+  for(const [id,weapon] of this.firstPersonInstances)weapon.root.visible=id===weaponId;for(const utility of this.utilities?.values()||[])utility.visible=false;
+  const instance=this._firstPersonWeapon(weaponId);if(!instance)return false;instance.root.visible=true;
   const pose=createFirstPersonAssetPose(profile,state,parts,instance.length),unit=profile.presentation.scale;
   instance.root.position.set(...pose.position);instance.root.rotation.order='YXZ';instance.root.rotation.set(...pose.rotation);
   instance.mount.position.set(pose.trigger[0]*unit,pose.trigger[1]*unit,pose.trigger[2]*unit);
   instance.basis.scale.setScalar(pose.scale);
+  if(this.arms){const hands=createFirstPersonHandPose(profile,parts);poseSoldierArms(this.arms,{right:hands.shooting.wrist,left:hands.support.wrist,origin:pose.position,rotation:pose.rotation,scale:unit});}
   const phase=String(parts?.stage||'idle'),progress=clamp(Number(parts?.progress??1),0,1),smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
   let magazineOut=phase==='eject'?smooth((progress-.16)/.22):phase==='insert'?1-smooth((progress-.38)/.32):0;
   for(const entry of instance.bones){entry.bone.position.copy(entry.position);entry.bone.rotation.copy(entry.rotation);}
@@ -91,6 +96,15 @@ export class MatchCharacterRenderer{
   if(width!==this.width||height!==this.height){this.width=width;this.height=height;this.renderer.setSize(width,height,false);}
   this.firstPersonCamera.aspect=Math.max(.1,width/Math.max(1,height));this.firstPersonCamera.fov=62;this.firstPersonCamera.updateProjectionMatrix();
   this.renderer.resetState();this.renderer.render(this.firstPersonScene,this.firstPersonCamera);this.restoreRawState();return true;
+ }
+ renderFirstPersonItem(id,state,player,{width=this.canvas.width,height=this.canvas.height}={}){
+  if(!this.arms)return false;for(const weapon of this.firstPersonInstances.values())weapon.root.visible=false;
+  let item=this.utilities.get(id);if(!item){item=createHeldItem(id);this.utilities.set(id,item);this.firstPersonScene.add(item);}for(const [key,value] of this.utilities)value.visible=key===id;
+  const swing=player.actionTime>0?Math.sin((1-Math.min(1,player.actionTime/(id==='pickaxe'?.42:.55)))*Math.PI):0,use=player.use?Math.sin((1-player.use.remaining/player.use.duration)*Math.PI):0;
+  item.scale.setScalar(id==='pickaxe'?.68:1);item.position.set(.28-swing*.18,-.38+use*.2,-.78+swing*.16);item.rotation.set(-.15-swing*1.5+use*.65,.1,-.2-swing*.3);item.updateMatrixWorld(true);
+  const right=item.localToWorld(new THREE.Vector3(0,-.04,.06)),left=id==='pickaxe'?new THREE.Vector3(-.38,-.65,-.38):item.localToWorld(new THREE.Vector3(-.12,-.1,.04));
+  poseSoldierArms(this.arms,{right:right.toArray(),left:left.toArray(),utility:true});
+  this.firstPersonCamera.aspect=width/height;this.firstPersonCamera.updateProjectionMatrix();this.renderer.resetState();this.renderer.render(this.firstPersonScene,this.firstPersonCamera);this.restoreRawState();return true;
  }
  _create(id,source){
   const model=cloneSkinned(this.template),holder=new THREE.Group(),mixer=new THREE.AnimationMixer(model),actions=new Map(),bones=new Map();
@@ -119,7 +133,7 @@ export class MatchCharacterRenderer{
    const supported=new Set(this.clips.keys());instance.blend=stepAnimationBlend(instance.blend,{state:p.animationState||animation.state,supported},dt);
    for(const [state,action] of instance.actions)action.setEffectiveWeight(instance.blend.weights[state]||0);
    instance.mixer.update(clamp(dt,0,.06));
-   const armed=phase==='playing'&&p.deploymentState==='match_active'&&p.slot>0&&p.slot<5;
+   const activeMatch=phase==='playing'&&p.deploymentState==='match_active',armed=activeMatch&&p.slot>0&&p.slot<5&&Boolean(p.weapons?.[['','ar','shotgun','smg','sniper'][p.slot]]);
    this._weaponFor(instance,armed?(['','ar','shotgun','smg','sniper'][p.slot]||''):null);
    instance.fireTime=Math.max(0,instance.fireTime-clamp(dt,0,.06));
    if(instance.weaponMount){const base=instance.weaponMount.userData.basePosition,reload=armed?clamp((Number(p.reload)||0)/2.5,0,1):0,fire=instance.fireTime/.11;instance.weaponMount.position.set(base.x,base.y+Math.sin(reload*Math.PI)*.065,base.z+fire*.065);instance.weaponMount.rotation.copy(instance.weaponMount.userData.baseRotation);instance.weaponMount.rotation.x+=Math.sin(reload*Math.PI)*.36-fire*.11;instance.weaponMount.userData.muzzle.visible=fire>.04;}
@@ -129,6 +143,10 @@ export class MatchCharacterRenderer{
    if(instance.leftArm&&armed){instance.leftArm.rotation.x-=aim+.7;instance.leftArm.rotation.z+=.24;}
    if(instance.leftForeArm&&armed)instance.leftForeArm.rotation.x+=.26;
    if(airborne){if(instance.rightArm)instance.rightArm.rotation.x-=.23;if(instance.leftArm)instance.leftArm.rotation.x-=.2;}
+   const utilityId=activeMatch&&!armed&&!p.building?(p.slot===7?'shield':p.slot===8?'health':p.slot===9?'shockwave':'pickaxe'):null;
+   if(instance.utilityId!==utilityId){if(instance.utility)instance.hand?.remove(instance.utility);instance.utility=utilityId?createHeldItem(utilityId):null;instance.utilityId=utilityId;if(instance.utility&&instance.hand){instance.holder.updateMatrixWorld(true);const handScale=instance.hand.getWorldScale(new THREE.Vector3()).x;instance.utility.scale.setScalar(handAttachmentScale(handScale));instance.utility.position.set(0,.08/handScale,0);instance.hand.add(instance.utility);}}
+   if(armed){instance.holder.updateMatrixWorld(true);const right=instance.holder.localToWorld(new THREE.Vector3(.22,1.28,-.42)),left=instance.holder.localToWorld(new THREE.Vector3(-.12,1.35,-.64));poseArmChain(instance.model,instance.bones,'right',right,instance.holder.localToWorld(new THREE.Vector3(.55,.95,-.1)));poseArmChain(instance.model,instance.bones,'left',left,instance.holder.localToWorld(new THREE.Vector3(-.55,1,-.1)));}
+   if(p.actionTime>0||p.use){const wave=p.use?.7:Math.sin((1-Math.min(1,p.actionTime/.55))*Math.PI);if(instance.rightArm)instance.rightArm.rotation.x-=wave*1.45;if(instance.rightForeArm)instance.rightForeArm.rotation.z-=wave*.65;if(p.use&&instance.leftArm)instance.leftArm.rotation.x-=.9;}
    if(p.crouching){instance.holder.position.y-=.16;for(const key of['mixamorigleftupleg','mixamorigrightupleg']){const bone=instance.bones.get(key);if(bone)bone.rotation.x-=.36;}for(const key of['mixamorigleftleg','mixamorigrightleg']){const bone=instance.bones.get(key);if(bone)bone.rotation.x+=.68;}}
   }
   for(const [id,instance] of this.instances)if(!active.has(id)){instance.mixer.stopAllAction();this.scene.remove(instance.holder);this.instances.delete(id);}
@@ -144,6 +162,6 @@ export class MatchCharacterRenderer{
  }
  bindRawProgram(program,positionAttribute,colorAttribute){this.rawProgram=program;this.rawPosition=positionAttribute;this.rawColor=colorAttribute;}
  restoreRawState(){
-  if(!this.rawProgram)return;const gl=this.gl;gl.useProgram(this.rawProgram);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.enableVertexAttribArray(this.rawPosition);gl.enableVertexAttribArray(this.rawColor);
+  if(!this.rawProgram)return;const gl=this.gl;gl.useProgram(this.rawProgram);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.clearColor(.48,.77,.88,1);gl.enableVertexAttribArray(this.rawPosition);gl.enableVertexAttribArray(this.rawColor);
  }
 }

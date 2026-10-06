@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Match,cameraAimOrigin} from '../public/simulation.js';
-import {WEAPON_PROFILES} from '../public/weapon-system.js';
+import {WEAPON_PROFILES,createLoadout} from '../public/weapon-system.js';
 
 const world={height:()=>0,obstacles:[]};
 const playing=()=>{
  const match=new Match(world,['a','b']);
  match.phase='playing';
- for(const player of match.players){player.air='landed';player.p[1]=0;}
+ for(const player of match.players){player.weapons=createLoadout();player.shield=100;player.air='landed';player.p[1]=0;}
  match.players[0].p=[0,0,0];
  match.players[1].p=[0,0,-20];
  return match;

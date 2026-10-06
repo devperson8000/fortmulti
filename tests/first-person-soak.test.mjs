@@ -1,9 +1,10 @@
+import {createLoadout} from '../public/weapon-system.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Match} from '../public/simulation.js';
 
 const world={height:()=>0,obstacles:[]};
-const landAll=match=>{match.phase='playing';for(const player of match.players){player.air='landed';player.p[1]=0;player.vy=0;}};
+const landAll=match=>{match.phase='playing';for(const player of match.players){player.weapons=createLoadout();player.materials={wood:150,stone:150};player.air='landed';player.p[1]=0;player.vy=0;}};
 
 test('two-player first-person combat remains bounded through a 45 second soak',()=>{
  const match=new Match(world,['alpha','bravo'],'build');landAll(match);match.players[0].p=[-40,0,30];match.players[1].p=[40,0,-30];
@@ -21,7 +22,7 @@ test('two-player first-person combat remains bounded through a 45 second soak',(
  assert.ok(snapshot.players.every(player=>player.p.every(Number.isFinite)));
  assert.ok(snapshot.players.every(player=>Number.isFinite(player.hp)&&Number.isFinite(player.ammo)));
  assert.ok(match.projectiles.length<=8);
- assert.ok(match.events.length<=256);
+ assert.ok(match.events.length<=36);assert.ok(match.eventId>20,'soak must actually exercise combat');
  assert.ok(match.structures.length<=32);
  assert.doesNotThrow(()=>structuredClone(snapshot));
 });

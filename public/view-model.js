@@ -106,3 +106,6 @@ export function stepWeaponParts(state,profile,remaining){
  }
  return state;
 }
+
+// Bone attachments inherit every ancestor's scale, including Soldier's centimeter root.
+export function handAttachmentScale(inheritedScale,worldLength=1,sourceLength=1){return worldLength/(Math.max(1e-8,Math.abs(inheritedScale))*Math.max(1e-8,sourceLength));}
