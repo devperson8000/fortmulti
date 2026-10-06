@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {beginDrag,moveDrag,finishDrag} from '../public/inventory-menu.js';
+test('drag threshold distinguishes click, occupied swap and empty movement',()=>{const d=beginDrag(2,100,100,1);assert.equal(moveDrag(d,103,100),false);assert.equal(finishDrag(d,2),null);const s=beginDrag(2,100,100,1);assert.equal(moveDrag(s,110,100),true);assert.deepEqual(finishDrag(s,5),{from:2,to:5});assert.equal(finishDrag(s,null),null);assert.equal(finishDrag(s,2),null);});

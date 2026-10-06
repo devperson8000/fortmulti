@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {Match} from '../public/simulation.js';
 
 const world={height:()=>0,obstacles:[]};
-const landAll=match=>{match.phase='playing';for(const player of match.players){player.weapons=createLoadout();player.materials={wood:150,stone:150};player.air='landed';player.p[1]=0;player.vy=0;}};
+const landAll=match=>{match.phase='playing';for(const player of match.players){player.inventory=[...Object.entries(createLoadout()).map(([type,state])=>({id:type,type,...state})),null];player.materials={wood:150,stone:150};player.air='landed';player.p[1]=0;player.vy=0;}};
 
 test('two-player first-person combat remains bounded through a 45 second soak',()=>{
  const match=new Match(world,['alpha','bravo'],'build');landAll(match);match.players[0].p=[-40,0,30];match.players[1].p=[40,0,-30];

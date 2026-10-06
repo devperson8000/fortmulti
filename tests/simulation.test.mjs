@@ -5,11 +5,11 @@ import {Match,placement,validBuild,sanitize,ground,createGroundGrid,ISLAND_LIMIT
 import {DEPLOYMENT_SHIP,SHIP_PODS} from '../public/deployment-ship.js';
 
 const world={height:()=>0,obstacles:[]};
-const landAll=match=>{match.phase='playing';for(const p of match.players){p.p[1]=0;p.air='landed';p.vy=0;p.deploymentState='match_active';p.slot=1;p.weapons=createLoadout();p.shield=100;p.ammo=30;p.materials={wood:150,stone:0};p.material=150;p.animationState='idle';}};
+const landAll=match=>{match.phase='playing';for(const p of match.players){p.p[1]=0;p.air='landed';p.vy=0;p.deploymentState='match_active';p.slot=1;p.inventory=[...Object.entries(createLoadout()).map(([type,state])=>({id:type,type,...state})),null];p.shield=100;p.ammo=30;p.materials={wood:150,stone:0};p.material=150;p.animationState='idle';}};
 const tick=(match,seconds)=>{for(let i=0;i<Math.ceil(seconds/.05);i++)match.tick(.05);};
 
 test('build follows facing in four directions and allows upper-level chains',()=>{
- const p={p:[0,0,0]};for(const[yaw,x,z]of[[0,0,-5],[Math.PI/2,-5,0],[Math.PI,0,5],[-Math.PI/2,5,0]]){const structure=placement(p,{yaw,slot:6},world);assert.ok(Math.abs(structure.x-x)<.001&&Math.abs(structure.z-z)<.001);assert.equal(validBuild(structure,[],[p],world),true);}
+ const p={p:[0,0,0]};for(const[yaw,x,z]of[[0,0,-5],[Math.PI/2,-5,0],[Math.PI,0,5],[-Math.PI/2,5,0]]){const structure=placement(p,{yaw,slot:10},world);assert.ok(Math.abs(structure.x-x)<.001&&Math.abs(structure.z-z)<.001);assert.equal(validBuild(structure,[],[p],world),true);}
  const ramp={x:0,z:0,y:0,angle:0,type:3};assert.equal(ground(0,2.4,0,[ramp],world)>.05,true);assert.equal(validBuild({x:0,z:-5,y:3.6,type:3,angle:0},[ramp],[],world),true);
 });
 
@@ -21,7 +21,7 @@ test('ground queries use local obstacle buckets without changing rooftop height'
 test('a new match starts aboard a fixed ship with combat disabled',()=>{
  const match=new Match(world,['a','b']);assert.equal(match.phase,'waiting');assert.ok(match.players.every(p=>p.air==='ship'&&p.slot===0));assert.ok(match.players.every(p=>p.p[1]===DEPLOYMENT_SHIP.origin[1]));
  assert.equal(match.snapshot().ship.origin[1],DEPLOYMENT_SHIP.origin[1]);assert.equal(match.beginDeployment(),true);match.input('a',{z:1,yaw:0,slot:4,fire:true,reload:true});tick(match,.4);
- assert.equal(match.phase,'deployment');assert.ok(match.players[0].shipLocal[2]<-4.2);assert.equal(match.players[0].slot,0);assert.deepEqual(match.players[0].weapons,{});assert.ok(match.players.every(p=>p.p[1]===DEPLOYMENT_SHIP.origin[1]));
+ assert.equal(match.phase,'deployment');assert.ok(match.players[0].shipLocal[2]<-4.2);assert.equal(match.players[0].slot,0);assert.deepEqual(match.players[0].inventory,Array(5).fill(null));assert.ok(match.players.every(p=>p.p[1]===DEPLOYMENT_SHIP.origin[1]));
 });
 
 test('ship walking respects the available deck bounds and sprint scaling',()=>{
@@ -59,8 +59,8 @@ test('a wall blocks bullets and loses durability',()=>{
 });
 
 test('the same held fire input places one wall and charges material once',()=>{
- const match=new Match(world,['a','b'],'town');landAll(match);match.players[0].p=[0,0,0];match.input('a',{yaw:0,slot:5,fire:true});match.tick(.03);assert.equal(match.structures.length,1);assert.equal(match.players[0].material,140);
- for(let i=0;i<20;i++){match.input('a',{yaw:0,slot:5,fire:true});match.tick(.03);}assert.equal(match.structures.length,1);assert.equal(match.players[0].material,140);
+ const match=new Match(world,['a','b'],'town');landAll(match);match.players[0].p=[0,0,0];match.input('a',{yaw:0,slot:6,fire:true});match.tick(.03);assert.equal(match.structures.length,1);assert.equal(match.players[0].material,140);
+ for(let i=0;i<20;i++){match.input('a',{yaw:0,slot:6,fire:true});match.tick(.03);}assert.equal(match.structures.length,1);assert.equal(match.players[0].material,140);
 });
 
 test('crouch, walk, run, jump and fall animation states are synchronized in snapshots',()=>{

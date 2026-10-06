@@ -7,7 +7,7 @@ const world={height:()=>0,obstacles:[]};
 const playing=()=>{
  const match=new Match(world,['a','b']);
  match.phase='playing';
- for(const player of match.players){player.weapons=createLoadout();player.shield=100;player.air='landed';player.p[1]=0;}
+ for(const player of match.players){player.inventory=[...Object.entries(createLoadout()).map(([type,state])=>({id:type,type,...state})),null];player.shield=100;player.air='landed';player.p[1]=0;}
  match.players[0].p=[0,0,0];
  match.players[1].p=[0,0,-20];
  return match;

@@ -25,17 +25,6 @@ export function installNetworkStability(){
  Connection.prototype.send=function(type,data={},to=null){if(type==='snapshot'&&Array.isArray(data?.state?.events)&&data.state.events.length>10)data={...data,state:{...data.state,events:data.state.events.slice(-10)}};return originalSend.call(this,type,data,to);};
 }
 
-function installSlotPrediction(){
- const game=globalThis.window?.Game;if(!game||game.__slotPredictionInstalled)return false;game.__slotPredictionInstalled=true;
- const originalInput=game.input.bind(game),originalApply=game.apply.bind(game);let desiredSlot=VALID_SLOTS.has(originalInput()?.slot)?originalInput().slot:1;
- const sync=()=>queueMicrotask(()=>{const selected=originalInput()?.slot;if(VALID_SLOTS.has(selected))desiredSlot=selected;});
- document.addEventListener('keydown',sync);document.addEventListener('click',sync);document.addEventListener('wheel',sync,{passive:true});
- game.input=()=>{const input=originalInput();input.slot=desiredSlot;return input;};
- game.apply=(snapshot,id,colors,dt)=>{if(!snapshot?.players?.length)return originalApply(snapshot,id,colors,dt);const self=snapshot.players.find(p=>p.id===id);if(snapshot.phase!=='playing')desiredSlot=0;else if(ITEM_BY_SLOT[desiredSlot]&&!self?.weapons?.[ITEM_BY_SLOT[desiredSlot]])desiredSlot=self?.slot??0;const players=snapshot.players.map(player=>{if(player.id!==id||player.slot===desiredSlot)return player;return {...player,slot:desiredSlot,weapon:ITEM_BY_SLOT[desiredSlot]||null,building:desiredSlot===5||desiredSlot===6};});return originalApply({...snapshot,players},id,colors,dt);};
-
- return true;
-}
-
 let booted=false;
-export function installMultiplayerStability(){if(booted)return;booted=true;installNetworkStability();if(typeof window==='undefined')return;const boot=()=>{if(!installSlotPrediction())requestAnimationFrame(boot);};boot();}
+export function installMultiplayerStability(){if(booted)return;booted=true;installNetworkStability();}
 if(typeof window!=='undefined')installMultiplayerStability();

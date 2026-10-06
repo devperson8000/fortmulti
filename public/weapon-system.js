@@ -36,12 +36,12 @@ export const WEAPON_PROFILES=Object.freeze({
  })
 });
 
-export const BUILD_SLOTS=Object.freeze({5:2,6:3});
-export const isWeaponSlot=slot=>Number.isInteger(slot)&&slot>=1&&slot<=WEAPON_ORDER.length;
+export const BUILD_SLOTS=Object.freeze({6:2,10:3});
+export const isWeaponSlot=slot=>Number.isInteger(slot)&&slot>=1&&slot<=5;
 export const isBuildSlot=slot=>Object.hasOwn(BUILD_SLOTS,slot);
 export const buildTypeForSlot=slot=>BUILD_SLOTS[slot]||2;
-export const weaponIdForSlot=slot=>WEAPON_ORDER[slot-1]||'ar';
-export const weaponForSlot=slot=>WEAPON_PROFILES[weaponIdForSlot(slot)];
+export const weaponIdForSlot=(slot,inventory)=>Array.isArray(inventory)?inventory[slot-1]?.type||null:WEAPON_ORDER[slot-1]||'ar';
+export const weaponForSlot=(slot,inventory)=>WEAPON_PROFILES[weaponIdForSlot(slot,inventory)]||WEAPON_PROFILES.ar;
 export const weaponForId=id=>WEAPON_PROFILES[id]||WEAPON_PROFILES.ar;
 
 export function createLoadout(){
@@ -58,8 +58,8 @@ export function cloneLoadout(loadout={}){
 }
 
 export function currentAmmo(loadout,slot){
- const id=weaponIdForSlot(slot),profile=WEAPON_PROFILES[id];
- return Math.max(0,Math.min(profile.magazineCapacity,Number(loadout?.[id]?.ammo) || 0));
+ const id=weaponIdForSlot(slot,Array.isArray(loadout)?loadout:undefined),profile=WEAPON_PROFILES[id]||WEAPON_PROFILES.ar;
+ return Math.max(0,Math.min(profile.magazineCapacity,Number(Array.isArray(loadout)?loadout[slot-1]?.ammo:loadout?.[id]?.ammo) || 0));
 }
 
 export function reloadProgress(remaining,slot){
@@ -79,12 +79,12 @@ export function spreadDirection(yaw,pitch,spread,random=Math.random){
 }
 
 export function weaponPublicState(player){
- const weapon=weaponIdForSlot(player.slot);
+ const weapon=weaponIdForSlot(player.slot,player.inventory);
  return {
   slot:player.slot,
   weapon,
-  ammo:currentAmmo(player.weapons,player.slot),
-  weapons:cloneLoadout(player.weapons),
+  ammo:currentAmmo(player.inventory,player.slot),
+  inventory:player.inventory.map(w=>w?{...w}:null),
   reload:Math.max(0,Number(player.reload)||0),
   equip:Math.max(0,Number(player.equip)||0),
   aim:Boolean(player.input?.aim)

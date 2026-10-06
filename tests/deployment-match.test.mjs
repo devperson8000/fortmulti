@@ -80,7 +80,7 @@ test('pre-match snapshots carry recovery data and combat stays locked until pod 
  const match=new Match(world,['a','b']);match.beginDeployment();readyPlayer(match,'a',0,{x:12,z:18});readyPlayer(match,'b',1,{x:-22,z:28});
  const initial=match.snapshot();assert.equal(initial.deployment.stage,'landing_selection');assert.equal(initial.players[0].destination.x,12);
  match.input('a',{slot:4,fire:true,reload:true,z:1});tick(match,.5);
- assert.equal(match.players[0].slot,0);assert.deepEqual(match.players[0].weapons,{});assert.equal(match.players[0].p[0],match.players[0].shipLocal[0]);
+ assert.equal(match.players[0].slot,0);assert.deepEqual(match.players[0].inventory,Array(5).fill(null));assert.equal(match.players[0].p[0],match.players[0].shipLocal[0]);
  tick(match,12);
  assert.equal(match.phase,'playing');assert.equal(match.deployment.stage,'match_active');
  assert.ok(match.players.every(p=>p.air==='landed'&&p.slot===0));

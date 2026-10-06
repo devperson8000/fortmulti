@@ -4,7 +4,7 @@ import {WEAPON_ORDER,WEAPON_PROFILES,createLoadout,currentAmmo,shotSpread} from 
 import {Match,cameraAimOrigin} from '../public/simulation.js';
 
 const world={height:()=>0,obstacles:[]};
-const playing=()=>{const match=new Match(world,['a','b']);match.phase='playing';for(const p of match.players){p.air='landed';p.p[1]=0;p.deploymentState='match_active';p.slot=1;p.weapons=createLoadout();p.shield=100;p.ammo=30;}match.players[0].p=[0,0,0];match.players[1].p=[0,0,-20];return match;};
+const playing=()=>{const match=new Match(world,['a','b']);match.phase='playing';for(const p of match.players){p.air='landed';p.p[1]=0;p.deploymentState='match_active';p.slot=1;p.inventory=[...Object.entries(createLoadout()).map(([type,state])=>({id:type,type,...state})),null];p.shield=100;p.ammo=30;}match.players[0].p=[0,0,0];match.players[1].p=[0,0,-20];return match;};
 
 test('four weapon profiles expose complete combat tuning',()=>{
  assert.deepEqual(WEAPON_ORDER,['ar','shotgun','smg','sniper']);
@@ -13,16 +13,16 @@ test('four weapon profiles expose complete combat tuning',()=>{
 });
 
 test('switching weapons preserves independent magazines and syncs public ammo',()=>{
- const m=playing(),p=m.players[0];m.input('a',{slot:3,yaw:0});for(let i=0;i<8;i++)m.tick(.05);m.input('a',{slot:3,yaw:0,fire:true});m.tick(.05);assert.equal(currentAmmo(p.weapons,3),31);assert.equal(p.weapon,'smg');assert.equal(p.ammo,31);assert.equal(currentAmmo(p.weapons,1),30);
+ const m=playing(),p=m.players[0];m.input('a',{slot:3,yaw:0});for(let i=0;i<8;i++)m.tick(.05);m.input('a',{slot:3,yaw:0,fire:true});m.tick(.05);assert.equal(currentAmmo(p.inventory,3),31);assert.equal(p.weapon,'smg');assert.equal(p.ammo,31);assert.equal(currentAmmo(p.inventory,1),30);
 });
 
 test('reload uses the selected weapon duration and refills only that magazine',()=>{
- const m=playing(),p=m.players[0];p.weapons.sniper.ammo=1;m.input('a',{slot:4,yaw:0});for(let i=0;i<10;i++)m.tick(.05);m.input('a',{slot:4,yaw:0,reload:true});m.tick(.05);assert.ok(p.reload>2.6);assert.equal(p.reloadWeapon,'sniper');assert.equal(m.events.at(-1).type,'reload');assert.equal(m.events.at(-1).duration,WEAPON_PROFILES.sniper.reloadDuration);for(let i=0;i<60;i++){m.input('a',{slot:4,yaw:0});m.tick(.05);}assert.equal(p.reload,0);assert.equal(p.weapons.sniper.ammo,4);assert.equal(p.weapons.ar.ammo,30);
+ const m=playing(),p=m.players[0];p.inventory.find(w=>w?.type==='sniper').ammo=1;m.input('a',{slot:4,yaw:0});for(let i=0;i<10;i++)m.tick(.05);m.input('a',{slot:4,yaw:0,reload:true});m.tick(.05);assert.ok(p.reload>2.6);assert.equal(p.reloadWeapon,'sniper');assert.equal(m.events.at(-1).type,'reload');assert.equal(m.events.at(-1).duration,WEAPON_PROFILES.sniper.reloadDuration);for(let i=0;i<60;i++){m.input('a',{slot:4,yaw:0});m.tick(.05);}assert.equal(p.reload,0);assert.equal(p.inventory.find(w=>w?.type==='sniper').ammo,4);assert.equal(p.inventory.find(w=>w?.type==='ar').ammo,30);
 });
 
 test('semi-automatic shotgun requires a fresh trigger while SMG can sustain fire',()=>{
- const shotgun=playing(),a=shotgun.players[0];shotgun.input('a',{slot:2,yaw:0});for(let i=0;i<10;i++)shotgun.tick(.05);shotgun.input('a',{slot:2,yaw:0,fire:true});for(let i=0;i<40;i++)shotgun.tick(.05);assert.equal(a.weapons.shotgun.ammo,5);
- const smg=playing(),b=smg.players[0];smg.input('a',{slot:3,yaw:0});for(let i=0;i<10;i++)smg.tick(.05);smg.input('a',{slot:3,yaw:0,fire:true});for(let i=0;i<20;i++)smg.tick(.05);assert.ok(b.weapons.smg.ammo<27);
+ const shotgun=playing(),a=shotgun.players[0];shotgun.input('a',{slot:2,yaw:0});for(let i=0;i<10;i++)shotgun.tick(.05);shotgun.input('a',{slot:2,yaw:0,fire:true});for(let i=0;i<40;i++)shotgun.tick(.05);assert.equal(a.inventory.find(w=>w?.type==='shotgun').ammo,5);
+ const smg=playing(),b=smg.players[0];smg.input('a',{slot:3,yaw:0});for(let i=0;i<10;i++)smg.tick(.05);smg.input('a',{slot:3,yaw:0,fire:true});for(let i=0;i<20;i++)smg.tick(.05);assert.ok(b.inventory.find(w=>w?.type==='smg').ammo<27);
 });
 
 test('movement and sustained fire widen the simulated crosshair spread',()=>{
@@ -36,7 +36,7 @@ test('landed authoritative aim begins at the first-person eye anchor',()=>{
 });
 
 test('snapshots expose ADS, weapon animation state and versioned shot payloads',()=>{
- const m=playing(),p=m.players[0];m.input('a',{slot:4,yaw:0});for(let i=0;i<11;i++)m.tick(.05);m.input('a',{slot:4,yaw:0,pitch:0,aim:true,fire:true});m.tick(.05);const snap=m.snapshot(),me=snap.players[0],shot=snap.events.findLast(e=>e.type==='shot');assert.equal(me.weapon,'sniper');assert.equal(me.aim,true);assert.equal(me.slot,4);assert.equal(me.weapons.sniper.ammo,3);assert.equal(shot.weapon,'sniper');assert.equal(shot.traces.length,1);assert.ok(Array.isArray(shot.hits));assert.ok(Number.isFinite(shot.damage));
+ const m=playing(),p=m.players[0];m.input('a',{slot:4,yaw:0});for(let i=0;i<11;i++)m.tick(.05);m.input('a',{slot:4,yaw:0,pitch:0,aim:true,fire:true});m.tick(.05);const snap=m.snapshot(),me=snap.players[0],shot=snap.events.findLast(e=>e.type==='shot');assert.equal(me.weapon,'sniper');assert.equal(me.aim,true);assert.equal(me.slot,4);assert.equal(me.inventory.find(w=>w?.type==='sniper').ammo,3);assert.equal(shot.weapon,'sniper');assert.equal(shot.traces.length,1);assert.ok(Array.isArray(shot.hits));assert.ok(Number.isFinite(shot.damage));
 });
 
 test('the authoritative shot ray converges on the first-person crosshair',()=>{

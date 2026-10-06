@@ -203,6 +203,8 @@ function receive(m){
  if(m.type==='locked'){leave('That party is already in a match. Ask for another invite when they return to the lobby.');return;}
  const peer=peers.get(m.from);if(peer)peer.lastSeen=Date.now();
  if(m.type==='snapshot'){if(m.from===conn.host&&!host)apply(d);return;}
+ if(m.type==='inventory-move'&&host&&match&&d.id===matchId&&d.epoch===matchEpoch&&match.ids.includes(m.from)){const ack=match.moveInventory(m.from,d.operation);conn.send('inventory-ack',{id:matchId,epoch:matchEpoch,...ack},m.from);sendSnapshot();return;}
+ if(m.type==='inventory-ack'&&m.from===conn.host&&!host&&d.id===matchId&&d.epoch===matchEpoch){game.ackInventory(d);return;}
  if(m.type==='input'&&host&&match&&d.id===matchId&&match.ids.includes(m.from)){match.input(m.from,d.input);return;}
  if(m.type==='chat'&&peer&&typeof d.text==='string'){say(peer.name,d.text.slice(0,200));return;}
  if(m.type==='leave'){if(m.from===conn.host&&!host){leave('The party leader left, so the party was closed.');return;}removePeer(m.from);return;}
@@ -214,7 +216,7 @@ function receive(m){
  if(m.type==='pong'&&Number.isFinite(d.time)){latencies.set(m.from,Math.max(0,Date.now()-d.time));updateNetworkChip();}
 }
 
-window.Duel={active:true,lobby:true,characterPreview:false,round:0,myColor:profile.color,party:partyProfiles(),peerColors:{},menu(){game.clear();if(this.lobby)return;showMenu=true;$('match-actions').hidden=false;$('resume').hidden=false;$('rematch').hidden=snapshot?.phase!=='done';$('back-lobby').hidden=false;document.exitPointerLock?.();},preview(){const p=game.pose(),i=game.input();return placement(p,i,game.world,snapshot?.structures||[]);},valid(s){return !!snapshot&&validBuild(s,snapshot.structures,snapshot.players,game.world);},render(dt){if(snapshot&&conn)game.apply(snapshot,conn.id,colors(),dt);}};
+window.Duel={moveInventory(operation){if(!conn||!snapshot||snapshot.phase!=='playing')return;if(host&&match){game.ackInventory(match.moveInventory(conn.id,operation));snapshot=match.snapshot();sendSnapshot(snapshot);}else conn.send('inventory-move',{id:matchId,epoch:matchEpoch,operation},conn.host);},active:true,lobby:true,characterPreview:false,round:0,myColor:profile.color,party:partyProfiles(),peerColors:{},menu(){game.clear();if(this.lobby)return;showMenu=true;$('match-actions').hidden=false;$('resume').hidden=false;$('rematch').hidden=snapshot?.phase!=='done';$('back-lobby').hidden=false;document.exitPointerLock?.();},preview(){const p=game.pose(),i=game.input();return placement(p,i,game.world,snapshot?.structures||[]);},valid(s){return !!snapshot&&validBuild(s,snapshot.structures,snapshot.players,game.world);},render(dt){if(snapshot&&conn)game.apply(snapshot,conn.id,colors(),dt);}};
 
 $('create').onclick=()=>connect(true);
 $('join').onclick=()=>connect(false);

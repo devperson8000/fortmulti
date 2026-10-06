@@ -34,7 +34,7 @@ test('ramp surface effects follow the slope and ignore its empty volume',()=>{
 
 test('shot feedback identifies the player hit by each individual pellet',async()=>{
  const {Match}=await import('../public/simulation.js');const {createLoadout}=await import('../public/weapon-system.js');
- const m=new Match({height:()=>0,obstacles:[]},['a','b']);m.phase='playing';const p=m.players[0],other=m.players[1];p.p=[0,0,0];p.air='landed';p.deploymentState='match_active';p.weapons=createLoadout();p.weapons.shotgun={ammo:8};p.slot=2;other.p=[0,0,-3];other.hp=1000;
+ const m=new Match({height:()=>0,obstacles:[]},['a','b']);m.phase='playing';const p=m.players[0],other=m.players[1];p.p=[0,0,0];p.air='landed';p.deploymentState='match_active';p.inventory=[...Object.entries(createLoadout()).map(([type,state])=>({id:type,type,...state})),null];p.inventory[1]={id:'shotgun',type:'shotgun',ammo:8};p.slot=2;other.p=[0,0,-3];other.hp=1000;
  m.fireWeapon(p,{yaw:0,pitch:0,aimYaw:0,aimPitch:0,aim:false},false);
  const event=m.events.find(e=>e.type==='shot');assert.ok(Array.isArray(event.traceHits));assert.equal(event.traceHits.length,event.traces.length);assert.ok(event.traceHits.every(id=>id===null||id==='b'));
 });
