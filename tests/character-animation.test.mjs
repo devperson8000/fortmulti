@@ -28,3 +28,13 @@ test('pod entry, pod exit and crouch use the supplied locomotion clips when dedi
   assert.equal(stepAnimationBlend(createAnimationBlend('idle'),{state,supported},.08).state,'walk',state);
  }
 });
+
+test('action overlays retain locomotion and settle smoothly',async()=>{
+ const {characterLocomotion,characterActionPose}=await import('../public/character-animation.js');
+ assert.equal(characterLocomotion({animationState:'harvest',locomotionState:'run',grounded:true,moveSpeed:10.2,sprinting:true}).state,'run');
+ assert.equal(characterLocomotion({animationState:'consume',grounded:false,vy:-5}).state,'fall');
+ assert.equal(characterLocomotion({animationState:'idle',moveSpeed:0,grounded:true,sprinting:true}).state,'idle');
+ assert.equal(characterActionPose({action:'harvest',actionTime:0}).swing,0);
+ assert.ok(characterActionPose({action:'harvest',actionTime:.25}).swing>.5);
+ assert.ok(characterActionPose({use:{remaining:1.5,duration:3}}).consume>.8);
+});

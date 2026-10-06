@@ -41,7 +41,7 @@ if(canvas){
  function findRig(model){
   return resolveLobbyRig(model);
  }
- function disposeInstance(instance){instance.mixer.stopAllAction();scene.remove(instance.holder);}
+ function disposeInstance(instance){instance.mixer.stopAllAction();scene.remove(instance.holder);const skeletons=new Set();instance.model.traverse(object=>{if(object.isSkinnedMesh)skeletons.add(object.skeleton);});for(const skeleton of skeletons)skeleton.dispose();}
  function createInstance(member,index){
   const model=cloneSkinned(template),holder=new THREE.Group(),rig=findRig(model);
   const sampledFingerPose=new Map(saluteFingerPose.map(({name,quaternion})=>[name,quaternion]));
@@ -69,7 +69,7 @@ if(canvas){
   idleAction.time=phase;
   if(walkAction)walkAction.time=(phase*1.73)%(walkClip.duration||1);
   return {
-   id:member.id,holder,model,mixer,idleAction,walkAction,fingerTargets,saluteBones,foreheadMeshes,salutePose:null,rig,phase,slot:index,
+   id:member.id,holder,model,mixer,idleAction,walkAction,animatedPose:new Map(Object.values(rig).filter(bone=>bone?.quaternion).map(bone=>[bone,bone.quaternion.clone()])),fingerTargets,saluteBones,foreheadMeshes,salutePose:null,rig,phase,slot:index,
    randomState:hash(`${member.id||index}:horizon-lobby`)||1,
    saluteActive:false,saluteStarted:0,nextSaluteAt:now+.85+index*.16
   };
@@ -254,11 +254,13 @@ if(canvas){
  }
  function frame(){
   requestAnimationFrame(frame);
+  const dt=Math.min(clock.getDelta(),.05);
+  if(document.hidden||!window.Duel?.lobby)return;
   const party=Array.isArray(window.Duel?.party)?window.Duel.party:[];
   ensureInstances(party);
   const preview=Boolean(window.Duel?.characterPreview),[width,height]=resize();setCamera(preview,width,height);
-  const dt=Math.min(clock.getDelta(),.05),time=performance.now()/1000;
-  for(const instance of instances.values())instance.mixer.update(dt);
+  const time=performance.now()/1000;
+  for(const instance of instances.values()){for(const [bone,q] of instance.animatedPose)bone.quaternion.copy(q);instance.mixer.update(dt);for(const [bone,q] of instance.animatedPose)q.copy(bone.quaternion);}
   poseInstances(party,preview,time);
   renderer.render(scene,camera);
  }

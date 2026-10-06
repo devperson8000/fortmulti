@@ -85,3 +85,15 @@ test('pre-match snapshots carry recovery data and combat stays locked until pod 
  assert.equal(match.phase,'playing');assert.equal(match.deployment.stage,'match_active');
  assert.ok(match.players.every(p=>p.air==='landed'&&p.slot===0));
 });
+
+test('pod exit eases from the landed position rather than jumping on its first frame',()=>{
+ const match=new Match(world,['a','b']);match.beginDeployment();readyPlayer(match,'a',0,{x:12,z:18});readyPlayer(match,'b',1,{x:-22,z:28});
+ let last=match.players[0].p.slice();
+ for(let n=0;n<300;n++){
+  last=match.players[0].p.slice();match.tick(.025);
+  if(match.deployment.stage==='exiting'){
+   assert.ok(Math.hypot(match.players[0].p[0]-last[0],match.players[0].p[2]-last[2])<.05,'exit should start at the pod');return;
+  }
+ }
+ assert.fail('never reached pod exit');
+});

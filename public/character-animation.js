@@ -32,3 +32,17 @@ export function stepAnimationBlend(previous,request,dt=.016,duration=.18){
  for(const name of STATES)weights[name]/=total;
  return {state,weights};
 }
+
+export function characterLocomotion(player={}){
+ const state=player.locomotionState||player.animationState||'idle';
+ const speed=Number.isFinite(player.moveSpeed)?player.moveSpeed:state==='run'?5.4:state==='walk'?2.2:0;
+ const grounded=typeof player.grounded==='boolean'?player.grounded:!['jump','fall'].includes(state);
+ return resolveCharacterAnimation({grounded,speed,velocity:player.vy||0,sprinting:player.sprinting||state==='run',crouching:player.crouching,deploymentState:state==='pod-enter'?'entering_pod':state==='pod-exit'?'exiting':'',weapon:player.slot,aiming:player.aim,reloading:player.reload>0});
+}
+export function characterActionPose(player={}){
+ const remaining=Math.max(0,Number(player.actionTime)||0),duration=player.action==='harvest'?.42:.55,progress=clamp(1-remaining/duration,0,1);
+ const pulse=remaining>0?Math.sin(Math.PI*progress):0;
+ const use=player.use,elapsed=use?clamp(1-use.remaining/use.duration,0,1):0;
+ const ease=x=>{const t=clamp(x,0,1);return t*t*(3-2*t);};
+ return {swing:player.action==='harvest'?pulse:0,throw:player.action==='throw'?pulse:0,consume:use?ease(elapsed/.18)*ease((1-elapsed)/.16):0};
+}

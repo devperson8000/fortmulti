@@ -4,7 +4,7 @@ import {createFirstPersonHandPose,handAttachmentScale} from './view-model.js';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkinned} from 'three/addons/utils/SkeletonUtils.js';
-import {createAnimationBlend,resolveCharacterAnimation,stepAnimationBlend} from './character-animation.js';
+import {createAnimationBlend,stepAnimationBlend,characterLocomotion,characterActionPose} from './character-animation.js';
 import {createFirstPersonAssetPose} from './view-model.js';
 
 const WEAPON_FILES=Object.freeze({ar:'Rifle_Assault_East.glb',shotgun:'Shotgun_Pump_East.glb',smg:'SMG_Compact_East.glb',sniper:'Sniper_Rifle_East.glb'});
@@ -36,23 +36,24 @@ export class MatchCharacterRenderer{
   for(const clip of gltf.animations){const state=clipState(clip.name);if(['idle','walk','run','jump','fall','crouch'].includes(state))this.clips.set(state,clip);}
   if(!this.clips.has('idle')&&gltf.animations[0])this.clips.set('idle',gltf.animations[0]);
   if(!this.clips.has('walk')&&this.clips.has('run'))this.clips.set('walk',this.clips.get('run'));
-  this.arms=createSoldierArms(this.template,this.modelScale);this.firstPersonScene.add(this.arms.model);this.utilities=new Map();this.ready=this.clips.has('idle');
+  this.arms=createSoldierArms(this.template,this.modelScale);this.firstPersonScene.add(this.arms.model);this.utilities=new Map();this.supportedClips=new Set(this.clips.keys());this.ready=this.clips.has('idle');
  }
  _weaponFor(instance,weaponId){
   if(instance.weaponId===weaponId&&(!weaponId||instance.weaponMount||!this.weaponTemplates.has(weaponId)))return;
   instance.weaponId=weaponId||'';
-  if(instance.weaponMount)instance.hand?.remove(instance.weaponMount);
+  if(instance.weaponMount)instance.weaponMount.visible=false;
   instance.weaponMount=null;
   if(!weaponId||!this.weaponTemplates.has(weaponId)||!instance.hand)return;
-  const source=this.weaponTemplates.get(weaponId),model=source.clone(true),bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
+  const cached=instance.weaponMounts.get(weaponId);if(cached){cached.visible=true;instance.weaponMount=cached;return;}
+  const source=this.weaponTemplates.get(weaponId),model=cloneSkinned(source),bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
   const dimensions=[size.x,size.y,size.z],longest=dimensions.indexOf(Math.max(...dimensions));
   const grip=new THREE.Group();model.position.sub(center);grip.add(model);
   const length=Math.max(...dimensions)||1;instance.holder.updateMatrixWorld(true);const handScale=instance.hand.getWorldScale(new THREE.Vector3()).x;grip.scale.setScalar(handAttachmentScale(handScale,.82,length));
   if(longest===0)grip.rotation.y=Math.PI/2;else if(longest===1)grip.rotation.x=Math.PI/2;
-  grip.position.set(.04/handScale,-.055/handScale,-.08/handScale);grip.userData.basePosition=grip.position.clone();grip.userData.baseRotation=grip.rotation.clone();
+  grip.position.set(.04/handScale,-.055/handScale,-.08/handScale);grip.userData.handScale=handScale;grip.userData.basePosition=grip.position.clone();grip.userData.baseRotation=grip.rotation.clone();
   const muzzle=new THREE.Mesh(new THREE.SphereGeometry(.045,8,6),new THREE.MeshBasicMaterial({color:0xffd78a,transparent:true,opacity:.9}));muzzle.position.set(0,.005,-.51);muzzle.visible=false;grip.add(muzzle);grip.userData.muzzle=muzzle;
   grip.traverse(object=>{if(object.isMesh){object.castShadow=false;object.receiveShadow=false;object.frustumCulled=false;}});
-  instance.hand.add(grip);instance.weaponMount=grip;
+  instance.hand.add(grip);instance.weaponMount=grip;instance.weaponMounts.set(weaponId,grip);
  }
  hasFirstPersonWeapon(weaponId){return this.weaponTemplates.has(String(weaponId||''));}
  _firstPersonWeapon(weaponId){
@@ -100,8 +101,8 @@ export class MatchCharacterRenderer{
  renderFirstPersonItem(id,state,player,{width=this.canvas.width,height=this.canvas.height}={}){
   if(!this.arms)return false;for(const weapon of this.firstPersonInstances.values())weapon.root.visible=false;
   let item=this.utilities.get(id);if(!item){item=createHeldItem(id);this.utilities.set(id,item);this.firstPersonScene.add(item);}for(const [key,value] of this.utilities)value.visible=key===id;
-  const swing=player.actionTime>0?Math.sin((1-Math.min(1,player.actionTime/(id==='pickaxe'?.42:.55)))*Math.PI):0,use=player.use?Math.sin((1-player.use.remaining/player.use.duration)*Math.PI):0;
-  item.scale.setScalar(id==='pickaxe'?.68:1);item.position.set(.28-swing*.18,-.38+use*.2,-.78+swing*.16);item.rotation.set(-.15-swing*1.5+use*.65,.1,-.2-swing*.3);item.updateMatrixWorld(true);
+  const pose=characterActionPose(player),swing=pose.swing+pose.throw,use=pose.consume,bob=Math.sin(state.bobPhase||0)*.012*(player.moveSpeed>0?1:0);
+  item.scale.setScalar(id==='pickaxe'?.68:1);item.position.set(.28-swing*.18+(state.swayX||0),-.38+use*.2+bob,-.78+swing*.16);item.rotation.set(-.15-swing*1.5+use*.65,.1,-.2-swing*.3);item.updateMatrixWorld(true);
   const right=item.localToWorld(new THREE.Vector3(0,-.04,.06)),left=id==='pickaxe'?new THREE.Vector3(-.38,-.65,-.38):item.localToWorld(new THREE.Vector3(-.12,-.1,.04));
   poseSoldierArms(this.arms,{right:right.toArray(),left:left.toArray(),utility:true});
   this.firstPersonCamera.aspect=width/height;this.firstPersonCamera.updateProjectionMatrix();this.renderer.resetState();this.renderer.render(this.firstPersonScene,this.firstPersonCamera);this.restoreRawState();return true;
@@ -114,12 +115,13 @@ export class MatchCharacterRenderer{
   rightArm=bones.get('mixamorigrightarm');rightForeArm=bones.get('mixamorigrightforearm');leftArm=bones.get('mixamorigleftarm');leftForeArm=bones.get('mixamorigleftforearm');
   model.scale.setScalar(this.modelScale);model.traverse(object=>{if(object.isMesh){object.castShadow=false;object.receiveShadow=true;object.frustumCulled=false;}});
   holder.add(model);this.scene.add(holder);
-  const instance={id,holder,model,mixer,actions,bones,hand,rightArm,rightForeArm,leftArm,leftForeArm,weaponId:'',weaponMount:null,blend:createAnimationBlend('idle'),sequenceState:'',fireTime:0,color:source.color||'#6f8470'};
+  const animatedPose=new Map([...bones.values()].map(bone=>[bone,bone.quaternion.clone()]));
+  const instance={id,holder,model,mixer,actions,bones,animatedPose,hand,rightArm,rightForeArm,leftArm,leftForeArm,weaponId:'',weaponMount:null,weaponMounts:new Map(),utilityCache:new Map(),blend:createAnimationBlend('idle'),sequenceState:'',fireTime:0,color:source.color||'#6f8470'};
   this._tint(instance,instance.color);return instance;
  }
  _tint(instance,value){
-  const tint=new THREE.Color(value||'#6f8470');
-  instance.model.traverse(object=>{if(!object.isMesh)return;const source=object.material,colorMat=sourceMaterial=>{const material=sourceMaterial.clone();if(material.color)material.color.lerp(tint,.075);return material;};object.material=Array.isArray(source)?source.map(colorMat):colorMat(source);});
+  const tint=new THREE.Color(value||'#6f8470');instance.bodyMaterials=[];
+  instance.model.traverse(object=>{if(!object.isMesh)return;const source=object.material,colorMat=sourceMaterial=>{const material=sourceMaterial.clone();instance.bodyMaterials.push(material);if(material.color)material.color.lerp(tint,.075);return material;};object.material=Array.isArray(source)?source.map(colorMat):colorMat(source);});
  }
  update(players=[],{localId='',hideId='',phase='playing',dt=.016}={}){
   if(!this.ready)return;
@@ -129,27 +131,51 @@ export class MatchCharacterRenderer{
    const id=String(p.id);active.add(id);let instance=this.instances.get(id);
    if(!instance){instance=this._create(id,p);this.instances.set(id,instance);}
    instance.holder.visible=id!==String(hideId);instance.holder.position.set(p.p?.[0]||0,p.p?.[1]||0,p.p?.[2]||0);instance.holder.rotation.y=Number.isFinite(p.yaw)?p.yaw:0;
-   const animation=resolveCharacterAnimation({grounded:p.air==='landed'||p.air==='ship'||p.air==='pod',speed:p.animationState==='run'?5.4:p.animationState==='walk'?2.2:0,velocity:Number(p.vy)||0,sprinting:p.animationState==='run'||p.sprinting,crouching:p.crouching,deploymentState:p.animationState==='pod-enter'?'entering_pod':p.animationState==='pod-exit'?'exiting':'',aiming:p.aim,reloading:p.reload>0,weapon:p.slot});
-   const supported=new Set(this.clips.keys());instance.blend=stepAnimationBlend(instance.blend,{state:p.animationState||animation.state,supported},dt);
-   for(const [state,action] of instance.actions)action.setEffectiveWeight(instance.blend.weights[state]||0);
+   const animation=characterLocomotion(p);
+   const blendState=animation.state==='crouch'&&animation.speed<.18?'idle':animation.state;
+   instance.blend=stepAnimationBlend(instance.blend,{state:blendState,supported:this.supportedClips},dt);
+   for(const [state,action] of instance.actions){action.setEffectiveWeight(instance.blend.weights[state]||0);if(state==='walk'||state==='run')action.setEffectiveTimeScale(clamp((p.moveSpeed||animation.speed)/(state==='run'?6.8:3.2),.65,1.4));}
+   // Restore the last mixer pose before applying it again. Constant animation
+   // tracks may skip writes, so additive layers must never become their input.
+   for(const [bone,q] of instance.animatedPose)bone.quaternion.copy(q);
    instance.mixer.update(clamp(dt,0,.06));
+   for(const [bone,q] of instance.animatedPose)q.copy(bone.quaternion);
    const activeMatch=phase==='playing'&&p.deploymentState==='match_active',armed=activeMatch&&p.slot>0&&p.slot<5&&Boolean(p.weapons?.[['','ar','shotgun','smg','sniper'][p.slot]]);
    this._weaponFor(instance,armed?(['','ar','shotgun','smg','sniper'][p.slot]||''):null);
    instance.fireTime=Math.max(0,instance.fireTime-clamp(dt,0,.06));
-   if(instance.weaponMount){const base=instance.weaponMount.userData.basePosition,reload=armed?clamp((Number(p.reload)||0)/2.5,0,1):0,fire=instance.fireTime/.11;instance.weaponMount.position.set(base.x,base.y+Math.sin(reload*Math.PI)*.065,base.z+fire*.065);instance.weaponMount.rotation.copy(instance.weaponMount.userData.baseRotation);instance.weaponMount.rotation.x+=Math.sin(reload*Math.PI)*.36-fire*.11;instance.weaponMount.userData.muzzle.visible=fire>.04;}
-   const aim=armed?(p.aim?.25:.07):0,run=instance.blend.weights.run||0,reload=armed?clamp((Number(p.reload)||0)/2.5,0,1):0,airborne=['jump','fall'].includes(p.animationState);
+   if(instance.weaponMount){const base=instance.weaponMount.userData.basePosition,handScale=instance.weaponMount.userData.handScale,reload=armed?clamp((Number(p.reload)||0)/2.5,0,1):0,fire=instance.fireTime/.11;instance.weaponMount.position.set(base.x,base.y+Math.sin(reload*Math.PI)*.065/handScale,base.z+fire*.065/handScale);instance.weaponMount.rotation.copy(instance.weaponMount.userData.baseRotation);instance.weaponMount.rotation.x+=Math.sin(reload*Math.PI)*.36-fire*.11;instance.weaponMount.userData.muzzle.visible=fire>.04;}
+   const aim=armed?(p.aim?.25:.07):0,run=instance.blend.weights.run||0,reload=armed?clamp((Number(p.reload)||0)/2.5,0,1):0,airborne=!animation.grounded;
    if(instance.rightArm){instance.rightArm.rotation.x-=aim+run*.08+reload*.3;instance.rightArm.rotation.z-=.08+run*.035;}
    if(instance.rightForeArm){instance.rightForeArm.rotation.x+=aim*.28+reload*.22;}
    if(instance.leftArm&&armed){instance.leftArm.rotation.x-=aim+.7;instance.leftArm.rotation.z+=.24;}
    if(instance.leftForeArm&&armed)instance.leftForeArm.rotation.x+=.26;
-   if(airborne){if(instance.rightArm)instance.rightArm.rotation.x-=.23;if(instance.leftArm)instance.leftArm.rotation.x-=.2;}
+   if(airborne){if(instance.rightArm)instance.rightArm.rotation.x-=.23;if(instance.leftArm)instance.leftArm.rotation.x-=.2;for(const side of ['left','right']){const thigh=instance.bones.get(`mixamorig${side}upleg`),leg=instance.bones.get(`mixamorig${side}leg`);if(thigh)thigh.rotation.x-=p.vy>0?.24:.12;if(leg)leg.rotation.x+=p.vy>0?.38:.2;}}
    const utilityId=activeMatch&&!armed&&!p.building?(p.slot===7?'shield':p.slot===8?'health':p.slot===9?'shockwave':'pickaxe'):null;
-   if(instance.utilityId!==utilityId){if(instance.utility)instance.hand?.remove(instance.utility);instance.utility=utilityId?createHeldItem(utilityId):null;instance.utilityId=utilityId;if(instance.utility&&instance.hand){instance.holder.updateMatrixWorld(true);const handScale=instance.hand.getWorldScale(new THREE.Vector3()).x;instance.utility.scale.setScalar(handAttachmentScale(handScale));instance.utility.position.set(0,.08/handScale,0);instance.hand.add(instance.utility);}}
+   if(instance.utilityId!==utilityId){
+    if(instance.utility)instance.utility.visible=false;
+    instance.utility=utilityId?instance.utilityCache.get(utilityId):null;instance.utilityId=utilityId;
+    if(utilityId&&!instance.utility&&instance.hand){instance.utility=createHeldItem(utilityId);instance.holder.updateMatrixWorld(true);const handScale=instance.hand.getWorldScale(new THREE.Vector3()).x;instance.utility.scale.setScalar(handAttachmentScale(handScale));instance.utility.position.set(0,.08/handScale,0);instance.hand.add(instance.utility);instance.utilityCache.set(utilityId,instance.utility);}
+    if(instance.utility)instance.utility.visible=true;
+   }
    if(armed){instance.holder.updateMatrixWorld(true);const right=instance.holder.localToWorld(new THREE.Vector3(.22,1.28,-.42)),left=instance.holder.localToWorld(new THREE.Vector3(-.12,1.35,-.64));poseArmChain(instance.model,instance.bones,'right',right,instance.holder.localToWorld(new THREE.Vector3(.55,.95,-.1)));poseArmChain(instance.model,instance.bones,'left',left,instance.holder.localToWorld(new THREE.Vector3(-.55,1,-.1)));}
-   if(p.actionTime>0||p.use){const wave=p.use?.7:Math.sin((1-Math.min(1,p.actionTime/.55))*Math.PI);if(instance.rightArm)instance.rightArm.rotation.x-=wave*1.45;if(instance.rightForeArm)instance.rightForeArm.rotation.z-=wave*.65;if(p.use&&instance.leftArm)instance.leftArm.rotation.x-=.9;}
+   const actionPose=characterActionPose(p),swing=actionPose.swing,throwing=actionPose.throw,consuming=actionPose.consume;
+   if(instance.rightArm){instance.rightArm.rotation.x-=swing*1.45+throwing*1.7+consuming*.9;instance.rightArm.rotation.z-=swing*.18;}
+   if(instance.rightForeArm)instance.rightForeArm.rotation.x-=swing*.45+throwing*.65+consuming*.75;
+   if(instance.leftArm&&consuming)instance.leftArm.rotation.x-=consuming*.9;
+
    if(p.crouching){instance.holder.position.y-=.16;for(const key of['mixamorigleftupleg','mixamorigrightupleg']){const bone=instance.bones.get(key);if(bone)bone.rotation.x-=.36;}for(const key of['mixamorigleftleg','mixamorigrightleg']){const bone=instance.bones.get(key);if(bone)bone.rotation.x+=.68;}}
   }
-  for(const [id,instance] of this.instances)if(!active.has(id)){instance.mixer.stopAllAction();this.scene.remove(instance.holder);this.instances.delete(id);}
+  for(const [id,instance] of this.instances)if(!active.has(id)){this._disposeInstance(instance);this.instances.delete(id);}
+ }
+ _disposeInstance(instance){
+  instance.mixer.stopAllAction();this.scene.remove(instance.holder);
+  const materials=new Set(),geometries=new Set();
+  for(const utility of instance.utilityCache.values())utility.traverse(o=>{if(o.isMesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);}});
+  for(const mount of instance.weaponMounts.values()){const muzzle=mount.userData.muzzle;if(muzzle){geometries.add(muzzle.geometry);materials.add(muzzle.material);}}
+  // Body materials are per-player tints; shared asset geometry/textures stay alive.
+  instance.model.traverse(o=>{if(o.isSkinnedMesh)o.skeleton.dispose();});
+  for(const material of instance.bodyMaterials||[])materials.add(material);
+  for(const geometry of geometries)geometry.dispose();for(const material of materials)material.dispose();
  }
  pulse(id,type='fire'){const instance=this.instances.get(String(id));if(instance&&type==='fire')instance.fireTime=.11;}
  render({eye,target,aspect,fov,dt=.016,width=this.canvas.width,height=this.canvas.height}={}){
