@@ -47,7 +47,7 @@ test('switching held items reuses remote meshes and independent weapon skeletons
  const {MatchCharacterRenderer}=await import('../public/match-character-renderer.js');
  const renderer=Object.create(MatchCharacterRenderer.prototype);Object.assign(renderer,{scene:new THREE.Scene(),firstPersonScene:new THREE.Scene(),instances:new Map(),weaponTemplates:new Map(),clips:new Map()});renderer._loaded(asset);
  const data=await readFile(new URL('../public/models/weapons/Rifle_Assault_East.glb',import.meta.url));const gun=await loader.parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');renderer.weaponTemplates.set('ar',gun.scene);
- const p={id:'peer',p:[0,0,0],hp:100,slot:0,weapons:{ar:{ammo:30}},air:'landed',deploymentState:'match_active',animationState:'idle'};
+ const p={id:'peer',p:[0,0,0],hp:100,slot:0,inventory:[{id:'ar',type:'ar',ammo:30},null,null,null,null],air:'landed',deploymentState:'match_active',animationState:'idle'};
  renderer.update([p]);const instance=renderer.instances.get('peer'),pickaxe=instance.utility;
  p.slot=1;renderer.update([p]);const firstGun=instance.weaponMount;
  p.slot=0;renderer.update([p]);assert.ok(instance.utility===pickaxe,'utility switches must not allocate new GPU resources');
@@ -63,4 +63,9 @@ test('match contact shadows follow ground and presentation motion settles after 
  p.p[1]=0;p.vy=0;p.grounded=true;p.moveSpeed=0;renderer.update([p]);assert.ok(instance.model.position.y<0);
  for(let n=0;n<180;n++)renderer.update([p]);assert.ok(Math.abs(instance.model.position.y)<.001);assert.ok(Math.abs(instance.model.rotation.x)<.001);
  renderer.update([]);assert.equal(renderer.instances.size,0);assert.ok(!renderer.scene.children.includes(instance.contactShadow));
+});
+test('remote rendering resolves arbitrary slot five from the instance inventory',async()=>{
+ const {MatchCharacterRenderer}=await import('../public/match-character-renderer.js');const r=Object.create(MatchCharacterRenderer.prototype);Object.assign(r,{scene:new THREE.Scene(),firstPersonScene:new THREE.Scene(),instances:new Map(),weaponTemplates:new Map(),clips:new Map()});r._loaded(asset);
+ const bytes=await readFile(new URL('../public/models/weapons/Rifle_Assault_East.glb',import.meta.url));r.weaponTemplates.set('ar',(await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'')).scene);
+ r.update([{id:'remote',p:[0,0,0],hp:100,slot:5,inventory:[null,null,null,null,{id:'a',type:'ar',ammo:7}],weapon:'ar',air:'landed',deploymentState:'match_active'}]);assert.equal(r.instances.get('remote').weaponId,'ar');assert.ok(r.instances.get('remote').weaponMount);
 });

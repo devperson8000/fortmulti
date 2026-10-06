@@ -1,3 +1,5 @@
+import {inventoryWeapon} from './weapon-inventory.js';
+import {WEAPON_FILES,createGroundWeapon,groundWeaponPose} from './weapon-assets.js';
 import {firstPersonCalibration} from './first-person-calibration.js';
 import {createContactShadow} from './character-lighting.js';
 import {createMotionPresentation,stepMotionPresentation} from './visual-presentation.js';
@@ -9,14 +11,14 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkinned} from 'three/addons/utils/SkeletonUtils.js';
 import {createAnimationBlend,stepAnimationBlend,characterLocomotion,characterActionPose} from './character-animation.js';
 
-const WEAPON_FILES=Object.freeze({ar:'Rifle_Assault_East.glb',shotgun:'Shotgun_Pump_East.glb',smg:'SMG_Compact_East.glb',sniper:'Sniper_Rifle_East.glb'});
+
 const clipState=name=>String(name||'').toLowerCase().replace(/[^a-z]/g,'');
 const normBone=name=>String(name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 
 export class MatchCharacterRenderer{
  constructor(gl,canvas,{modelUrl='/models/Soldier.glb',weaponBase='/models/weapons/'}={}){
-  this.canvas=canvas;this.gl=gl;this.weaponBase=weaponBase;this.instances=new Map();this.weaponTemplates=new Map();this.firstPersonInstances=new Map();this.template=null;this.clips=new Map();this.ready=false;this.failed=false;this.width=0;this.height=0;
+  this.canvas=canvas;this.gl=gl;this.weaponBase=weaponBase;this.instances=new Map();this.weaponTemplates=new Map();this.groundInstances=new Map();this.weaponThumbnails=new Map();this.firstPersonInstances=new Map();this.template=null;this.clips=new Map();this.ready=false;this.failed=false;this.width=0;this.height=0;
   this.scene=new THREE.Scene();this.camera=new THREE.PerspectiveCamera(75,1,.15,820);
   this.scene.fog=new THREE.FogExp2(0xb1d6e3,.0036);this.scene.add(new THREE.HemisphereLight(0xc6e9ff,0x394332,1.3));
   const key=new THREE.DirectionalLight(0xffedc8,2.05);key.position.set(-18,30,14);this.scene.add(key);
@@ -29,7 +31,7 @@ export class MatchCharacterRenderer{
   this.renderer.autoClear=false;this.renderer.setPixelRatio(1);this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.05;this.renderer.setClearColor(0x000000,0);
   this.loader=new GLTFLoader();
   this.loader.load(modelUrl,gltf=>this._loaded(gltf),undefined,error=>{this.failed=true;console.error('Horizon match character model could not load.',error);});
-  for(const [id,file] of Object.entries(WEAPON_FILES))this.loader.load(`${weaponBase}${file}`,gltf=>this.weaponTemplates.set(id,gltf.scene),undefined,error=>console.warn(`Horizon ${id} third-person weapon could not load.`,error));
+  for(const [id,file] of Object.entries(WEAPON_FILES))this.loader.load(`${weaponBase}${file}`,gltf=>{this.weaponTemplates.set(id,gltf.scene);const warm=()=>{this.getWeaponThumbnail(id);if(this.weaponThumbnails.size===4&&this.thumbnailRenderer){this.thumbnailRenderer.dispose();this.thumbnailRenderer=null;}};if(globalThis.requestIdleCallback)requestIdleCallback(warm);else setTimeout(warm,0);},undefined,error=>console.warn(`Horizon ${id} third-person weapon could not load.`,error));
  }
  _loaded(gltf){
   this.template=gltf.scene;this.template.updateMatrixWorld(true);
@@ -57,6 +59,8 @@ export class MatchCharacterRenderer{
   grip.traverse(object=>{if(object.isMesh){object.castShadow=false;object.receiveShadow=false;object.frustumCulled=false;}});
   instance.hand.add(grip);instance.weaponMount=grip;instance.weaponMounts.set(weaponId,grip);
  }
+ updateGroundWeapons(pickups,time,eye){if(!this.groundInstances)this.groundInstances=new Map();const active=new Set();for(const item of pickups){if(!this.weaponTemplates.has(item.type))continue;active.add(item.id);let visual=this.groundInstances.get(item.id);if(!visual){visual=createGroundWeapon(this.weaponTemplates.get(item.type),item.type);this.groundInstances.set(item.id,visual);this.scene.add(visual);}visual.visible=Math.hypot(item.x-eye[0],item.z-eye[2])<90;if(!visual.visible)continue;const pose=groundWeaponPose(item,time);visual.position.set(item.x,pose.height,item.z);visual.rotation.y=pose.rotation;}for(const [id,visual]of this.groundInstances)if(!active.has(id)){this.scene.remove(visual);this.groundInstances.delete(id);}}
+ getWeaponThumbnail(type){if(!this.weaponThumbnails)this.weaponThumbnails=new Map();if(this.weaponThumbnails.has(type))return this.weaponThumbnails.get(type);const template=this.weaponTemplates.get(type);if(!template)return null;if(!this.thumbnailRenderer){this.thumbnailRenderer=new THREE.WebGLRenderer({alpha:true,antialias:true});this.thumbnailRenderer.setSize(256,144);this.thumbnailRenderer.setClearColor(0,0);this.thumbnailRenderer.outputColorSpace=THREE.SRGBColorSpace;this.thumbnailRenderer.toneMapping=THREE.ACESFilmicToneMapping;}const scene=new THREE.Scene(),model=createGroundWeapon(template,type),bounds=new THREE.Box3().setFromObject(model),center=bounds.getCenter(new THREE.Vector3()),size=bounds.getSize(new THREE.Vector3());model.position.sub(center);scene.add(model);scene.add(new THREE.HemisphereLight(0xcceaff,0x40454b,2));const light=new THREE.DirectionalLight(0xffefd8,3);light.position.set(2,4,3);scene.add(light);const camera=new THREE.PerspectiveCamera(35,256/144,.01,20),distance=Math.max(size.x,size.y,size.z)*1.15;camera.position.set(distance,.45*distance,.75*distance);camera.lookAt(0,0,0);this.thumbnailRenderer.render(scene,camera);const url=this.thumbnailRenderer.domElement.toDataURL('image/png');this.weaponThumbnails.set(type,url);return url;}
  hasFirstPersonWeapon(weaponId){return this.weaponTemplates.has(String(weaponId||''));}
  _firstPersonWeapon(weaponId){
   let instance=this.firstPersonInstances.get(weaponId);if(instance)return instance;
@@ -106,18 +110,18 @@ export class MatchCharacterRenderer{
    const reach=phase==='idle'?0:phase==='release'?smooth(progress/.16):phase==='eject'?1:phase==='insert'?1-smooth((progress-.58)/.12):0;
    const reloadNode=instance.nodes.get(c.reloadNode),magazine=reloadNode?instance.root.worldToLocal(reloadNode.getWorldPosition(new THREE.Vector3())).add(new THREE.Vector3(...c.reloadPalmOffset).multiplyScalar(c.scale)).toArray():relative(c.grip);
    support=support.map((v,i)=>v+(magazine[i]-v)*reach);
-   poseSoldierArms(this.arms,{origin:pose.position,rotation:pose.rotation,hands:{right:{palm:relative(c.rightPalm),rotation:c.rightRotation,fingers:c.rightFingers,splay:c.rightSplay},left:{palm:support,rotation:c.leftRotation,fingers:c.leftFingers}}});
+   poseSoldierArms(this.arms,{origin:pose.position,rotation:pose.rotation,ads:state.ads||0,hands:{right:{palm:relative(c.rightPalm),rotation:c.rightRotation,fingers:c.rightFingers,splay:c.rightSplay},left:{palm:support,rotation:c.leftRotation,fingers:c.leftFingers}}});
   }
   this.activeFirstPerson=instance;
   instance.flashGroup.visible=flash>0;
   if(instance.flashGroup.visible){const pulse=clamp(flash/.09,.25,1);instance.flashGroup.scale.setScalar(.72+pulse*.52);instance.flashMaterial.opacity=.72+pulse*.26;}
   if(width!==this.width||height!==this.height){this.width=width;this.height=height;this.renderer.setSize(width,height,false);}
-  this.firstPersonCamera.aspect=Math.max(.1,width/Math.max(1,height));this.firstPersonCamera.fov=c.fov;this.firstPersonCamera.updateProjectionMatrix();
+  this.firstPersonCamera.aspect=Math.max(.1,width/Math.max(1,height));instance.viewFov=c.fov+(c.adsViewFov-c.fov)*clamp(state.ads||0,0,1);this.firstPersonCamera.fov=instance.viewFov;this.firstPersonCamera.updateProjectionMatrix();
   this.renderer.resetState();this.renderer.render(this.firstPersonScene,this.firstPersonCamera);this.restoreRawState();return true;
  }
  firstPersonMuzzleWorld(eye,forward,worldFov,weaponId){
   const instance=this.activeFirstPerson;if(!instance?.root.visible||(weaponId&&instance.weaponId!==weaponId))return null;
-  instance.root.updateMatrixWorld(true);const p=instance.flashGroup.getWorldPosition(new THREE.Vector3()),f=new THREE.Vector3(...forward).normalize(),right=new THREE.Vector3().crossVectors(f,new THREE.Vector3(0,1,0)).normalize(),up=new THREE.Vector3().crossVectors(right,f),ratio=Math.tan(worldFov/2)/Math.tan(instance.c.fov*Math.PI/360);
+  instance.root.updateMatrixWorld(true);const p=instance.flashGroup.getWorldPosition(new THREE.Vector3()),f=new THREE.Vector3(...forward).normalize(),right=new THREE.Vector3().crossVectors(f,new THREE.Vector3(0,1,0)).normalize(),up=new THREE.Vector3().crossVectors(right,f),ratio=Math.tan(worldFov/2)/Math.tan((instance.viewFov||instance.c.fov)*Math.PI/360);
   return new THREE.Vector3(...eye).addScaledVector(right,p.x*ratio).addScaledVector(up,p.y*ratio).addScaledVector(f,-p.z).toArray();
  }
  renderFirstPersonItem(id,state,player,{width=this.canvas.width,height=this.canvas.height}={}){
@@ -127,7 +131,7 @@ export class MatchCharacterRenderer{
   item.scale.setScalar(id==='pickaxe'?.68:1);item.position.set(.28-swing*.18+(state.swayX||0),-.38+use*.2+bob,-.78+swing*.16);item.rotation.set(-.15-swing*1.5+use*.65,.1,-.2-swing*.3);item.updateMatrixWorld(true);
   const right=item.localToWorld(new THREE.Vector3(0,-.04,.06)),left=id==='pickaxe'?new THREE.Vector3(-.38,-.65,-.38):item.localToWorld(new THREE.Vector3(-.12,-.1,.04));
   poseSoldierArms(this.arms,{right:right.toArray(),left:left.toArray(),utility:true});
-  this.firstPersonCamera.aspect=width/height;this.firstPersonCamera.updateProjectionMatrix();this.renderer.resetState();this.renderer.render(this.firstPersonScene,this.firstPersonCamera);this.restoreRawState();return true;
+  this.firstPersonCamera.aspect=width/height;this.firstPersonCamera.fov=62;this.firstPersonCamera.updateProjectionMatrix();this.renderer.resetState();this.renderer.render(this.firstPersonScene,this.firstPersonCamera);this.restoreRawState();return true;
  }
  _create(id,source){
   const model=cloneSkinned(this.template),holder=new THREE.Group(),mixer=new THREE.AnimationMixer(model),actions=new Map(),bones=new Map();
@@ -163,8 +167,8 @@ export class MatchCharacterRenderer{
    for(const [bone,q] of instance.animatedPose)bone.quaternion.copy(q);
    instance.mixer.update(clamp(dt,0,.06));
    for(const [bone,q] of instance.animatedPose)q.copy(bone.quaternion);
-   const activeMatch=phase==='playing'&&p.deploymentState==='match_active',armed=activeMatch&&p.slot>0&&p.slot<5&&Boolean(p.weapons?.[['','ar','shotgun','smg','sniper'][p.slot]]);
-   this._weaponFor(instance,armed?(['','ar','shotgun','smg','sniper'][p.slot]||''):null);
+   const activeMatch=phase==='playing'&&p.deploymentState==='match_active',armed=activeMatch&&Boolean(inventoryWeapon(p.inventory,p.slot));
+   this._weaponFor(instance,armed?inventoryWeapon(p.inventory,p.slot).type:null);
    instance.fireTime=Math.max(0,instance.fireTime-clamp(dt,0,.06));
    if(instance.weaponMount){const base=instance.weaponMount.userData.basePosition,handScale=instance.weaponMount.userData.handScale,reload=armed?clamp((Number(p.reload)||0)/2.5,0,1):0,fire=instance.fireTime/.11;instance.weaponMount.position.set(base.x,base.y+Math.sin(reload*Math.PI)*.065/handScale,base.z+fire*.065/handScale);instance.weaponMount.rotation.copy(instance.weaponMount.userData.baseRotation);instance.weaponMount.rotation.x+=Math.sin(reload*Math.PI)*.36-fire*.11;instance.weaponMount.userData.muzzle.visible=fire>.04;}
    const aim=armed?(p.aim?.25:.07):0,run=instance.blend.weights.run||0,reload=armed?clamp((Number(p.reload)||0)/2.5,0,1):0,airborne=!animation.grounded;

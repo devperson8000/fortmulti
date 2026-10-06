@@ -64,3 +64,24 @@ test('weapon switches reuse meshes and keep a damped, finite grip-pivot trajecto
   assert.ok(state.rotation.every(Number.isFinite));assert.equal([...r.firstPersonInstances.values()].filter(v=>v.root.visible).length,1);
  }assert.equal(r.firstPersonInstances.size,4);
 });
+
+test('first-person posing preserves upper-arm attachment translations to avoid torn sleeve skin',()=>{
+ const profile=WEAPON_PROFILES.ar,state=createViewModelState();stepViewModel(state,{weapon:profile},1/60);
+ const original=new Map();r.template.traverse(b=>{if(b.isBone&&/mixamorig(Right|Left)Arm$/.test(b.name))original.set(b.name,b.position.clone());});
+ r.renderFirstPersonWeapon('ar',profile,state,createWeaponPartState());
+ for(const [name,position]of original){const bone=[...r.arms.bones.values()].find(b=>b.name===name);assert.ok(bone.position.distanceTo(position)<1e-6,'skin attachment was translated independently');}
+});
+test('measured index fingertips contact each real GLB trigger instead of floating past it',()=>{
+ for(const id of Object.keys(FIRST_PERSON_CALIBRATION)){
+  const profile=WEAPON_PROFILES[id],state=createViewModelState();stepViewModel(state,{weapon:profile},1/60);r.renderFirstPersonWeapon(id,profile,state,createWeaponPartState());
+  const item=r.firstPersonInstances.get(id),target=item.nodes.get('trigger').getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(.012*item.c.scale,0,0).applyQuaternion(item.root.getWorldQuaternion(new THREE.Quaternion()))),finger=r.arms.bones.get('mixamorigrighthandindex3');
+  // The shipped Soldier mesh's distal index vertices extend 3.75 cm past this bone.
+  const tip=new THREE.Vector3(0,3.75,0).applyMatrix4(finger.matrixWorld);assert.ok(tip.distanceTo(target)<(id==='shotgun'?.028:.012),`${id}: fingertip misses trigger`);
+ }
+});
+
+test('utility camera framing is independent of the previously aimed weapon',()=>{
+ const state=createViewModelState();for(let n=0;n<180;n++)stepViewModel(state,{weapon:WEAPON_PROFILES.ar,aiming:true},1/60);
+ r.renderFirstPersonWeapon('ar',WEAPON_PROFILES.ar,state,createWeaponPartState());assert.ok(r.firstPersonCamera.fov<51);
+ for(const id of ['pickaxe','shield','health','shockwave']){r.renderFirstPersonItem(id,state,{moveSpeed:0});assert.equal(r.firstPersonCamera.fov,62);for(const [bone,position]of r.arms.restPositions)assert.ok(bone.position.distanceTo(position)<1e-6,'utility posing detached a native skin attachment');}
+});

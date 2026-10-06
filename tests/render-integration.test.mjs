@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises';
 test('game and lobby frames reuse dynamic geometry storage',async()=>{
  const source=await readFile(new URL('../public/engine.js',import.meta.url),'utf8');
  assert.match(source,/new ReusableFloatBuffer\(/);
- assert.equal((source.match(/new Float32Array\(geo\)/g)||[]).length,1,'only the one-time static-world upload may allocate from geo');
+ assert.equal((source.match(/new Float32Array\(geo\)/g)||[]).length,0,'static world is partitioned once instead of reallocated per frame');assert.match(source,/createWorldChunks\(geo\)/);
  assert.equal((source.match(/geo\s*=\s*\[\]/g)||[]).length,1,'only the initial geometry array allocation is allowed');
  assert.ok((source.match(/dynamicData\.copy\(geo\)/g)||[]).length>=2);
 });

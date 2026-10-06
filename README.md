@@ -98,12 +98,11 @@ Rounds are last-player-standing. The first player to 5 round wins takes the matc
 | Right mouse | ADS / sniper scope |
 | Space | Jump after deployment |
 | Shift | Sprint |
-| 1 | Striker AR |
-| 2 | Thunder Shotgun |
-| 3 | Burst SMG |
-| 4 | Eagle-Eye Sniper |
-| 5 | Wall blueprint |
-| 6 | Ramp blueprint |
+| 1–5 | Select your five freely arranged weapon slots |
+| Tab | Open/close inventory; drag to move or swap weapons |
+| 0 | Pickaxe |
+| Z / V | Wall / ramp blueprint |
+| 7 / 8 / 9 | Shield cell / med kit / shockwave |
 | C | Crouch after deployment |
 | G | Rotate build |
 | Q | Toggle last weapon / last blueprint |
@@ -165,4 +164,14 @@ The automated suite covers local multi-client room messaging, targeted signaling
 
 ## Harvest and loot controls
 
-Every match starts with a pickaxe, 100 health, no shield and empty inventory. Click trees for wood or rocks for stone. Press E to open chests or collect each dropped item. 0 selects the pickaxe; 1–4 select collected firearms; 5/6 select walls/ramps; 7/8 select shield cells/med kits; 9 selects shockwaves. Click to use or throw. B switches building material, G rotates builds, X drops the held stack or weapon, and R reloads. Shield cells take 3 seconds for 25 shield; med kits take 5 seconds for full health. Switching cancels use without consuming the item. Shockwaves launch players without damage and protect their next landing.
+Every match starts with a pickaxe, 100 health, no shield and empty inventory. Click trees for wood or rocks for stone. Hold E continuously for 3.5 seconds to open a chest; releasing, changing target or leaving range resets progress. Press E to collect each dropped item. 0 selects the pickaxe; 1–5 select freely arranged firearms; Z/V select walls/ramps; 7/8 select shield cells/med kits; 9 selects shockwaves. Click to use or throw. B switches building material, G rotates builds, X drops the held stack or weapon, and R reloads. Shield cells take 3 seconds for 25 shield; med kits take 5 seconds for full health. Switching cancels use without consuming the item. Shockwaves launch players without damage and protect their next landing.
+
+## Flexible loadout and browser verification
+
+Carry up to five weapon instances in any order, including duplicates with separate magazines. Press Tab to arrange them: drag onto a weapon to swap, or onto an empty slot to move. Changes appear immediately while the party leader validates them. Rearranging preserves the equipped instance and its reload. Pickups fill the first empty slot; when full, drop a weapon with X to make room. Building, pickaxe and consumables remain separate. The inventory releases mouse capture and clears held controls while the match continues; close it and click to resume mouse control. Keyboard users can focus a weapon, press Space, choose a destination with the arrow keys and press Space again.
+
+Ground firearms use the same GLBs and materials as held firearms, slowly rotating and bobbing. Three.js is served from the checksum-verified npm installation in development and copied into `dist/vendor/three` during builds, so browser startup needs no third-party CDN.
+
+Run `npm run dev`, then `npm run test:browser` in another terminal. The default check URL is `http://127.0.0.1:4174`; set `GAME_TEST_URL=http://127.0.0.1:4173` for the default dev port. Set `CHROMIUM_EXECUTABLE` to an installed Chromium binary (default `/usr/bin/chromium`) and `GAME_ARTIFACTS` to your screenshot/result directory. Browser checks create two isolated local-test party tabs and seed test items through a test-only harness; normal app input, networking and host validation remain in use. They never alter production database state.
+
+Run `node scripts/grip-visual-check.mjs` with the same URL/browser/artifact settings for actual Soldier/weapon rendering in hip, ADS, reload and alternate aspect ratios. Inspect the resulting screenshots; numerical palm tests alone do not establish visual correctness.
