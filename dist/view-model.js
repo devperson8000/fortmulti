@@ -1,3 +1,4 @@
+import {firstPersonCalibration,adsGripPosition} from './first-person-calibration.js';
 import {WEAPON_MODELS} from './weapon-model.js';
 
 const damp=(from,to,speed,dt)=>from+(to-from)*(1-Math.exp(-speed*Math.min(.1,Math.max(0,dt))));
@@ -5,7 +6,7 @@ const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const mix=(from,to,t)=>from+(to-from)*t;
 
 export function createViewModelState(){
- return {position:[0,0,0],rotation:[0,0,0],recoil:0,swayX:0,swayY:0,bobPhase:0,movement:0,sprint:0,ads:0,stage:'idle'};
+ return {position:[0,0,0],rotation:[0,0,0],recoil:0,swayX:0,swayY:0,bobPhase:0,movement:0,sprint:0,ads:0,stage:'idle',initialized:false};
 }
 
 export function reloadStage(profile,remaining){
@@ -19,22 +20,23 @@ export function reloadStage(profile,remaining){
 }
 
 export function stepViewModel(state,input,dt){
- const profile=input.weapon,p=profile.presentation,step=Math.min(.1,Math.max(0,Number(dt)||0));
+ const profile=input.weapon,p=profile.presentation,c=firstPersonCalibration(profile.id),step=Math.min(.1,Math.max(0,Number(dt)||0));
+ if(!state.initialized){state.position=c.hip.slice();state.rotation=c.hipRotation.slice();state.initialized=true;}
  state.recoil=clamp(state.recoil+Math.max(0,input.shotImpulse||0),0,1);
  state.recoil=damp(state.recoil,0,11,step);
  state.swayX=damp(state.swayX,clamp(input.mouseX||0,-24,24)*p.sway*.01,10,step);
  state.swayY=damp(state.swayY,clamp(input.mouseY||0,-24,24)*p.sway*.01,10,step);
- state.movement=damp(state.movement,clamp(input.moving||0,0,1),12,step);
- state.ads=damp(state.ads,input.aiming?1:0,14,step);state.sprint=damp(state.sprint,input.sprinting&&!input.aiming&&!input.reloading?1:0,10,step);
+ state.movement=damp(state.movement,(input.grounded===false?0:clamp(input.moving||0,0,1)),12,step);
+ state.ads=damp(state.ads,input.ads??(input.aiming?1:0),14,step);state.sprint=damp(state.sprint,input.sprinting&&!input.aiming&&!input.reloading?1:0,10,step);
  state.bobPhase+=state.movement*step*(input.sprinting?12:9);
  state.stage=reloadStage(profile,input.reloading||0);
- const anchor=p.anchor.map((v,i)=>mix(v,p.adsAnchor[i],state.ads)),bob=Math.sin(state.bobPhase*2)*p.bob*state.movement*(1-state.ads*.85),sprint=state.sprint,equip=clamp((input.equipRemaining||0)/profile.equipDuration,0,1);
- state.position[0]=damp(state.position[0],anchor[0]+state.swayX*(1-state.ads*.8)+Math.cos(state.bobPhase)*p.bob*.5*state.movement*(1-state.ads)+p.sprint[0]*sprint,16,step);
- state.position[1]=damp(state.position[1],anchor[1]+bob+(input.landing||0)*-.045+p.sprint[1]*sprint-.48*equip,16,step);
- state.position[2]=damp(state.position[2],anchor[2]+p.recoil[0]*state.recoil+p.sprint[2]*sprint,18,step);
- state.rotation[0]=damp(state.rotation[0],p.recoil[1]*state.recoil+.45*sprint+.65*equip,18,step);
- state.rotation[1]=damp(state.rotation[1],state.swayX*.8,14,step);
- state.rotation[2]=damp(state.rotation[2],p.recoil[2]*state.recoil-state.swayY*.6+.35*sprint,14,step);
+ const anchor=c.hip.map((v,i)=>mix(v,adsGripPosition(c)[i],state.ads)),bob=Math.sin(state.bobPhase*2)*p.bob*state.movement*(1-state.ads*.92),sprint=state.sprint,equip=clamp((input.equipRemaining||0)/profile.equipDuration,0,1),quiet=1-state.ads*.94;
+ state.position[0]=damp(state.position[0],anchor[0]+state.swayX*quiet+Math.cos(state.bobPhase)*.004*state.movement*quiet+.025*sprint,16,step);
+ state.position[1]=damp(state.position[1],anchor[1]+bob+(input.landing||0)*-.025-clamp((input.verticalVelocity||0)*.0015,-.018,.018)-.12*sprint-.48*equip,16,step);
+ state.position[2]=damp(state.position[2],anchor[2]+.035*state.recoil+.035*sprint,18,step);
+ const inertial=[-(input.mouseY||0)*c.swayRotation[0],-(input.mouseX||0)*c.swayRotation[1],-(input.strafe||0)*.025+Math.sin(state.bobPhase)*.009*state.movement];
+ for(let i=0;i<3;i++)state.rotation[i]=damp(state.rotation[i],c.hipRotation[i]*(1-state.ads)+inertial[i]*quiet+c.recoilRotation[i]*state.recoil*(1-state.ads*.6)+c.sprintRotation[i]*sprint+(i===0?.65*equip:0),i===0?22:12,step);
+
  return state;
 }
 
@@ -78,9 +80,8 @@ export function createFirstPersonHandPose(profile,parts){
  };
 }
 
-// The licensed GLBs are mounted at their trigger bone, so the existing glove
-// pose stays attached to the weapon instead of being replaced by the avatar's
-// third-person arms. assetLength is the GLB's measured longest dimension.
+// Legacy procedural fallback composition. The actual Soldier/GLB rig uses
+// first-person-calibration.js and its measured palm and weapon anchors.
 export function createFirstPersonAssetPose(profile,state,parts,assetLength=1){
  const hand=createFirstPersonHandPose(profile,parts),trigger=hand.shooting.digits[0].to;
  return {
@@ -104,7 +105,7 @@ export function stepWeaponParts(state,profile,remaining){
  }else if(stage==='action'){
   const t=clamp((progress-.7)/.2,0,1);state.rootTilt=-.12*(1-t);state.action=Math.sin(t*Math.PI);state.supportHand[0]=mix(-.04,0,t);state.supportHand[1]=mix(-.06,0,t);state.supportHand[2]=mix(-.25,-.3,t);
  }else if(stage==='settle'){
-  const t=clamp((progress-.9)/.1,0,1);state.rootTilt=-.12*(1-t);state.supportHand[2]=-.3*(1-t);
+  const t=clamp((progress-.9)/.1,0,1);state.rootTilt=0;state.supportHand[2]=-.3*(1-t);
  }
  return state;
 }

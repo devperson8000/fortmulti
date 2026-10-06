@@ -49,7 +49,7 @@ test('aim and sprint converge toward different stable poses',()=>{
  }
  assert.ok(Math.abs(ads.position[0])<.01);
  assert.ok(sprint.position[0]>.2);
- assert.ok(sprint.rotation[0]>.3);
+ assert.ok(sprint.rotation[0]<-.25);
 });
 
 test('reload parts eject the magazine and cycle the weapon action',()=>{

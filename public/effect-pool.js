@@ -6,7 +6,7 @@ const copy3=(target,source)=>{
 };
 
 const createSlot=()=>({
- active:false,kind:'',life:0,maxLife:0,tracer:false,shell:false,projectileId:null,radius:.045,gravity:7,
+ active:false,kind:'',life:0,maxLife:0,speed:900,tracer:false,shell:false,projectileId:null,radius:.045,gravity:7,
  a:[0,0,0],b:[0,0,0],p:[0,0,0],v:[0,0,0],col:[1,1,1]
 });
 
@@ -34,6 +34,7 @@ export function createEffectPool(capacity=96){
    slot.kind=String(data.kind||'impact');
    slot.life=Math.max(0,Number(data.life)||0);
    slot.maxLife=Math.max(slot.life,Number(data.maxLife)||slot.life||.001);
+   slot.speed=Math.max(1,Number(data.speed)||900);
    slot.tracer=Boolean(data.tracer);
    slot.shell=Boolean(data.shell);
    slot.projectileId=data.projectileId??null;slot.radius=Math.max(.001,Number(data.radius)||.045);slot.gravity=Number.isFinite(data.gravity)?data.gravity:7;
