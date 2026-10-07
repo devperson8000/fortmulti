@@ -89,3 +89,11 @@ test('utility camera framing is independent of the previously aimed weapon',()=>
 test('pickaxe index closes around the actual shaft rather than floating beside it',()=>{
  const state=createViewModelState();r.renderFirstPersonItem('pickaxe',state,{moveSpeed:0});const item=r.utilities.get('pickaxe'),finger=r.arms.bones.get('mixamorigrighthandindex3'),tip=item.worldToLocal(new THREE.Vector3(0,3.75,0).applyMatrix4(finger.matrixWorld));assert.ok(Math.hypot(tip.x,tip.z)<.065,`index is too far from the shaft ${tip.toArray()}`);assert.ok(tip.y>-.3&&tip.y<.25,'index missed the grip section');
 });
+
+for(const id of Object.keys(FIRST_PERSON_CALIBRATION))test(`${id}: native support palm faces into the weapon and fingers curl inward`,()=>{
+ const state=createViewModelState();stepViewModel(state,{weapon:WEAPON_PROFILES[id]},1/60);r.renderFirstPersonWeapon(id,WEAPON_PROFILES[id],state,createWeaponPartState());
+ const item=r.firstPersonInstances.get(id),hand=r.arms.bones.get('mixamoriglefthand');
+ const inward=new THREE.Vector3(-1,0,0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion())),up=new THREE.Vector3(0,1,0).applyQuaternion(item.root.getWorldQuaternion(new THREE.Quaternion()));
+ assert.ok(inward.dot(up)>.99,'support palm faces away from the underside');
+ for(const name of ['index','middle','ring','pinky']){const base=r.arms.bones.get('mixamoriglefthand'+name+'1'),distal=r.arms.bones.get('mixamoriglefthand'+name+'3')||r.arms.bones.get('mixamoriglefthand'+name+'2'),tip=hand.worldToLocal(new THREE.Vector3(0,name==='pinky'?2.5:3.75,0).applyMatrix4(distal.matrixWorld)),origin=hand.worldToLocal(base.getWorldPosition(new THREE.Vector3()));assert.ok(tip.x<origin.x-1,`${name}: actual fingertip curls away from palm`);}
+});

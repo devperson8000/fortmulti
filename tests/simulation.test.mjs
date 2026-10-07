@@ -65,7 +65,7 @@ test('the same held fire input places one wall and charges material once',()=>{
 
 test('crouch, walk, run, jump and fall animation states are synchronized in snapshots',()=>{
  const match=new Match(world,['a','b']);landAll(match);const p=match.players[0];match.input('a',{z:1,crouch:true});match.tick(.05);assert.equal(p.animationState,'crouch');assert.equal(match.snapshot().players[0].crouching,true);
- match.input('a',{z:1,crouch:false,sprint:true});match.tick(.05);assert.equal(p.animationState,'run');match.input('a',{jump:true});match.tick(.05);assert.equal(p.animationState,'jump');
+ match.input('a',{crouch:false});match.tick(.05);match.input('a',{crouch:true});match.tick(.05);match.input('a',{z:1,crouch:false,sprint:true});match.tick(.05);assert.equal(p.animationState,'run');match.input('a',{jump:true});match.tick(.05);assert.equal(p.animationState,'jump');
  for(let i=0;i<15;i++){match.input('a',{jump:false});match.tick(.05);}assert.ok(['fall','idle'].includes(p.animationState));
 });
 
@@ -108,4 +108,40 @@ test('snapshots carry sanitized vertical weapon aim for other players',()=>{
   match.input('a',{slot:1,pitch});match.tick(.016);
   assert.equal(match.snapshot().players.find(p=>p.id==='a').pitch,expected);
  }
+});
+
+test('crouch toggles on presses and persists through release and stale input',()=>{
+ const match=new Match(world,['a','b']);landAll(match);const p=match.players[0];
+ match.input('a',{crouch:true});match.tick(.05);assert.equal(p.crouching,true);
+ match.input('a',{});tick(match,1);assert.equal(p.crouching,true);
+ match.input('a',{crouch:true});match.tick(.05);assert.equal(p.crouching,false);
+ tick(match,.2);assert.equal(p.crouching,false,'held key must not retrigger');
+});
+test('revision preserves a quick crouch tap between network samples without duplicate toggles',()=>{
+ const match=new Match(world,['a','b']);landAll(match);const p=match.players[0];
+ match.input('a',{crouch:false,crouchRevision:1});match.tick(.05);assert.equal(p.crouching,true);
+ match.input('a',{crouch:false,crouchRevision:1});match.tick(.05);assert.equal(p.crouching,true);
+ match.input('a',{crouch:false,crouchRevision:2});match.tick(.05);assert.equal(p.crouching,false);
+});
+test('slide continues with both keys released and stands when complete',()=>{
+ const match=new Match(world,['a','b']);landAll(match);const p=match.players[0];
+ for(let n=0;n<8;n++){match.input('a',{z:1,sprint:true});match.tick(.05);}
+ match.input('a',{z:1,sprint:true,crouch:true});match.tick(.05);assert.equal(p.sliding,true);
+ match.input('a',{});match.tick(.05);assert.equal(p.sliding,true);tick(match,2);
+ assert.equal(p.sliding,false);assert.equal(p.crouching,false);
+});
+
+test('a quick Shift slide tap starts while moving without sprint held and cannot replay',()=>{
+ const match=new Match(world,['a','b']);landAll(match);const p=match.players[0];
+ match.input('a',{z:1,slideRevision:1,sprint:false});match.tick(.05);assert.equal(p.sliding,true);
+ for(let n=0;n<40;n++){match.input('a',{z:1,slideRevision:1});match.tick(.05);}
+ assert.equal(p.sliding,false);assert.equal(p.crouching,false);
+ match.input('a',{z:1,slideRevision:2});match.tick(.05);assert.equal(p.sliding,true);
+});
+
+test('standing toggle under a low ceiling takes effect after clearing the obstacle',()=>{
+ const match=new Match({height:()=>0,obstacles:[{min:[-3,1.5,-3],max:[3,1.7,3]}]},['a','b']);landAll(match);const p=match.players[0];p.p=[0,0,0];
+ match.input('a',{crouchRevision:1});match.tick(.05);assert.equal(p.crouching,true);
+ match.input('a',{crouchRevision:2});match.tick(.05);assert.equal(p.crouching,true,'ceiling prevents standing');
+ p.p=[20,0,20];match.tick(.05);assert.equal(p.crouching,false,'standing request resumes outside ceiling');
 });

@@ -8,3 +8,8 @@ test('movement and inventory transitions are recognized immediately',()=>{const 
 test('steady controls can be heartbeated without per-frame sends',()=>{const input={x:1,z:0,slot:1,jump:false,sprint:false,aim:false,fire:false,reload:false,rotation:0,yaw:0,pitch:0,aimYaw:0,aimPitch:0},c=cadenceForPlayers(3);assert.equal(shouldForwardInput(input,{...input},50,c),false);assert.equal(shouldForwardInput(input,{...input},c.heartbeatMs,c),true);});
 test('camera helpers and smoothing stay finite',()=>{const a={yaw:0,pitch:0,aimYaw:0,aimPitch:0},b={...a,yaw:.2};assert.equal(aimChanged(a,b),true);const p=smoothPoint([0,0,0],[10,5,-2],14,.016);assert.ok(p.every(Number.isFinite));assert.ok(p[0]>0&&p[0]<10);assert.equal(isStaleSnapshotGap(.74),false);assert.equal(isStaleSnapshotGap(.76),true);});
 test('projectile terminal event ids are accepted once inside their ttl',()=>{const cache=new Map();assert.equal(acceptEventId(cache,'a:1',1000,3000),true);assert.equal(acceptEventId(cache,'a:1',1200,3000),false);assert.equal(acceptEventId(cache,'a:1',5001,3000),true);});
+
+test('released crouch and slide taps forward immediately instead of waiting for heartbeat',()=>{
+ const prev={crouch:false,sprint:false,crouchRevision:0,slideRevision:0};
+ for(const key of ['crouchRevision','slideRevision'])assert.equal(shouldForwardInput(prev,{...prev,[key]:1},0,cadenceForPlayers(32)),true);
+});
