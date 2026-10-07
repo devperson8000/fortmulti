@@ -1,11 +1,11 @@
 import {WEAPON_PROFILES} from './weapon-system.js';
 import {inventoryWeapon} from './weapon-inventory.js';
 import {WEAPON_FILES,createGroundWeapon,groundWeaponPose} from './weapon-assets.js';
-import {firstPersonCalibration} from './first-person-calibration.js';
+import {firstPersonCalibration,PICKAXE_GRIP} from './first-person-calibration.js';
 import {createContactShadow} from './character-lighting.js';
 import {SALUTE_FINGER_CURLS} from './lobby-rig.js';
 import {createMotionPresentation,stepMotionPresentation} from './visual-presentation.js';
-import {createSoldierArms,poseSoldierArms,poseWeaponHand} from './soldier-arms.js';
+import {createSoldierArms,poseSoldierArms,poseWeaponHand,supportHandPose} from './soldier-arms.js';
 import {createHeldItem} from './held-items.js';
 import {handAttachmentScale} from './view-model.js';
 import * as THREE from 'three';
@@ -112,7 +112,7 @@ export class MatchCharacterRenderer{
    const reach=phase==='idle'?0:phase==='release'?smooth(progress/.16):phase==='eject'?1:phase==='insert'?1-smooth((progress-.58)/.12):0;
    const reloadNode=instance.nodes.get(c.reloadNode),magazine=reloadNode?instance.root.worldToLocal(reloadNode.getWorldPosition(new THREE.Vector3())).add(new THREE.Vector3(...c.reloadPalmOffset).multiplyScalar(c.scale)).toArray():relative(c.grip);
    support=support.map((v,i)=>v+(magazine[i]-v)*reach);
-   poseSoldierArms(this.arms,{origin:pose.position,rotation:pose.rotation,ads:state.ads||0,hands:{right:{palm:relative(c.rightPalm),rotation:c.rightRotation,fingers:c.rightFingers,splay:c.rightSplay},left:{palm:support,rotation:c.leftRotation,fingers:c.leftFingers}}});
+   poseSoldierArms(this.arms,{origin:pose.position,rotation:pose.rotation,ads:state.ads||0,hands:{right:{palm:relative(c.rightPalm),rotation:c.rightRotation,fingers:c.rightFingers,splay:c.rightSplay,thumbOpposition:c.rightThumbOpposition},left:{palm:support,...supportHandPose(c,reach)}}});
   }
   this.activeFirstPerson=instance;
   instance.flashGroup.visible=flash>0;
@@ -133,8 +133,8 @@ export class MatchCharacterRenderer{
   item.scale.setScalar(id==='pickaxe'?.68:1);item.position.set(.28-swing*.18+(state.swayX||0),(id==='pickaxe'?-.28:-.38)+use*.2+bob,-.78+swing*.16);item.rotation.set(-.15-swing*1.5+use*.65,.1,-.2-swing*.3);item.updateMatrixWorld(true);
   const right=item.localToWorld(new THREE.Vector3(0,-.04,.06)),left=id==='pickaxe'?new THREE.Vector3(-.38,-.65,-.38):item.localToWorld(new THREE.Vector3(-.12,-.1,.04));
   if(id==='pickaxe'){
-   const fingers={index:[.4,.8,1.1],middle:[.4,.8,1.1],ring:[.4,.8,1.1],pinky:[.4,.8,1.1],thumb:[.35,.55,.42]},q=item.getWorldQuaternion(new THREE.Quaternion()),rotation=new THREE.Euler().setFromQuaternion(q,'YXZ'),free=item.worldToLocal(left.clone());
-   poseSoldierArms(this.arms,{origin:item.position.toArray(),rotation:[rotation.x,rotation.y,rotation.z],scale:item.scale.x,utility:true,hands:{right:{palm:[.20,-.10,-.10],rotation:[-Math.PI/2,0,0],fingers},left:{palm:free.toArray(),rotation:[-.8,0,-.2],fingers}}});
+   const fingers=PICKAXE_GRIP.fingers,q=item.getWorldQuaternion(new THREE.Quaternion()),rotation=new THREE.Euler().setFromQuaternion(q,'YXZ'),free=item.worldToLocal(left.clone());
+   poseSoldierArms(this.arms,{origin:item.position.toArray(),rotation:[rotation.x,rotation.y,rotation.z],scale:item.scale.x,utility:true,hands:{right:PICKAXE_GRIP,left:{palm:free.toArray(),rotation:[-.8,0,-.2],fingers}}});
   }else poseSoldierArms(this.arms,{right:right.toArray(),left:left.toArray(),utility:true});
   this.firstPersonCamera.aspect=width/height;this.firstPersonCamera.fov=62;this.firstPersonCamera.updateProjectionMatrix();this.renderer.resetState();this.renderer.render(this.firstPersonScene,this.firstPersonCamera);this.restoreRawState();return true;
  }
@@ -240,8 +240,8 @@ export class MatchCharacterRenderer{
   const support=mount.worldToLocal(left);support.z=Math.max(-.09,support.z);left=mount.localToWorld(support);
   const magazine=mount.userData.nodes.get(c.reloadNode);if(magazine&&reach>0)left.lerp(magazine.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(...c.reloadPalmOffset).multiplyScalar(c.scale).applyQuaternion(mount.getWorldQuaternion(new THREE.Quaternion()))),reach);
   const rotation=mount.getWorldQuaternion(new THREE.Quaternion());
-  for(const [side,palm,angles,fingers,splay,sign]of [['right',right,c.rightRotation,c.rightFingers,c.rightSplay,1],['left',left,c.leftRotation,c.leftFingers,null,-1]]){
-   const orientation=new THREE.Quaternion().setFromEuler(new THREE.Euler(...angles,'XYZ')).premultiply(rotation),pole=instance.holder.localToWorld(new THREE.Vector3(sign*.5,1.05,.1));poseWeaponHand(instance.model,instance.bones,side,palm,orientation,{fingers,splay,rest:instance.fingerRest},pole);
+  for(const [side,palm,spec,sign]of [['right',right,{rotation:c.rightRotation,fingers:c.rightFingers,splay:c.rightSplay,thumbOpposition:c.rightThumbOpposition},1],['left',left,supportHandPose(c,reach),-1]]){
+   const orientation=new THREE.Quaternion().setFromEuler(new THREE.Euler(...spec.rotation,'XYZ')).premultiply(rotation),pole=instance.holder.localToWorld(new THREE.Vector3(sign*.5,1.05,.1));poseWeaponHand(instance.model,instance.bones,side,palm,orientation,{...spec,rest:instance.fingerRest},pole);
   }
   mount.userData.contacts.right=right;mount.userData.contacts.left=left;
  }

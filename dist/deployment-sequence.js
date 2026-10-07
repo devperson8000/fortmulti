@@ -1,7 +1,7 @@
 import {DEPLOYMENT_CUES,MUSIC_START,POD_RELEASE,CINEMATIC_CAMERA_RADIUS,deploymentCinematic} from './deployment-cinematic.js';
 export const DEPLOYMENT_STATES=Object.freeze([
  'ship_waiting','landing_selection','pod_available','entering_pod','pod_ready',
- 'both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','match_active'
+ 'both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','saluting','match_active'
 ]);
 
 export const DEPLOYMENT_TIMELINE=Object.freeze({
@@ -13,6 +13,7 @@ export const DEPLOYMENT_TIMELINE=Object.freeze({
  landedSeconds:POD_RELEASE.hold,
  openingSeconds:POD_RELEASE.open,
  exitSeconds:POD_RELEASE.exit,
+ saluteSeconds:POD_RELEASE.salute,
  readyBeat:.42
 });
 
@@ -34,13 +35,14 @@ export function deploymentStageAt(elapsed){
  if(t<time.sealSeconds+time.launchSeconds+time.landedSeconds)return 'landed';
  if(t<time.sealSeconds+time.launchSeconds+time.landedSeconds+time.openingSeconds)return 'pod_opening';
  if(t<time.sealSeconds+time.launchSeconds+time.landedSeconds+time.openingSeconds+time.exitSeconds)return 'exiting';
+ if(t<time.sealSeconds+time.launchSeconds+time.landedSeconds+time.openingSeconds+time.exitSeconds+time.saluteSeconds)return 'saluting';
  return 'match_active';
 }
 
 export function deploymentPresentation(stage,elapsed){
  const time=DEPLOYMENT_TIMELINE,t=Math.max(0,Number(elapsed)||0);
  const launchStart=time.sealSeconds;
- const fade=['pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(stage)?deploymentCinematic(t).black:0;
+ const fade=['pod_sealing','launching','transition','landed','pod_opening','exiting','saluting'].includes(stage)?deploymentCinematic(t).black:0;
  const launchProgress=clamp((t-launchStart)/time.launchSeconds,0,1);
  return {fade,launchProgress,stage,insidePod:['entering_pod','pod_ready','both_ready','pod_sealing','launching','transition','landed','pod_opening'].includes(stage)};
 }
@@ -61,8 +63,17 @@ export function safeLandingPoint(destination,world,reserved=[]){
   const y=Number(world.height(x,z));if(!Number.isFinite(y))continue;
   // Reserve the full portrait orbit at selection time. A .75m body clearance
   // lets a nearby car or wall force the camera inside the capsule on landing.
-  const blocked=obstacles.some(box=>Math.hypot(Math.max(box.min[0]-x,0,x-box.max[0]),Math.max(box.min[2]-z,0,z-box.max[2]))<CINEMATIC_CAMERA_RADIUS+.25&&box.max[1]>y-.15);
-  if(blocked||reserved.some(other=>other&&Math.hypot(x-other.x,z-other.z)<1.9))continue;
+  const blocked=obstacles.some(box=>Math.hypot(Math.max(box.min[0]-x,0,x-box.max[0]),Math.max(box.min[2]-z,0,z-box.max[2]))<CINEMATIC_CAMERA_RADIUS+.45&&box.max[1]>y-.15);
+  // A landing reserves a full capsule AND its exterior camera orbit.
+  // Two operators choosing the same spot must not spawn intersecting pods
+  // or place one capsule inside the other player's cinematic camera.
+  const minimumSpacing=CINEMATIC_CAMERA_RADIUS*2+1.2;
+  if(blocked||reserved.some(other=>other&&Math.hypot(x-other.x,z-other.z)<minimumSpacing))continue;
+  // A 3.8m high rigid capsule sinks into steep terrain unless its entire
+  // footprint is near the landing height; an exit hatch needs firm ground.
+  const footprint=[y];
+  for(let i=0;i<8;i++){const angle=i*Math.PI/4,groundY=Number(world.height(x+Math.cos(angle)*1.22,z+Math.sin(angle)*1.22));footprint.push(groundY);}
+  if(!footprint.every(Number.isFinite)||Math.max(...footprint)-Math.min(...footprint)>.78)continue;
   return {x,z,y};
  }
  return null;

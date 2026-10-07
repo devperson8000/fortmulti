@@ -1,3 +1,4 @@
+import {triggerSurfaceContact,weaponPartTriangles} from './helpers/weapon-contacts.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -28,6 +29,7 @@ for(const id of Object.keys(FIRST_PERSON_CALIBRATION)){
     assert.ok(palm('left').distanceTo(item.root.localToWorld(local))<.002,'support palm slipped');
    }
    for(const [name,bone] of r.arms.bones)assert.ok(bone.quaternion.toArray().every(Number.isFinite),name);
+   for(const side of ['right','left']){const hand=r.arms.bones.get(`mixamorig${side}hand`),fore=r.arms.bones.get(`mixamorig${side}forearm`),axis=hand.getWorldPosition(new THREE.Vector3()).sub(fore.getWorldPosition(new THREE.Vector3())).normalize(),fingers=new THREE.Vector3(0,1,0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion()));assert.ok(axis.angleTo(fingers)<95*Math.PI/180,`${id} frame ${frame} ${side} wrist folds backward`);}
   }
  });
  test(`${id}: calibrated sight centres without changing scale or reversing the barrel`,()=>{
@@ -74,9 +76,9 @@ test('first-person posing preserves upper-arm attachment translations to avoid t
 test('measured index fingertips contact each real GLB trigger instead of floating past it',()=>{
  for(const id of Object.keys(FIRST_PERSON_CALIBRATION)){
   const profile=WEAPON_PROFILES[id],state=createViewModelState();stepViewModel(state,{weapon:profile},1/60);r.renderFirstPersonWeapon(id,profile,state,createWeaponPartState());
-  const item=r.firstPersonInstances.get(id),target=item.nodes.get('trigger').getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(.012*item.c.scale,0,0).applyQuaternion(item.root.getWorldQuaternion(new THREE.Quaternion()))),finger=r.arms.bones.get('mixamorigrighthandindex3');
-  // The shipped Soldier mesh's distal index vertices extend 3.75 cm past this bone.
-  const tip=new THREE.Vector3(0,3.75,0).applyMatrix4(finger.matrixWorld);assert.ok(tip.distanceTo(target)<(id==='shotgun'?.028:.012),`${id}: fingertip misses trigger`);
+  const item=r.firstPersonInstances.get(id),target=triggerSurfaceContact(item.model,item.root.getWorldQuaternion(new THREE.Quaternion()),item.c.scale),finger=r.arms.bones.get('mixamorigrighthandindex3');
+  // The finger pad lies inside the distal mesh, 3.1 native units past its bone.
+  const tip=new THREE.Vector3(0,3.1,0).applyMatrix4(finger.matrixWorld);assert.ok(tip.distanceTo(target)<.012,`${id}: fingertip misses trigger`);
  }
 });
 
@@ -96,4 +98,69 @@ for(const id of Object.keys(FIRST_PERSON_CALIBRATION))test(`${id}: native suppor
  const inward=new THREE.Vector3(-1,0,0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion())),up=new THREE.Vector3(0,1,0).applyQuaternion(item.root.getWorldQuaternion(new THREE.Quaternion()));
  assert.ok(inward.dot(up)>.99,'support palm faces away from the underside');
  for(const name of ['index','middle','ring','pinky']){const base=r.arms.bones.get('mixamoriglefthand'+name+'1'),distal=r.arms.bones.get('mixamoriglefthand'+name+'3')||r.arms.bones.get('mixamoriglefthand'+name+'2'),tip=hand.worldToLocal(new THREE.Vector3(0,name==='pinky'?2.5:3.75,0).applyMatrix4(distal.matrixWorld)),origin=hand.worldToLocal(base.getWorldPosition(new THREE.Vector3()));assert.ok(tip.x<origin.x-1,`${name}: actual fingertip curls away from palm`);}
+});
+
+test('all gripping fingers contact the real weapon surface instead of closing in empty space',()=>{
+ const tips={index:[0,3.4,0],middle:[0,3.35,0],ring:[0,3.1,0],pinky:[0,2.8,0]};
+ for(const id of Object.keys(FIRST_PERSON_CALIBRATION)){
+  const state=createViewModelState();for(let n=0;n<120;n++)stepViewModel(state,{weapon:WEAPON_PROFILES[id]},1/60);
+  r.renderFirstPersonWeapon(id,WEAPON_PROFILES[id],state,createWeaponPartState());const item=r.firstPersonInstances.get(id),triangles=[];
+  item.model.traverse(mesh=>{if(!mesh.isMesh)return;const index=mesh.geometry.index,position=mesh.geometry.attributes.position;
+   for(let i=0;i<(index?.count||position.count);i+=3){const points=[];for(let k=0;k<3;k++)points.push(mesh.getVertexPosition(index?index.getX(i+k):i+k,new THREE.Vector3()).applyMatrix4(mesh.matrixWorld));triangles.push(new THREE.Triangle(...points));}
+  });
+  for(const side of ['right','left'])for(const finger of ['middle','ring','pinky','thumb']){
+   const bone=r.arms.bones.get(`mixamorig${side}hand${finger}3`)||r.arms.bones.get(`mixamorig${side}hand${finger}2`);
+   const offset=finger==='thumb'?(side==='right'?[-.9,2.6,1]:[-2.7,6,-2.7]):tips[finger],point=new THREE.Vector3(...offset).applyMatrix4(bone.matrixWorld),nearest=new THREE.Vector3();let distance=Infinity;
+   for(const triangle of triangles)distance=Math.min(distance,triangle.closestPointToPoint(point,nearest).distanceTo(point));
+   assert.ok(distance<.018,`${id} ${side} ${finger} floats ${(distance*1000).toFixed(1)} mm from the weapon`);
+  }
+ }
+});
+
+test('trigger fingers use a natural joint range rather than folding back through the hand',()=>{
+ for(const id of Object.keys(FIRST_PERSON_CALIBRATION)){
+  const state=createViewModelState();stepViewModel(state,{weapon:WEAPON_PROFILES[id]},1/60);r.renderFirstPersonWeapon(id,WEAPON_PROFILES[id],state,createWeaponPartState());
+  for(const [joint,limit] of [[1,1.5],[2,1.65],[3,1.15]]){
+   const bone=r.arms.bones.get('mixamorigrighthandindex'+joint),relative=r.arms.rest.get(bone).clone().invert().multiply(bone.quaternion);
+   assert.ok(relative.angleTo(new THREE.Quaternion())<=limit,`${id} index joint ${joint} is over-folded`);
+  }
+ }
+});
+
+test('first-person forearms approach the hands without folding wrists backward',()=>{
+ for(const id of Object.keys(FIRST_PERSON_CALIBRATION))for(const mode of ['hip','ads','reload']){
+  const profile=WEAPON_PROFILES[id],state=createViewModelState(),parts=createWeaponPartState();
+  for(let n=0;n<120;n++)stepViewModel(state,{weapon:profile,aiming:mode==='ads'},1/60);
+  stepWeaponParts(parts,profile,mode==='reload'?profile.reloadDuration*.5:0);for(let n=0;n<30;n++)r.renderFirstPersonWeapon(id,profile,state,parts);
+  for(const side of ['right','left']){
+   const hand=r.arms.bones.get(`mixamorig${side}hand`),fore=r.arms.bones.get(`mixamorig${side}forearm`),direction=hand.getWorldPosition(new THREE.Vector3()).sub(fore.getWorldPosition(new THREE.Vector3())).normalize(),fingers=new THREE.Vector3(0,1,0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion())),angle=direction.angleTo(fingers)*180/Math.PI;
+   assert.ok(angle<95,`${id} ${mode} ${side} wrist folds backward ${angle.toFixed(1)} degrees`);
+  }
+ }
+});
+
+test('pickaxe palm and every gripping finger wrap the shaft',()=>{
+ r.renderFirstPersonItem('pickaxe',createViewModelState(),{moveSpeed:0});const item=r.utilities.get('pickaxe');
+ for(const [finger,offset] of Object.entries({index:[0,3.4,0],middle:[0,3.35,0],ring:[0,3.1,0],pinky:[0,2.8,0],thumb:[-.9,2.6,1]})){
+  const bone=r.arms.bones.get(`mixamorigrighthand${finger}3`)||r.arms.bones.get(`mixamorigrighthand${finger}2`),point=item.worldToLocal(new THREE.Vector3(...offset).applyMatrix4(bone.matrixWorld));
+  assert.ok(Math.hypot(point.x,point.z)<.05,`${finger} does not wrap the actual pickaxe shaft`);assert.ok(point.y>-.3&&point.y<.2);
+ }
+ const hand=r.arms.bones.get('mixamorigrighthand'),point=item.worldToLocal(hand.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,.09*r.modelScale,0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion()))));
+ assert.ok(Math.hypot(point.x,point.z)<.08,'the palm must sit beside the shaft');
+});
+
+
+test('reload hands turn inward and close around the actual magazines',()=>{
+ for(const id of ['ar','smg','sniper']){
+  const profile=WEAPON_PROFILES[id],state=createViewModelState(),parts=createWeaponPartState();for(let n=0;n<120;n++)stepViewModel(state,{weapon:profile},1/60);
+  stepWeaponParts(parts,profile,profile.reloadDuration*.7);for(let n=0;n<30;n++)r.renderFirstPersonWeapon(id,profile,state,parts);
+  const item=r.firstPersonInstances.get(id),hand=r.arms.bones.get('mixamoriglefthand'),normal=new THREE.Vector3(-1,0,0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion())),inward=new THREE.Vector3(1,0,0).applyQuaternion(item.root.getWorldQuaternion(new THREE.Quaternion()));
+  assert.ok(normal.dot(inward)>.99,`${id}: reload palm must face the magazine side`);
+  const triangles=weaponPartTriangles(item.model,'magazine');assert.ok(triangles.length>0);
+  for(const [finger,offset] of Object.entries({index:[0,3.1,0],middle:[0,3.35,0],ring:[0,3.1,0],pinky:[0,2.8,0],thumb:[-2.7,6,-2.7]})){
+   const bone=r.arms.bones.get(`mixamoriglefthand${finger}3`)||r.arms.bones.get(`mixamoriglefthand${finger}2`),point=new THREE.Vector3(...offset).applyMatrix4(bone.matrixWorld),near=new THREE.Vector3();let distance=Infinity;
+   for(const t of triangles)distance=Math.min(distance,t.closestPointToPoint(point,near).distanceTo(point));
+   assert.ok(distance<.024,`${id} reload ${finger} floats ${(distance*1000).toFixed(1)} mm from its magazine`);
+  }
+ }
 });
