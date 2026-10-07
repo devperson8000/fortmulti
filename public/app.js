@@ -169,6 +169,7 @@ function roundBanner(s){
   if(stage==='landed')return 'POD LANDED · PRESSURE EQUALIZING';
   if(stage==='pod_opening')return 'POD OPENING · STAND BY';
   if(stage==='exiting')return 'EXIT POD · MOVE OUT';
+   if(stage==='saluting')return 'DEPLOYED · HORIZON SALUTE';
   if(me?.deploymentState==='entering_pod')return 'POD ENTRY · ALIGNING';
   if(me?.deploymentState==='pod_ready')return 'POD READY · WAITING FOR SQUAD';
   return me?.destination?'DESTINATION SET · ENTER A DEPLOYMENT POD':'SELECT A LANDING ZONE';

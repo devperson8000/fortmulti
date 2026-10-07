@@ -91,7 +91,7 @@ test('pre-match snapshots carry recovery data and combat stays locked until pod 
  const initial=match.snapshot();assert.equal(initial.deployment.stage,'landing_selection');assert.equal(initial.players[0].destination.x,12);
  match.input('a',{slot:4,fire:true,reload:true,z:1});tick(match,.5);
  assert.equal(match.players[0].slot,0);assert.deepEqual(match.players[0].inventory,Array(5).fill(null));assert.equal(match.players[0].p[0],match.players[0].shipLocal[0]);
- tick(match,DEPLOYMENT_TIMELINE.enterSeconds+DEPLOYMENT_TIMELINE.readyBeat+DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds+DEPLOYMENT_TIMELINE.landedSeconds+DEPLOYMENT_TIMELINE.openingSeconds+DEPLOYMENT_TIMELINE.exitSeconds+1);
+ tick(match,DEPLOYMENT_TIMELINE.enterSeconds+DEPLOYMENT_TIMELINE.readyBeat+DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds+DEPLOYMENT_TIMELINE.landedSeconds+DEPLOYMENT_TIMELINE.openingSeconds+DEPLOYMENT_TIMELINE.exitSeconds+DEPLOYMENT_TIMELINE.saluteSeconds+1);
  assert.equal(match.phase,'playing');assert.equal(match.deployment.stage,'match_active');
  assert.ok(match.players.every(p=>p.air==='landed'&&p.slot===0));
 });
@@ -114,11 +114,11 @@ test('scripted deployment catches up after a stalled host without skipping touch
  match.tick(impact-.04-match.deployment.elapsed);
  assert.equal(match.deployment.stage,'transition');assert.equal(match.phase,'deployment');
  assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,0);
- match.tick(.7); // One delayed callback crosses the entire landed stage.
+ match.tick(.98); // One delayed callback crosses the entire landed hold.
  assert.equal(match.deployment.stage,'pod_opening');assert.equal(match.phase,'deployment');
  assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,1);
  assert.deepEqual(match.players[0].exitPosition,[30,0,40]);
- match.tick(5);
+ match.tick(6);
  assert.equal(match.phase,'playing');assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,1);
 });
 
@@ -133,4 +133,24 @@ test('the host follows audible music elapsed while scripted deployment is active
  match.tick(.05,{deploymentElapsed:impact-.001});assert.equal(match.deployment.stage,'transition');
  match.tick(.05,{deploymentElapsed:impact+.001});assert.equal(match.deployment.stage,'landed');
  assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,1);
+});
+
+test('Soldier walks outside the pod and salutes before any combat inputs unlock',()=>{
+ const match=new Match(world,['a','b']);match.beginDeployment();
+ readyPlayer(match,'a',0,{x:12,z:18});readyPlayer(match,'b',1,{x:-22,z:28});
+ tick(match,1.2);
+ const saluteAt=DEPLOYMENT_TIMELINE.readyBeat+DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds+
+  DEPLOYMENT_TIMELINE.landedSeconds+DEPLOYMENT_TIMELINE.openingSeconds+DEPLOYMENT_TIMELINE.exitSeconds;
+ while(match.deployment.elapsed<saluteAt+.2)match.tick(.05);
+ assert.equal(match.deployment.stage,'saluting');
+ assert.equal(match.phase,'deployment');
+ const actor=match.players[0];
+ assert.ok(actor.p[2]>actor.exitPosition[2]+2,'the Soldier is visibly outside the pod shell');
+ assert.ok(actor.saluteProgress>.2,'the authentic rig has a noticeable two-finger salute pose');
+ match.input('a',{fire:true,slot:1,sprint:true});match.tick(.05);
+ assert.equal(actor.slot,0,'combat remains locked for the entire salute');
+ assert.equal(match.phase,'deployment');
+ match.tick(DEPLOYMENT_TIMELINE.saluteSeconds);
+ assert.equal(match.phase,'playing');
+ assert.equal(actor.saluteProgress,0,'the rig returns to normal gameplay idle');
 });

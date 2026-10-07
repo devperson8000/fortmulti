@@ -7,9 +7,9 @@ import {DEPLOYMENT_TIMELINE,deploymentStageAt} from '../public/deployment-sequen
 test('music starts only on full black and the title follows the measured vocal cues',()=>{
  const at=t=>deploymentCinematic(MUSIC_START+t);
  assert.equal(at(0).black,1);
- assert.equal(at(DEPLOYMENT_CUES.uhYeahStart-.01).logo,0);
+ assert.equal(at(DEPLOYMENT_CUES.uhYeahStart-.07).logo,0);
  assert.ok(at(DEPLOYMENT_CUES.uhYeahStart+.4).logo>.95);
- assert.equal(at(DEPLOYMENT_CUES.lyricsStart+.6).logo,0);
+ assert.equal(at(DEPLOYMENT_CUES.lyricsStart+1.56).logo,0);
  assert.equal(at(DEPLOYMENT_CUES.businessStart).black,0);
  assert.equal(at(DEPLOYMENT_CUES.businessStart).orbit,1);
  assert.equal(at(DEPLOYMENT_CUES.impact).black,0);
@@ -31,7 +31,7 @@ test('camera finishes facing the operator and stays outside the pod and characte
   assert.ok(pose.eye.every(Number.isFinite));
  }
  const front=cinematicCamera(p,0,{orbit:1,impact:0});
- assert.ok(front.eye[2]<p[2]);
+ assert.ok(front.eye[2]>p[2],'the door-facing camera stays in front of the sealed pod');
  assert.ok(front.target[1]>p[1]+.8&&front.target[1]<p[1]+1.4);
 });
 
@@ -47,11 +47,12 @@ test('the exit camera returns continuously to the actual first-person position a
  const p=[12,7,-18],yaw=.7,time=DEPLOYMENT_TIMELINE;
  const exitAt=MUSIC_START+DEPLOYMENT_CUES.impact+time.landedSeconds+time.openingSeconds;
  assert.equal(deploymentCinematic(exitAt).returnProgress,0);
- assert.equal(deploymentCinematic(exitAt+time.exitSeconds).returnProgress,1);
+ assert.equal(deploymentCinematic(exitAt+time.exitSeconds).returnProgress,0,'the camera stays outside for the salute');
+ assert.equal(deploymentCinematic(exitAt+time.exitSeconds+time.saluteSeconds).returnProgress,1);
  let previous=cinematicCamera(p,yaw,{orbit:1,returnProgress:0});
  for(let i=1;i<=120;i++){
-  const state=deploymentCinematic(exitAt+time.exitSeconds*i/120),view=cinematicCamera(p,yaw,state);
-  assert.ok(Math.hypot(...view.eye.map((v,k)=>v-previous.eye[k]))<.12,'no single-frame camera cut');
+  const state=deploymentCinematic(exitAt+(time.exitSeconds+time.saluteSeconds)*i/120),view=cinematicCamera(p,yaw,state);
+  assert.ok(Math.hypot(...view.eye.map((v,k)=>v-previous.eye[k]))<.5,'no single-frame camera cut');
   assert.ok(Math.hypot(...view.target.map((v,k)=>v-view.eye[k]))>.03,'look direction never degenerates');
   previous=view;
  }

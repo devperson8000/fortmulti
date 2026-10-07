@@ -1,7 +1,7 @@
 import {DEPLOYMENT_CUES,MUSIC_START,POD_RELEASE,CINEMATIC_CAMERA_RADIUS,deploymentCinematic} from './deployment-cinematic.js';
 export const DEPLOYMENT_STATES=Object.freeze([
  'ship_waiting','landing_selection','pod_available','entering_pod','pod_ready',
- 'both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','match_active'
+ 'both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','saluting','match_active'
 ]);
 
 export const DEPLOYMENT_TIMELINE=Object.freeze({
@@ -13,6 +13,7 @@ export const DEPLOYMENT_TIMELINE=Object.freeze({
  landedSeconds:POD_RELEASE.hold,
  openingSeconds:POD_RELEASE.open,
  exitSeconds:POD_RELEASE.exit,
+ saluteSeconds:POD_RELEASE.salute,
  readyBeat:.42
 });
 
@@ -34,13 +35,14 @@ export function deploymentStageAt(elapsed){
  if(t<time.sealSeconds+time.launchSeconds+time.landedSeconds)return 'landed';
  if(t<time.sealSeconds+time.launchSeconds+time.landedSeconds+time.openingSeconds)return 'pod_opening';
  if(t<time.sealSeconds+time.launchSeconds+time.landedSeconds+time.openingSeconds+time.exitSeconds)return 'exiting';
+ if(t<time.sealSeconds+time.launchSeconds+time.landedSeconds+time.openingSeconds+time.exitSeconds+time.saluteSeconds)return 'saluting';
  return 'match_active';
 }
 
 export function deploymentPresentation(stage,elapsed){
  const time=DEPLOYMENT_TIMELINE,t=Math.max(0,Number(elapsed)||0);
  const launchStart=time.sealSeconds;
- const fade=['pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(stage)?deploymentCinematic(t).black:0;
+ const fade=['pod_sealing','launching','transition','landed','pod_opening','exiting','saluting'].includes(stage)?deploymentCinematic(t).black:0;
  const launchProgress=clamp((t-launchStart)/time.launchSeconds,0,1);
  return {fade,launchProgress,stage,insidePod:['entering_pod','pod_ready','both_ready','pod_sealing','launching','transition','landed','pod_opening'].includes(stage)};
 }

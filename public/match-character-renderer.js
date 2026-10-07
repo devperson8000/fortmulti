@@ -3,6 +3,7 @@ import {inventoryWeapon} from './weapon-inventory.js';
 import {WEAPON_FILES,createGroundWeapon,groundWeaponPose} from './weapon-assets.js';
 import {firstPersonCalibration} from './first-person-calibration.js';
 import {createContactShadow} from './character-lighting.js';
+import {SALUTE_FINGER_CURLS} from './lobby-rig.js';
 import {createMotionPresentation,stepMotionPresentation} from './visual-presentation.js';
 import {createSoldierArms,poseSoldierArms,poseWeaponHand} from './soldier-arms.js';
 import {createHeldItem} from './held-items.js';
@@ -205,6 +206,24 @@ export class MatchCharacterRenderer{
    if(leftThigh)leftThigh.rotation.x-=crouch*.36+crouchStep*.17+slide*.72;if(rightThigh)rightThigh.rotation.x-=crouch*.36-crouchStep*.17+slide*.72;
    if(leftLeg)leftLeg.rotation.x+=crouch*.68-crouchStep*.14+slide*1.12;if(rightLeg)rightLeg.rotation.x+=crouch*.68+crouchStep*.14+slide*1.12;
    const hips=instance.bones.get('mixamorighips'),slideSpine=instance.bones.get('mixamorigspine');if(hips)hips.rotation.x+=slide*.09;if(slideSpine)slideSpine.rotation.x+=slide*.16;
+   // Cinematic exit salute uses the native Soldier arm/finger rig. Apply
+   // after mixer.update() so Idle cannot overwrite the gesture.
+   const salute=clamp(Number(p.saluteProgress)||0,0,1);
+   if(salute>.001&&instance.rightArm&&instance.rightForeArm){
+    instance.rightArm.quaternion.slerp(new THREE.Quaternion(.4095411,0,-.0013047,.9122907),salute);
+    instance.rightForeArm.quaternion.slerp(new THREE.Quaternion(.5717739,0,-.5741454,.5860305),salute);
+    const shoulder=instance.bones.get('mixamorigrightshoulder'),hand=instance.bones.get('mixamorigrighthand');
+    if(shoulder){shoulder.rotation.x-=.015*salute;shoulder.rotation.z-=.075*salute;}
+    if(hand){hand.rotation.x-=.24*salute;hand.rotation.y-=.08*salute;hand.rotation.z+=.28*salute;}
+    for(const digit of ['index','middle'])for(let joint=1;joint<=4;joint++){
+     const bone=instance.bones.get('mixamorigrighthand'+digit+joint),rest=instance.fingerRest.get(bone);
+     if(bone&&rest)bone.quaternion.slerp(rest,salute);
+    }
+    for(const curl of SALUTE_FINGER_CURLS){
+     const bone=instance.bones.get(normBone(curl.name));
+     if(bone)bone.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(...curl.axis),curl.angle*salute));
+    }
+   }
    if(armed&&instance.weaponMount)this._poseRemoteWeapon(instance,p,dt);
   }
   for(const [id,instance] of this.instances)if(!active.has(id)){this._disposeInstance(instance);this.instances.delete(id);}

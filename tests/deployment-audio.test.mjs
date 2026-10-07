@@ -82,7 +82,7 @@ test('music timing follows audible output when the browser supplies a valid outp
 
 test('a deployment first observed after the song ends cannot be restarted by a stale snapshot',async()=>{
  const c=context(),player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
- assert.equal(player.update(c.ctx,'round:1',29),null);
+ assert.equal(player.update(c.ctx,'round:1',34),null);
  assert.equal(player.update(c.ctx,'round:1',10),null,'a completed song stays completed even if a reconnect delivers an older snapshot');
  assert.equal(c.starts.length,0);
  assert.equal(player.update(c.ctx,'round:2',0),0);assert.equal(c.starts.length,1);
@@ -152,4 +152,15 @@ test('read-only cue lookup shares audible output timing and its monotonic guard'
  assert.equal(player.time(c.ctx,'round:1'),first);
  c.ctx.currentTime=10.1;c.ctx.getOutputTimestamp=()=>({contextTime:10.068,performanceTime:performance.now()});
  assert.ok(Math.abs(player.time(c.ctx,'round:1')-5.068)<.001);assert.equal(c.starts.length,1);
+});
+
+test('the instrument riff is extended after impact without restarting the vocal intro',async()=>{
+ const c=context(),player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
+ assert.equal(player.update(c.ctx,'round:1',0),0);
+ assert.equal(c.starts.length,1);
+ c.ctx.currentTime+=26.2;
+ assert.ok(player.update(c.ctx,'round:1',0)>26);
+ assert.equal(c.starts.length,2,'the instrument loop starts only around touchdown');
+ assert.equal(c.sources[1].loop,true);
+ assert.ok(c.stops.length>=1,'the loop has a finite fade-out at gameplay start');
 });

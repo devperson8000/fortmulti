@@ -43,7 +43,7 @@ export class Match{
   if(this.disconnected.size){const scoreById=new Map(this.ids.map((id,i)=>[id,this.scores[i]||0]));this.ids=this.ids.filter(id=>!this.disconnected.has(id));this.scores=this.ids.map(id=>scoreById.get(id)||0);this.disconnected.clear();}
   this.round++;this.phase=waiting?'waiting':'deployment';this.timer=0;this.elapsed=0;this.deployment={stage:waiting?'ship_waiting':'landing_selection',elapsed:0,sequenceElapsed:0,sequenceId:`${this.round}:1`,teleported:false,stageElapsed:0};this.deploymentSequence=0;this.podOwners=new Map();this.structures=[];this.projectiles.length=0;this.winner=undefined;
   this.pickups=[];this.openedChests=new Set();this.resourceHP=new Map();this.resources=this.world.resources||[];this.resourceGrid=createEntityGrid(this.resources);this.chests=this.world.chests||[];this.chestGrid=createEntityGrid(this.chests);this.grenades=[];this.lootSequence=0;
-  this.players=this.ids.map((id,i)=>{const local=clampShipPosition(seatOffset(i));return {id,p:shipWorld(local),shipLocal:local,yaw:0,vy:0,hp:100,shield:0,inventory:createInventory(),inventoryRevision:0,inventoryAcks:[],chestHold:null,items:{shield:0,health:0,shockwave:0},materials:{wood:0,stone:0},selectedMaterial:'wood',use:null,impulse:[0,0],shockwaveImmune:false,actionTime:0,slot:0,weapon:null,ammo:0,material:0,reload:0,equip:0,cool:0,sustained:0,walk:0,aim:false,sprinting:false,crouching:false,sliding:false,slideSpeed:0,slideTime:0,slideDir:[0,-1],crouchRequested:false,crouchLatch:false,lastCrouchRevision:0,lastSlideRevision:0,animationState:'idle',input:sanitize(),lastInput:0,air:'ship',dropState:'ship_waiting',deploymentState:waiting?'ship_waiting':'landing_selection',destination:null,pod:null,podProgress:0,entryStart:null,landingPosition:null,exitPosition:null,launchProgress:0,jumpLatch:false,interactLatch:false,fireLatch:false,reloadLatch:false,eliminated:false};});
+  this.players=this.ids.map((id,i)=>{const local=clampShipPosition(seatOffset(i));return {id,p:shipWorld(local),shipLocal:local,yaw:0,vy:0,hp:100,shield:0,inventory:createInventory(),inventoryRevision:0,inventoryAcks:[],chestHold:null,items:{shield:0,health:0,shockwave:0},materials:{wood:0,stone:0},selectedMaterial:'wood',use:null,impulse:[0,0],shockwaveImmune:false,actionTime:0,slot:0,weapon:null,ammo:0,material:0,reload:0,equip:0,cool:0,sustained:0,walk:0,aim:false,sprinting:false,crouching:false,sliding:false,slideSpeed:0,slideTime:0,slideDir:[0,-1],crouchRequested:false,crouchLatch:false,lastCrouchRevision:0,lastSlideRevision:0,animationState:'idle',input:sanitize(),lastInput:0,air:'ship',dropState:'ship_waiting',deploymentState:waiting?'ship_waiting':'landing_selection',destination:null,pod:null,podProgress:0,saluteProgress:0,entryStart:null,landingPosition:null,exitPosition:null,launchProgress:0,jumpLatch:false,interactLatch:false,fireLatch:false,reloadLatch:false,eliminated:false};});
   this.events=[];
  }
  beginDeployment(){if(this.phase!=='waiting')return false;this.phase='deployment';this.timer=0;this.deployment={stage:'landing_selection',elapsed:0,sequenceElapsed:0,sequenceId:`${this.round}:${++this.deploymentSequence}`,teleported:false,stageElapsed:0};for(const player of this.players){player.air='ship';player.deploymentState='landing_selection';player.dropState=player.deploymentState;player.slot=0;player.input=sanitize();}this.event({type:'deployment_start'});return true;}
@@ -57,7 +57,7 @@ export class Match{
  tickDeployment(dt){
   const alive=this.players.filter(player=>player.hp>0&&!this.disconnected.has(player.id));
   if(!alive.length)return;
-  const launchStarted=this.deployment.stage==='both_ready'||['pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(this.deployment.stage);
+  const launchStarted=this.deployment.stage==='both_ready'||['pod_sealing','launching','transition','landed','pod_opening','exiting','saluting'].includes(this.deployment.stage);
   if(!launchStarted){
    for(const p of alive){p.lastInput+=dt;const i=p.lastInput>INPUT_STALE_SECONDS?sanitize():p.input;const edgeInteract=i.interact&&!p.interactLatch;p.interactLatch=i.interact;p.yaw=dampAngle(p.yaw||0,i.yaw,8,dt);if(i.landing&&!p.pod&&['landing_selection','pod_available'].includes(p.deploymentState))this.chooseLanding(p.id,i.landing);
     if(['landing_selection','pod_available'].includes(p.deploymentState)){const inputLength=Math.hypot(i.x,i.z),len=Math.max(1,inputLength),speed=(i.sprint?7.2:5.4)*dt/len,dx=(Math.cos(i.yaw)*i.x-Math.sin(i.yaw)*i.z)*speed,dz=(-Math.sin(i.yaw)*i.x-Math.cos(i.yaw)*i.z)*speed,previous=p.shipLocal||seatOffset(this.players.indexOf(p));p.shipLocal=moveInShip(previous,[dx,0,dz]);p.p=shipWorld(p.shipLocal);const moved=Math.hypot(p.shipLocal[0]-previous[0],p.shipLocal[2]-previous[2]);p.walk+=moved*1.4;p.sprinting=Boolean(i.sprint&&moved>.008);p.crouching=Boolean(i.crouch);p.animationState=moved>.008?(p.sprinting?'run':'walk'):(p.crouching?'crouch':'idle');if(edgeInteract)this.enterPod(p.id);}
@@ -67,14 +67,32 @@ export class Match{
    return;
   }
   const previousStage=this.deployment.stage;this.deployment.elapsed+=dt;this.deployment.sequenceElapsed=Math.max(0,this.deployment.elapsed-DEPLOYMENT_TIMELINE.readyBeat);this.deployment.stage=this.deployment.elapsed<DEPLOYMENT_TIMELINE.readyBeat?'both_ready':deploymentStageAt(this.deployment.sequenceElapsed);this.deployment.stageElapsed=this.deployment.elapsed;
-  if(this.deployment.stage!==previousStage&&['pod_sealing','launching','transition','pod_opening','exiting'].includes(this.deployment.stage))this.event({type:'deployment_stage',stage:this.deployment.stage,sequence:this.deployment.sequenceId});
+  if(this.deployment.stage!==previousStage&&['pod_sealing','launching','transition','pod_opening','exiting','saluting'].includes(this.deployment.stage))this.event({type:'deployment_stage',stage:this.deployment.stage,sequence:this.deployment.sequenceId});
   if(!this.deployment.teleported&&deploymentCinematic(this.deployment.sequenceElapsed).portrait){for(const p of alive){if(p.landingPosition){p.p=cinematicPodPosition(p.landingPosition,this.deployment.sequenceElapsed);p.air='pod';p.animationState='idle';}}}
   if(this.deployment.stage==='transition'){for(const p of alive){p.deploymentState='transition';p.dropState='transition';p.animationState='idle';}}
   if(this.deployment.sequenceElapsed>=DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds&&!this.deployment.teleported){this.deployment.teleported=true;for(const p of alive){const target=p.landingPosition;if(!target)continue;p.p=[target.x,target.y,target.z];p.exitPosition=[target.x,target.y,target.z];p.air='pod';p.deploymentState='landed';p.dropState='landed';p.animationState='idle';}this.event({type:'deployment_landed',sequence:this.deployment.sequenceId});}
   else if(this.deployment.stage==='landed'){for(const p of alive){p.deploymentState='landed';p.dropState='landed';p.air='pod';p.animationState='idle';}}
   if(this.deployment.stage==='pod_opening'){for(const p of alive){p.deploymentState='pod_opening';p.dropState='pod_opening';p.air='pod';p.animationState='idle';}}
-  if(this.deployment.stage==='exiting'){const exitElapsed=this.deployment.sequenceElapsed-DEPLOYMENT_TIMELINE.sealSeconds-DEPLOYMENT_TIMELINE.launchSeconds-DEPLOYMENT_TIMELINE.landedSeconds-DEPLOYMENT_TIMELINE.openingSeconds,q=clamp(exitElapsed/DEPLOYMENT_TIMELINE.exitSeconds,0,1),ease=q*q*(3-2*q);for(const p of alive){p.deploymentState='exiting';p.dropState='exiting';p.animationState='pod-exit';p.air='pod';const start=p.exitPosition||p.p,pod=SHIP_PODS.find(value=>value.id===p.pod),offset=pod?.side||1;p.p=[start[0]+offset*1.7*ease,start[1]+.16*Math.sin(Math.PI*q),start[2]+.65*ease];}}
-  if(this.deployment.stage==='match_active'){for(const p of alive){if(p.pod)this.podOwners.delete(p.pod);p.p[1]=this.world.height(p.p[0],p.p[2]);p.air='landed';p.deploymentState='match_active';p.dropState='match_active';p.animationState='idle';p.slot=0;p.weapon=null;p.ammo=0;p.equip=.32;p.reload=0;p.aim=false;p.sliding=false;p.slideSpeed=0;p.slideTime=0;p.crouching=false;p.crouchRequested=false;p.pod=null;}this.phase='playing';this.elapsed=0;this.timer=0;this.event({type:'match_active',sequence:this.deployment.sequenceId});}
+  if(this.deployment.stage==='exiting'){
+   const exitElapsed=this.deployment.sequenceElapsed-DEPLOYMENT_TIMELINE.sealSeconds-DEPLOYMENT_TIMELINE.launchSeconds-DEPLOYMENT_TIMELINE.landedSeconds-DEPLOYMENT_TIMELINE.openingSeconds;
+   const q=clamp(exitElapsed/DEPLOYMENT_TIMELINE.exitSeconds,0,1),ease=q*q*(3-2*q);
+   for(const p of alive){
+    p.deploymentState='exiting';p.dropState='exiting';p.animationState='pod-exit';p.air='pod';
+    const start=p.exitPosition||p.p,pod=SHIP_PODS.find(value=>value.id===p.pod),offset=pod?.side||1;
+    const x=start[0]+offset*.35*ease,z=start[2]+2.35*ease;
+    p.p=[x,this.world.height(x,z)+.09*Math.sin(Math.PI*q),z];
+    p.walk+=dt*3.6;p.saluteProgress=0;
+   }
+  }
+  if(this.deployment.stage==='saluting'){
+   const saluteElapsed=this.deployment.sequenceElapsed-DEPLOYMENT_TIMELINE.sealSeconds-DEPLOYMENT_TIMELINE.launchSeconds-DEPLOYMENT_TIMELINE.landedSeconds-DEPLOYMENT_TIMELINE.openingSeconds-DEPLOYMENT_TIMELINE.exitSeconds;
+   const q=clamp(saluteElapsed/DEPLOYMENT_TIMELINE.saluteSeconds,0,1),up=clamp(q/.23,0,1),down=clamp((1-q)/.23,0,1);
+   const amount=Math.min(up*up*(3-2*up),down*down*(3-2*down));
+   for(const p of alive){
+    p.deploymentState='saluting';p.dropState='saluting';p.animationState='idle';p.air='pod';const pod=SHIP_PODS.find(value=>value.id===p.pod),start=p.exitPosition||p.p,offset=pod?.side||1,x=start[0]+offset*.35,z=start[2]+2.35;p.p=[x,this.world.height(x,z),z];p.saluteProgress=amount;
+   }
+  }
+  if(this.deployment.stage==='match_active'){for(const p of alive){if(p.pod)this.podOwners.delete(p.pod);if(p.exitPosition){const pod=SHIP_PODS.find(value=>value.id===p.pod),offset=pod?.side||1;p.p[0]=p.exitPosition[0]+offset*.35;p.p[2]=p.exitPosition[2]+2.35;}p.p[1]=this.world.height(p.p[0],p.p[2]);p.air='landed';p.deploymentState='match_active';p.dropState='match_active';p.animationState='idle';p.slot=0;p.weapon=null;p.ammo=0;p.equip=.32;p.reload=0;p.aim=false;p.sliding=false;p.slideSpeed=0;p.slideTime=0;p.crouching=false;p.crouchRequested=false;p.saluteProgress=0;p.pod=null;}this.phase='playing';this.elapsed=0;this.timer=0;this.event({type:'match_active',sequence:this.deployment.sequenceId});}
  }
  checkRoundEnd(){
   if(!['playing','countdown'].includes(this.phase))return false;
@@ -214,7 +232,7 @@ export class Match{
   const wallStep=Number.isFinite(dt)?Math.max(0,dt):0;dt=clamp(wallStep,0,.05);if(this.phase==='done'||this.phase==='paused'||this.phase==='waiting')return;
   // Music and the sealed-pod script follow elapsed wall time even if a host
   // misses a timer callback. Walking, combat and physics retain the 50ms cap.
-  if(this.phase==='deployment'){const scripted=['both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(this.deployment.stage);const step=scripted&&Number.isFinite(deploymentElapsed)?Math.max(0,deploymentElapsed-this.deployment.elapsed):scripted?wallStep:dt;this.tickDeployment(step);return;}
+  if(this.phase==='deployment'){const scripted=['both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','saluting'].includes(this.deployment.stage);const step=scripted&&Number.isFinite(deploymentElapsed)?Math.max(0,deploymentElapsed-this.deployment.elapsed):scripted?wallStep:dt;this.tickDeployment(step);return;}
   if(this.phase==='countdown'||this.phase==='roundover'){this.timer-=dt;if(this.timer<=0){if(this.phase==='countdown')this.phase='playing';else this.startRound(false);}return;}
   this.elapsed+=dt;this.tickGroundedPlayers(dt);this.finishCombatTick(dt);
  }

@@ -1,17 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEPLOYMENT_TIMELINE, DEPLOYMENT_STATES, createDeploymentClock, stepDeploymentClock, deploymentStageAt, safeLandingPoint } from '../public/deployment-sequence.js';
-import { DEPLOYMENT_CUES, MUSIC_START, CINEMATIC_CAMERA_RADIUS } from '../public/deployment-cinematic.js';
+import { DEPLOYMENT_CUES, MUSIC_START, CINEMATIC_CAMERA_RADIUS, deploymentCinematic, cinematicPodPosition, DEPLOYMENT_MUSIC_END } from '../public/deployment-cinematic.js';
 import { SHIP_PODS, clampShipPosition, moveInShip } from '../public/deployment-ship.js';
 
 const world={height:(x,z)=>Math.sin(x*.02)+Math.cos(z*.02),obstacles:[{min:[-5,-2,-5],max:[5,15,5]}]};
 
 test('deployment timeline covers seal, the musical intro, beat touchdown, opening and exit',()=>{
- assert.deepEqual(DEPLOYMENT_STATES,['ship_waiting','landing_selection','pod_available','entering_pod','pod_ready','both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','match_active']);
+ assert.deepEqual(DEPLOYMENT_STATES,['ship_waiting','landing_selection','pod_available','entering_pod','pod_ready','both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','saluting','match_active']);
  assert.equal(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds,MUSIC_START+DEPLOYMENT_CUES.impact);
  assert.ok(DEPLOYMENT_TIMELINE.fadeAt>2.3&&DEPLOYMENT_TIMELINE.fadeAt<DEPLOYMENT_TIMELINE.launchSeconds);
  assert.equal(deploymentStageAt(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.fadeAt),'transition');
  assert.equal(deploymentStageAt(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds),'landed');
+ const touchdown=DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds;
+ const opening=touchdown+DEPLOYMENT_TIMELINE.landedSeconds;
+ const exiting=opening+DEPLOYMENT_TIMELINE.openingSeconds;
+ const saluting=exiting+DEPLOYMENT_TIMELINE.exitSeconds;
+ assert.equal(deploymentStageAt(opening),'pod_opening');
+ assert.equal(deploymentStageAt(exiting),'exiting');
+ assert.equal(deploymentStageAt(saluting),'saluting');
+ assert.equal(deploymentStageAt(saluting+DEPLOYMENT_TIMELINE.saluteSeconds),'match_active');
+ assert.ok(DEPLOYMENT_TIMELINE.saluteSeconds>=1.5);
  assert.equal(deploymentStageAt(Infinity),'pod_sealing');
 });
 
@@ -56,4 +65,23 @@ test('ship movement preserves diagonal input instead of snapping to aisle lines'
  const moved=moveInShip([0,0,0],[1.2,0,.8]);
  assert.ok(moved[0]>.9,'lateral movement remains responsive');
  assert.ok(moved[2]>.6,'forward movement remains responsive');
+});
+
+test('first uh-yeah starts the Horizon mark on cue and the logo holds through the ad-lib',()=>{
+ const before=deploymentCinematic(MUSIC_START+DEPLOYMENT_CUES.uhYeahStart-.25);
+ const onBeat=deploymentCinematic(MUSIC_START+DEPLOYMENT_CUES.uhYeahStart+.2);
+ const late=deploymentCinematic(MUSIC_START+DEPLOYMENT_CUES.lyricsStart+.2);
+ assert.equal(before.logo,0);
+ assert.ok(onBeat.logo>.95);
+ assert.ok(late.logo>.85);
+});
+
+test('landing accelerates into the impact and the track continues under the salute',()=>{
+ const c=DEPLOYMENT_CUES,at=t=>cinematicPodPosition({x:10,y:5,z:20},MUSIC_START+t)[1];
+ const earlier=at(c.impact-.5)-at(c.impact-.35);
+ const later=at(c.impact-.15)-at(c.impact);
+ assert.ok(later>earlier,'the final descent accelerates into the kick');
+ assert.equal(at(c.impact),5);
+ assert.ok(DEPLOYMENT_MUSIC_END>c.impact+5);
+ assert.ok(deploymentCinematic(MUSIC_START+c.impact+.01).impact>.95);
 });
