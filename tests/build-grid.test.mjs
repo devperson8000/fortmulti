@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {gridPlacement,rampEndpoints,gridValid,rampHeight,rayRamp} from '../public/build-grid.js';import {placement,Match} from '../public/simulation.js';import {shockwaveImpulse,resolveLanding} from '../public/shockwave.js';
+import {gridPlacement,rampEndpoints,gridValid,rampHeight,rayRamp,terrainFoundation} from '../public/build-grid.js';import {placement,Match} from '../public/simulation.js';import {shockwaveImpulse,resolveLanding} from '../public/shockwave.js';
 const world={height:()=>0,obstacles:[]};
 test('preview and authority share placement; ramps chain exactly at all rotations',()=>{for(let turn=0;turn<4;turn++){let p={p:[0,0,0]},input={yaw:turn*Math.PI/2,slot:10},structures=[];for(let n=0;n<8;n++){const s=gridPlacement(p,input,world,structures);assert.deepEqual(s,placement(p,input,world,structures));assert.equal(gridValid(s,structures,[],world),true);const {bottom,top}=rampEndpoints(s);assert.ok(Math.abs(Math.hypot(top[0]-bottom[0],top[2]-bottom[2])-5)<1e-6);assert.ok(Math.abs(top[1]-bottom[1]-3.6)<1e-6);if(n){const prior=rampEndpoints(structures.at(-1)).top;for(let k=0;k<3;k++)assert.ok(Math.abs(bottom[k]-prior[k])<1e-5);}structures.push(s);p.p=top;}}});
 test('unsupported floating pieces are rejected and ramp rays ignore empty volume',()=>{const s={x:0,z:0,y:0,type:3,angle:0};assert.equal(gridValid({...s,y:20},[],[],world),false);assert.equal(rampHeight(s,0,2.5),0);assert.equal(rampHeight(s,0,-2.5),3.6);assert.equal(rayRamp([0,3,3],[0,0,-1],s),4.666666666666667);});
@@ -33,4 +33,33 @@ test('initial builds remain terrain-supported at nonzero grid heights',()=>{
   assert.ok(s.y<=elevation,'foundation must not float above ground');
   assert.ok(elevation-s.y<3.6);
  }
+});
+
+
+test('terrain-aware foundations keep new pieces above uneven ground instead of burying them',()=>{
+ const terrain={height:(x,z)=>2.4+Math.sin(x*.45)*.55+Math.cos(z*.35)*.4,obstacles:[]};
+ for(const slot of [6,10]){
+  const s=gridPlacement({p:[0,terrain.height(0,0),0]},{slot,yaw:0},terrain,[]);
+  assert.ok(Math.abs(s.y-terrainFoundation(s,terrain))<1e-9);
+  if(slot===6){
+   for(const x of [s.x-2.5,s.x-1.25,s.x,s.x+1.25,s.x+2.5])assert.ok(s.y>=terrain.height(x,s.z)-1e-8);
+  }else{
+   for(const x of [s.x-2.45,s.x,s.x+2.45])for(const z of [s.z-2.5,s.z-1.25,s.z,s.z+1.25,s.z+2.5])assert.ok(rampHeight(s,x,z)>=terrain.height(x,z)-1e-8);
+  }
+ }
+});
+
+test('walls snap to both ramp edges and stack cleanly on walls while ramps keep chaining',()=>{
+ const ramp={x:0,z:0,y:0,angle:0,type:3,material:'wood',hp:100},bottom=rampEndpoints(ramp).bottom,top=rampEndpoints(ramp).top;
+ const wallAtTop=gridPlacement({p:top},{slot:6,yaw:0},world,[ramp]);
+ assert.ok(Math.abs(wallAtTop.x-top[0])<1e-8&&Math.abs(wallAtTop.z-top[2])<1e-8&&Math.abs(wallAtTop.y-top[1])<1e-8);
+ assert.equal(gridValid(wallAtTop,[ramp],[],world),true);
+ const wallAtBottom=gridPlacement({p:bottom},{slot:6,yaw:Math.PI},world,[ramp]);
+ assert.ok(Math.abs(wallAtBottom.x-bottom[0])<1e-8&&Math.abs(wallAtBottom.z-bottom[2])<1e-8&&Math.abs(wallAtBottom.y-bottom[1])<1e-8);
+ assert.equal(gridValid(wallAtBottom,[ramp],[],world),true);
+ const baseWall={x:0,z:-7.5,y:0,angle:0,type:2,material:'wood',hp:100},stacked=gridPlacement({p:[0,0,0]},{slot:6,yaw:0},world,[baseWall]);
+ assert.equal(stacked.x,baseWall.x);assert.equal(stacked.z,baseWall.z);assert.equal(stacked.y,baseWall.y+3.6);assert.equal(gridValid(stacked,[baseWall],[],world),true);
+ const chained=gridPlacement({p:top},{slot:10,yaw:0},world,[ramp]),chainedBottom=rampEndpoints(chained).bottom;
+ for(let k=0;k<3;k++)assert.ok(Math.abs(chainedBottom[k]-top[k])<1e-8);
+ assert.equal(gridValid(chained,[ramp],[],world),true);
 });
