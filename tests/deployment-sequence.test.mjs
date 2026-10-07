@@ -85,3 +85,22 @@ test('landing accelerates into the impact and the track continues under the salu
  assert.ok(DEPLOYMENT_MUSIC_END>c.impact+5);
  assert.ok(deploymentCinematic(MUSIC_START+c.impact+.01).impact>.95);
 });
+
+test('nearby launch capsules and cameras have clear space',()=>{
+ const level={height:()=>0,obstacles:[]},landings=[];
+ for(let i=0;i<8;i++){
+  const point=safeLandingPoint({x:20,z:20},level,landings);
+  assert.ok(point,'eight close selections can be separated');
+  for(const other of landings)assert.ok(Math.hypot(point.x-other.x,point.z-other.z)>=CINEMATIC_CAMERA_RADIUS*2+1.2-1e-8);
+  landings.push(point);
+ }
+});
+test('terrain sampling rejects steep slopes and invalid heights',()=>{
+ assert.equal(safeLandingPoint({x:32,z:40},{height:(x,z)=>x*.95,obstacles:[]}),null);
+ const broken={height:(x,z)=>x>11?Infinity:0,obstacles:[]};
+ const landing=safeLandingPoint({x:10.5,z:25},broken);
+ if(landing)assert.ok(landing.x<=11-1.22);
+ const level={height:(x,z)=>3.4+Math.sin(x*.02)*.06+Math.cos(z*.02)*.06,obstacles:[]};
+ const safe=safeLandingPoint({x:32,z:40},level);
+ assert.ok(safe&&Math.hypot(safe.x-32,safe.z-40)<.01);
+});
