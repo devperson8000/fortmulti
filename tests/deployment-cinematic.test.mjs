@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {deploymentCinematic,cinematicCamera,cinematicPodPosition,DEPLOYMENT_CUES,MUSIC_START} from '../public/deployment-cinematic.js';
+import * as cinematic from '../public/deployment-cinematic.js';
+const {deploymentCinematic,cinematicCamera,cinematicPodPosition,cinematicFov,DEPLOYMENT_CUES,MUSIC_START}=cinematic;
 import {DEPLOYMENT_TIMELINE,deploymentStageAt} from '../public/deployment-sequence.js';
 
 test('music starts only on full black and the title follows the measured vocal cues',()=>{
@@ -40,4 +41,44 @@ test('descent is continuous, stays above the island, and touches chosen ground o
  assert.ok(at(DEPLOYMENT_CUES.impact-.02)[1]>landing.y);
  assert.deepEqual(at(DEPLOYMENT_CUES.impact),[12,7,-18]);
  assert.deepEqual(at(DEPLOYMENT_CUES.impact+1),[12,7,-18]);
+});
+
+test('the exit camera returns continuously to the actual first-person position and heading',()=>{
+ const p=[12,7,-18],yaw=.7,time=DEPLOYMENT_TIMELINE;
+ const exitAt=MUSIC_START+DEPLOYMENT_CUES.impact+time.landedSeconds+time.openingSeconds;
+ assert.equal(deploymentCinematic(exitAt).returnProgress,0);
+ assert.equal(deploymentCinematic(exitAt+time.exitSeconds).returnProgress,1);
+ let previous=cinematicCamera(p,yaw,{orbit:1,returnProgress:0});
+ for(let i=1;i<=120;i++){
+  const state=deploymentCinematic(exitAt+time.exitSeconds*i/120),view=cinematicCamera(p,yaw,state);
+  assert.ok(Math.hypot(...view.eye.map((v,k)=>v-previous.eye[k]))<.12,'no single-frame camera cut');
+  assert.ok(Math.hypot(...view.target.map((v,k)=>v-view.eye[k]))>.03,'look direction never degenerates');
+  previous=view;
+ }
+ assert.ok(Math.hypot(...previous.eye.map((v,k)=>v-[12,8.72,-18][k]))<1e-9);
+ const forward=previous.target.map((v,k)=>v-previous.eye[k]);
+ assert.ok(forward[0]<0&&forward[2]<0,'camera faces the same direction as the player');
+ assert.ok(Math.abs(Math.atan2(forward[1],Math.hypot(forward[0],forward[2]))+.04)<1e-8);
+});
+
+test('cinematic camera respects nearby terrain and keeps narrow screens wide enough for the capsule',()=>{
+ const p=[0,0,0],view=cinematicCamera(p,0,{orbit:.5},{groundHeight:()=>2});
+ assert.ok(view.eye[1]>=2.35,'the cinematic camera cannot sink below sloping terrain');
+ for(const aspect of [9/16,4/3,16/9,21/9]){
+  const fov=cinematicFov(aspect),halfWidth=Math.tan(fov/2)*aspect*2.55;
+  assert.ok(halfWidth>=1.18,'capsule and both rails stay inside the frame');
+  assert.ok(fov<=86*Math.PI/180);
+ }
+});
+
+test('the complete pod roof and floor fit the portrait shot across screen sizes',()=>{
+ const dot=(a,b)=>a.reduce((v,n,k)=>v+n*b[k],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],norm=a=>a.map(v=>v/Math.hypot(...a));
+ for(const aspect of [9/16,4/3,16/9,21/9])for(const orbit of [.4,.7,1]){
+  const view=cinematicCamera([0,0,0],0,{orbit}),forward=norm(view.target.map((v,k)=>v-view.eye[k])),right=norm(cross(forward,[0,1,0])),up=cross(right,forward),lens=Math.tan(cinematicFov(aspect)/2);
+  for(const x of[-.94,.94])for(const y of[-.18,2.35])for(const z of[-.89,.89]){
+   const offset=[x,y,z].map((v,k)=>v-view.eye[k]),depth=dot(offset,forward);
+   assert.ok(Math.abs(dot(offset,right)/(depth*lens*aspect))<.96,'pod rails fit horizontally');
+   assert.ok(Math.abs(dot(offset,up)/(depth*lens))<.96,'roof and floor fit vertically');
+  }
+ }
 });

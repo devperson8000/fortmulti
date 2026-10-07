@@ -49,11 +49,21 @@ try{
  assert.deepEqual(impact.position,[impact.landing.x,impact.landing.y,impact.landing.z]);await guest.screenshot({path:artifacts+'/04-touchdown.png'});checks.push('Visible pod touches the selected ground on Big stepper');
  await host.waitForFunction(()=>window.__testMatch.phase==='playing',{timeout:15000});await guest.waitForFunction(()=>window.Game.deploymentView().stage==='match_active',{timeout:15000});
  assert.equal(await guest.evaluate(()=>document.body.classList.contains('deployment-cinematic')),false);checks.push('Pod opens, exits cleanly and restores gameplay');
- const results=await Promise.all([host,guest].map(async p=>p.evaluate(c=>({music:window.__music.map(({context,...m})=>m),landings:window.__landings,frames:window.__views.length,firstVisible:window.__views.find(v=>v.black<.02&&v.portrait),firstImpact:window.__views.find(v=>v.musicTime>=c.impact),largestFrameGap:window.__views.reduce((max,v,i,a)=>i?Math.max(max,v.at-a[i-1].at):max,0)}),DEPLOYMENT_CUES)));
+ const results=await Promise.all([host,guest].map(async p=>p.evaluate(c=>({music:window.__music.map(({context,...m})=>m),landings:window.__landings,frames:window.__views.length,firstVisible:window.__views.find(v=>v.black<.02&&v.portrait),firstImpact:window.__views.find(v=>v.musicTime>=c.impact),exit:window.__views.filter(v=>v.returnProgress>.15&&v.returnProgress<1).map(v=>({returnProgress:v.returnProgress,position:v.position,podPosition:v.podPosition,eye:v.eye,localVisible:v.localVisible})),largestFrameGap:window.__views.reduce((max,v,i,a)=>i?Math.max(max,v.at-a[i-1].at):max,0)}),DEPLOYMENT_CUES)));
  await writeFile(artifacts+'/deployment-clock-diagnostics.json',JSON.stringify(results,null,2));
  console.log(JSON.stringify(results.map(r=>({music:r.music,landings:r.landings,firstImpact:r.firstImpact})),null,2));
  for(const result of results){assert.equal(result.music.length,1,'one music source per client');assert.equal(result.landings.length,1,'one touchdown per client');assert.ok(Math.abs(result.landings[0].musicTime-DEPLOYMENT_CUES.impact)<.25,'network touchdown must align with the music');assert.ok(result.firstImpact.musicTime-DEPLOYMENT_CUES.impact<.16,'visible touchdown occurs on the audio clock');}
- checks.push('Both real network clients play once, retain distinct landings and synchronize touchdown');assert.deepEqual(errors,[]);
+ checks.push('Both real network clients play once, retain distinct landings and synchronize touchdown');
+ for(const result of results){
+  assert.ok(result.exit.length>3,'exit camera must render a continuous handoff');
+  const start=result.exit[0].podPosition;
+  assert.ok(result.exit.every(v=>v.podPosition.every((n,k)=>Math.abs(n-start[k])<1e-8)),'landed pod stays anchored while the operator exits');
+  assert.ok(result.exit.some(v=>Math.hypot(v.position[0]-start[0],v.position[2]-start[2])>.4),'operator actually walks out of the stationary pod');
+  const end=result.exit.at(-1);
+  assert.ok(end.returnProgress>.9);assert.equal(end.localVisible,false,'hide avatar before camera enters the first-person head');
+  assert.ok(Math.hypot(end.eye[0]-end.position[0],end.eye[2]-end.position[2])<.25,'camera approaches the true first-person eye continuously');
+ }
+ checks.push('Pods stay fixed during exit and camera returns smoothly to first person');assert.deepEqual(errors,[]);
  await writeFile(artifacts+'/deployment-browser-results.json',JSON.stringify({checks,errors,cues:DEPLOYMENT_CUES,black,portrait,impact,clients:results},null,2));
  console.log(JSON.stringify({passed:checks.length,checks,errors,clients:results.map(r=>({frames:r.frames,landingMusicTime:r.landings[0].musicTime,visibleImpactMusicTime:r.firstImpact.musicTime,largestFrameGap:r.largestFrameGap}))},null,2));
  await writeFile(artifacts+'/recordings.json',JSON.stringify({host:await host.video().path(),guest:await guest.video().path()},null,2));

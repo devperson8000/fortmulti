@@ -24,6 +24,7 @@ export class MatchCharacterRenderer{
   this.scene.fog=new THREE.FogExp2(0xb1d6e3,.0036);this.scene.add(new THREE.HemisphereLight(0xc6e9ff,0x394332,1.3));
   const key=new THREE.DirectionalLight(0xffedc8,2.05);key.position.set(-18,30,14);this.scene.add(key);
   const rim=new THREE.DirectionalLight(0x91d6ff,.75);rim.position.set(13,12,-20);this.scene.add(rim);
+  this.cinematicLight=new THREE.DirectionalLight(0xc9eaff,0);this.scene.add(this.cinematicLight,this.cinematicLight.target);
   this.firstPersonScene=new THREE.Scene();this.firstPersonCamera=new THREE.PerspectiveCamera(62,1,.15,820);this.firstPersonCamera.position.set(0,0,0);this.firstPersonCamera.lookAt(0,0,-1);
   this.firstPersonScene.add(new THREE.HemisphereLight(0xd5edff,0x33302a,1.65));
   const fpKey=new THREE.DirectionalLight(0xffe5bc,2.1);fpKey.position.set(-2,3,2);this.firstPersonScene.add(fpKey);
@@ -150,7 +151,7 @@ export class MatchCharacterRenderer{
  }
  _tint(instance,value){
   const tint=new THREE.Color(value||'#6f8470');instance.bodyMaterials=[];
-  instance.model.traverse(object=>{if(!object.isMesh)return;const source=object.material,colorMat=sourceMaterial=>{const material=sourceMaterial.clone();instance.bodyMaterials.push(material);if(material.color)material.color.lerp(tint,.055);if('roughness' in material)material.roughness=Math.max(.65,material.roughness);return material;};object.material=Array.isArray(source)?source.map(colorMat):colorMat(source);});
+  instance.model.traverse(object=>{if(!object.isMesh)return;const source=object.material,colorMat=sourceMaterial=>{const material=sourceMaterial.clone();material.userData.cinematicBase={opacity:material.opacity,transparent:material.transparent,depthWrite:material.depthWrite};instance.bodyMaterials.push(material);if(material.color)material.color.lerp(tint,.055);if('roughness' in material)material.roughness=Math.max(.65,material.roughness);return material;};object.material=Array.isArray(source)?source.map(colorMat):colorMat(source);});
  }
  update(players=[],{localId='',hideId='',phase='playing',dt=.016}={}){
   if(!this.ready)return;
@@ -161,6 +162,7 @@ export class MatchCharacterRenderer{
    if(!instance){instance=this._create(id,p);this.instances.set(id,instance);}
    instance.holder.visible=id!==String(hideId);instance.holder.position.set(p.p?.[0]||0,p.p?.[1]||0,p.p?.[2]||0);instance.holder.rotation.y=Number.isFinite(p.yaw)?p.yaw:0;
    if(!instance.holder.visible){instance.contactShadow.visible=false;continue;}
+   const opacity=Number.isFinite(p.cinematicOpacity)?clamp(p.cinematicOpacity,0,1):1;if(instance.cinematicOpacity!==opacity){for(const material of instance.bodyMaterials){const base=material.userData.cinematicBase;material.opacity=base.opacity*opacity;material.transparent=base.transparent||opacity<.999;material.depthWrite=base.depthWrite&&opacity>.99;}instance.cinematicOpacity=opacity;}
    const animation=characterLocomotion(p),motion=stepMotionPresentation(instance.motion,p,dt);instance.model.rotation.x=motion.lean;instance.model.rotation.z=-motion.strafe-motion.turn;
    const altitude=Math.max(0,p.p[1]-(p.groundY??p.p[1]));instance.contactShadow.visible=p.showShadow!==false&&instance.holder.visible&&p.air==='landed';instance.contactShadow.position.set(p.p[0],(p.groundY??p.p[1])+.025,p.p[2]);instance.contactShadow.material.opacity=.72/(1+altitude*.65);instance.contactShadow.scale.set(1.8+Math.min(altitude,4)*.18,1.3+Math.min(altitude,4)*.12,1);
    const blendState=animation.state==='slide'?'crouch':animation.state==='crouch'&&animation.speed<.18?'idle':animation.state;
@@ -235,10 +237,11 @@ export class MatchCharacterRenderer{
   for(const geometry of geometries)geometry.dispose();for(const material of materials)material.dispose();
  }
  pulse(id,type='fire'){const instance=this.instances.get(String(id));if(instance&&type==='fire')instance.fireTime=.11;}
- render({eye,target,aspect,fov,dt=.016,width=this.canvas.width,height=this.canvas.height}={}){
+ render({eye,target,aspect,fov,cinematic=false,dt=.016,width=this.canvas.width,height=this.canvas.height}={}){
   if(!this.ready||!eye||!target)return;
   if(width!==this.width||height!==this.height){this.width=width;this.height=height;this.renderer.setSize(width,height,false);}
   this.camera.aspect=Math.max(.1,aspect||width/Math.max(1,height));this.camera.fov=Number.isFinite(fov)?fov*180/Math.PI:75;this.camera.position.set(...eye);this.camera.lookAt(...target);this.camera.updateProjectionMatrix();
+  this.cinematicLight.intensity=cinematic?1.15:0;if(cinematic){this.cinematicLight.position.set(eye[0],eye[1]+.8,eye[2]);this.cinematicLight.target.position.set(...target);}
   this.renderer.resetState();this.renderer.render(this.scene,this.camera);
   // Restore the raw renderer's state before it draws the view model in its own pass.
   this.restoreRawState();

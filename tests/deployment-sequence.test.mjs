@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEPLOYMENT_TIMELINE, DEPLOYMENT_STATES, createDeploymentClock, stepDeploymentClock, deploymentStageAt, safeLandingPoint } from '../public/deployment-sequence.js';
-import { DEPLOYMENT_CUES, MUSIC_START } from '../public/deployment-cinematic.js';
+import { DEPLOYMENT_CUES, MUSIC_START, CINEMATIC_CAMERA_RADIUS } from '../public/deployment-cinematic.js';
 import { SHIP_PODS, clampShipPosition, moveInShip } from '../public/deployment-ship.js';
 
 const world={height:(x,z)=>Math.sin(x*.02)+Math.cos(z*.02),obstacles:[{min:[-5,-2,-5],max:[5,15,5]}]};
@@ -34,6 +34,14 @@ test('safe landing rejects non-finite coordinates and finds unoccupied ground in
  assert.ok(Number.isFinite(target.y));
  const second=safeLandingPoint([0,0],world,[target]);
  assert.ok(Math.hypot(second.x-target.x,second.z-target.z)>1.4);
+});
+
+test('safe landing reserves the full cinematic camera orbit near cars and buildings',()=>{
+ const obstacle={min:[5.4,0,-3.5],max:[8.6,2.4,1.5]},world={height:()=>0,obstacles:[obstacle]};
+ const landing=safeLandingPoint({x:7,z:2.26},world);
+ assert.ok(landing);
+ const dx=Math.max(obstacle.min[0]-landing.x,0,landing.x-obstacle.max[0]),dz=Math.max(obstacle.min[2]-landing.z,0,landing.z-obstacle.max[2]);
+ assert.ok(Math.hypot(dx,dz)>=CINEMATIC_CAMERA_RADIUS+.2,'the camera orbit stays outside the obstacle rather than collapsing into the capsule');
 });
 
 test('ship movement is constrained by walls and deployment pod shells',()=>{

@@ -259,7 +259,7 @@ setInterval(()=>{
  if(now-lastHello>=cadence.helloMs){hello();lastHello=now;}
  if(host&&now-lastPing>=cadence.pingMs){const live=activePeers();if(live.length){const peer=live[pingCursor++%live.length];conn.send('ping',{time:Date.now()},peer.id);}lastPing=now;}
  for(const p of [...peers.values()])if(Date.now()-p.lastSeen>19000){if(p.id===conn.host&&!host){leave('The party leader disconnected.');return;}removePeer(p.id,'disconnected');}
- if(match&&host){match.input(conn.id,showMenu?{}:game.input());match.tick(dt);snapshot=match.snapshot();if(now-lastSnap>=cadence.snapshotMs){sendSnapshot(snapshot);lastSnap=now;}}
+ if(match&&host){match.input(conn.id,showMenu?{}:game.input());match.tick(dt,{deploymentElapsed:match.phase==='deployment'?game.audioDeploymentElapsed(match.deployment.sequenceId):null});snapshot=match.snapshot();if(now-lastSnap>=cadence.snapshotMs){sendSnapshot(snapshot);lastSnap=now;}}
  else if(snapshot&&!host){pendingInput=accumulateInput(pendingInput,showMenu?{}:game.input());if(now-lastInput>=cadence.inputMs){conn.send('input',{id:matchId,input:pendingInput},conn.host);pendingInput=null;lastInput=now;}}
 },33);
 

@@ -27,6 +27,14 @@ test('players must select distinct destinations before reserving an available ne
  assert.equal(match.chooseLanding('a',{x:-40,z:50}),false,'destination is locked once pod entry begins');
 });
 
+test('entering a pod clears crouch and sprint so the operator stands properly inside the capsule',()=>{
+ const match=new Match(world,['a','b']);match.beginDeployment();
+ match.players[0].crouching=true;match.players[0].sprinting=true;
+ readyPlayer(match,'a',0,{x:30,z:40});
+ assert.equal(match.players[0].crouching,false);
+ assert.equal(match.players[0].sprinting,false);
+});
+
 test('a player can walk diagonally out of the aisle and interact with a deployment pod',()=>{
  const match=new Match(world,['a','b']);match.beginDeployment();
  assert.equal(match.chooseLanding('a',{x:-40,z:50}),true);
@@ -112,4 +120,17 @@ test('scripted deployment catches up after a stalled host without skipping touch
  assert.deepEqual(match.players[0].exitPosition,[30,0,40]);
  match.tick(5);
  assert.equal(match.phase,'playing');assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,1);
+});
+
+test('the host follows audible music elapsed while scripted deployment is active',()=>{
+ const match=new Match(world,['a','b']);match.beginDeployment();readyPlayer(match,'a',0,{x:30,z:40});readyPlayer(match,'b',1,{x:-80,z:65});tick(match,1.2);
+ const start=match.deployment.elapsed;
+ match.tick(2,{deploymentElapsed:start+.02});
+ assert.ok(Math.abs(match.deployment.elapsed-start-.02)<1e-8,'music time takes precedence over delayed timer wall time');
+ match.tick(2,{deploymentElapsed:start});
+ assert.ok(Math.abs(match.deployment.elapsed-start-.02)<1e-8,'a stale clock never rewinds deployment');
+ const impact=DEPLOYMENT_TIMELINE.readyBeat+MUSIC_START+DEPLOYMENT_CUES.impact;
+ match.tick(.05,{deploymentElapsed:impact-.001});assert.equal(match.deployment.stage,'transition');
+ match.tick(.05,{deploymentElapsed:impact+.001});assert.equal(match.deployment.stage,'landed');
+ assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,1);
 });

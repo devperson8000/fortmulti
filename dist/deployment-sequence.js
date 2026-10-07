@@ -1,4 +1,4 @@
-import {DEPLOYMENT_CUES,MUSIC_START,deploymentCinematic} from './deployment-cinematic.js';
+import {DEPLOYMENT_CUES,MUSIC_START,POD_RELEASE,CINEMATIC_CAMERA_RADIUS,deploymentCinematic} from './deployment-cinematic.js';
 export const DEPLOYMENT_STATES=Object.freeze([
  'ship_waiting','landing_selection','pod_available','entering_pod','pod_ready',
  'both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','match_active'
@@ -10,9 +10,9 @@ export const DEPLOYMENT_TIMELINE=Object.freeze({
  launchSeconds:MUSIC_START+DEPLOYMENT_CUES.impact-1.12,
  fadeAt:MUSIC_START+DEPLOYMENT_CUES.impact-1.12-.14,
  fadeSeconds:.42,
- landedSeconds:.24,
- openingSeconds:1.18,
- exitSeconds:.9,
+ landedSeconds:POD_RELEASE.hold,
+ openingSeconds:POD_RELEASE.open,
+ exitSeconds:POD_RELEASE.exit,
  readyBeat:.42
 });
 
@@ -59,7 +59,9 @@ export function safeLandingPoint(destination,world,reserved=[]){
  for(let ring=1;ring<=9;ring++){const radius=ring*2.2,steps=Math.max(12,ring*8);for(let i=0;i<steps;i++){const angle=i/steps*Math.PI*2+.31;candidates.push([Math.cos(angle)*radius,Math.sin(angle)*radius]);}}
  for(const [dx,dz] of candidates){const x=requested.x+dx,z=requested.z+dz;if(Math.hypot(x,z)>292)continue;
   const y=Number(world.height(x,z));if(!Number.isFinite(y))continue;
-  const blocked=obstacles.some(box=>x>box.min[0]-.75&&x<box.max[0]+.75&&z>box.min[2]-.75&&z<box.max[2]+.75&&box.max[1]>y-.15);
+  // Reserve the full portrait orbit at selection time. A .75m body clearance
+  // lets a nearby car or wall force the camera inside the capsule on landing.
+  const blocked=obstacles.some(box=>Math.hypot(Math.max(box.min[0]-x,0,x-box.max[0]),Math.max(box.min[2]-z,0,z-box.max[2]))<CINEMATIC_CAMERA_RADIUS+.25&&box.max[1]>y-.15);
   if(blocked||reserved.some(other=>other&&Math.hypot(x-other.x,z-other.z)<1.9))continue;
   return {x,z,y};
  }
