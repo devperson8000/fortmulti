@@ -145,7 +145,7 @@ export class MatchCharacterRenderer{
   model.scale.setScalar(this.modelScale);model.traverse(object=>{if(object.isMesh){object.castShadow=false;object.receiveShadow=true;object.frustumCulled=false;}});
   holder.add(model);this.scene.add(holder);const contactShadow=createContactShadow();this.scene.add(contactShadow);
   const animatedPose=new Map([...bones.values()].map(bone=>[bone,bone.quaternion.clone()])),fingerRest=new Map([...bones].filter(([name])=>/hand.*[123]$/.test(name)).map(([,bone])=>[bone,bone.quaternion.clone()]));
-  const instance={id,holder,model,contactShadow,motion:createMotionPresentation(),mixer,actions,bones,animatedPose,fingerRest,hand,rightArm,rightForeArm,leftArm,leftForeArm,weaponId:'',weaponMount:null,weaponMounts:new Map(),utilityCache:new Map(),blend:createAnimationBlend('idle'),sequenceState:'',fireTime:0,color:source.color||'#6f8470'};
+  const instance={id,holder,model,contactShadow,motion:createMotionPresentation(),mixer,actions,bones,animatedPose,fingerRest,hand,rightArm,rightForeArm,leftArm,leftForeArm,weaponId:'',weaponMount:null,weaponMounts:new Map(),utilityCache:new Map(),blend:createAnimationBlend('idle'),sequenceState:'',fireTime:0,crouchBlend:0,slideBlend:0,color:source.color||'#6f8470'};
   this._tint(instance,instance.color);return instance;
  }
  _tint(instance,value){
@@ -163,7 +163,7 @@ export class MatchCharacterRenderer{
    if(!instance.holder.visible){instance.contactShadow.visible=false;continue;}
    const animation=characterLocomotion(p),motion=stepMotionPresentation(instance.motion,p,dt);instance.model.rotation.x=motion.lean;instance.model.rotation.z=-motion.strafe-motion.turn;
    const altitude=Math.max(0,p.p[1]-(p.groundY??p.p[1]));instance.contactShadow.visible=p.showShadow!==false&&instance.holder.visible&&p.air==='landed';instance.contactShadow.position.set(p.p[0],(p.groundY??p.p[1])+.025,p.p[2]);instance.contactShadow.material.opacity=.72/(1+altitude*.65);instance.contactShadow.scale.set(1.8+Math.min(altitude,4)*.18,1.3+Math.min(altitude,4)*.12,1);
-   const blendState=animation.state==='crouch'&&animation.speed<.18?'idle':animation.state;
+   const blendState=animation.state==='slide'?'crouch':animation.state==='crouch'&&animation.speed<.18?'idle':animation.state;
    instance.blend=stepAnimationBlend(instance.blend,{state:blendState,supported:this.supportedClips},dt);
    for(const [state,action] of instance.actions){action.setEffectiveWeight(instance.blend.weights[state]||0);if(state==='walk'||state==='run')action.setEffectiveTimeScale(clamp((p.moveSpeed||animation.speed)/(state==='run'?6.8:3.2),.65,1.4));}
    // Restore the last mixer pose before applying it again. Constant animation
@@ -171,6 +171,7 @@ export class MatchCharacterRenderer{
    for(const [bone,q] of instance.animatedPose)bone.quaternion.copy(q);
    instance.mixer.update(clamp(dt,0,.06));
    for(const [bone,q] of instance.animatedPose)q.copy(bone.quaternion);
+   const poseBlend=1-Math.exp(-clamp(dt,0,.06)*13);instance.slideBlend+=(Number(Boolean(p.sliding))-instance.slideBlend)*poseBlend;instance.crouchBlend+=(Number(Boolean(p.crouching&&!p.sliding))-instance.crouchBlend)*poseBlend;
    const activeMatch=phase==='playing'&&p.deploymentState==='match_active',armed=activeMatch&&Boolean(inventoryWeapon(p.inventory,p.slot));
    this._weaponFor(instance,armed?inventoryWeapon(p.inventory,p.slot).type:null);
    instance.fireTime=Math.max(0,instance.fireTime-clamp(dt,0,.06));
@@ -196,7 +197,12 @@ export class MatchCharacterRenderer{
 
    if(motion.landing>.001){for(const side of ['left','right']){const thigh=instance.bones.get(`mixamorig${side}upleg`),leg=instance.bones.get(`mixamorig${side}leg`);if(thigh)thigh.rotation.x-=motion.landing*.18;if(leg)leg.rotation.x+=motion.landing*.36;}instance.model.position.y=-motion.landing*.07;}else instance.model.position.y=0;
    const spine=instance.bones.get('mixamorigspine');if(spine)spine.rotation.y+=motion.turn*1.5;
-   if(p.crouching){instance.holder.position.y-=.16;for(const key of['mixamorigleftupleg','mixamorigrightupleg']){const bone=instance.bones.get(key);if(bone)bone.rotation.x-=.36;}for(const key of['mixamorigleftleg','mixamorigrightleg']){const bone=instance.bones.get(key);if(bone)bone.rotation.x+=.68;}}
+   const crouch=instance.crouchBlend,slide=instance.slideBlend,crouchStep=Math.sin((Number(p.walk)||0)*2.15)*Math.min(1,(Number(p.moveSpeed)||0)/3.5)*crouch;
+   instance.holder.position.y-=crouch*.16+slide*.27;instance.model.rotation.x+=slide*.12;
+   const leftThigh=instance.bones.get('mixamorigleftupleg'),rightThigh=instance.bones.get('mixamorigrightupleg'),leftLeg=instance.bones.get('mixamorigleftleg'),rightLeg=instance.bones.get('mixamorigrightleg');
+   if(leftThigh)leftThigh.rotation.x-=crouch*.36+crouchStep*.17+slide*.72;if(rightThigh)rightThigh.rotation.x-=crouch*.36-crouchStep*.17+slide*.72;
+   if(leftLeg)leftLeg.rotation.x+=crouch*.68-crouchStep*.14+slide*1.12;if(rightLeg)rightLeg.rotation.x+=crouch*.68+crouchStep*.14+slide*1.12;
+   const hips=instance.bones.get('mixamorighips'),slideSpine=instance.bones.get('mixamorigspine');if(hips)hips.rotation.x+=slide*.09;if(slideSpine)slideSpine.rotation.x+=slide*.16;
    if(armed&&instance.weaponMount)this._poseRemoteWeapon(instance,p,dt);
   }
   for(const [id,instance] of this.instances)if(!active.has(id)){this._disposeInstance(instance);this.instances.delete(id);}
@@ -204,7 +210,8 @@ export class MatchCharacterRenderer{
  _poseRemoteWeapon(instance,p,dt){
   const mount=instance.weaponMount,c=mount.userData.calibration,progress=p.reload?clamp(1-p.reload/(WEAPON_PROFILES[instance.weaponId]?.reloadDuration||2.5),0,1):1,reach=p.reload?Math.sin(Math.PI*progress):0;
   const desired=clamp(Number(p.pitch)||0,-.9,.7)+(p.reload?reach*.12:0);mount.userData.pitch=(mount.userData.pitch||0)+(desired-(mount.userData.pitch||0))*(1-Math.exp(-15*Math.min(.06,dt)));
-  mount.position.set(.16,1.18+(p.aim?.03:0)+Math.max(0,-mount.userData.pitch)*.03-instance.motion.landing*.04,-.16+instance.fireTime*.2);mount.rotation.set(mount.userData.pitch,0,0);mount.userData.muzzle.visible=instance.fireTime>.01;instance.holder.updateMatrixWorld(true);
+  instance.holder.updateMatrixWorld(true);const shoulders=['right','left'].map(side=>instance.holder.worldToLocal(instance.bones.get(`mixamorig${side}arm`).getWorldPosition(new THREE.Vector3()))),center=shoulders[0].add(shoulders[1]).multiplyScalar(.5);
+  mount.position.set(center.x+.16,center.y-.16+(p.aim?.03:0)+Math.max(0,-mount.userData.pitch)*.03,center.z-.16+instance.fireTime*.2);mount.rotation.set(mount.userData.pitch,0,0);mount.userData.muzzle.visible=instance.fireTime>.01;instance.holder.updateMatrixWorld(true);
   const point=v=>mount.localToWorld(new THREE.Vector3(...v).sub(new THREE.Vector3(...c.grip)).multiplyScalar(c.scale));
   const right=point(c.rightPalm),node=mount.userData.nodes.get(c.supportNode);let left=node?node.getWorldPosition(new THREE.Vector3()).add(mount.userData.supportOffset.clone().multiplyScalar(c.scale).applyQuaternion(mount.getWorldQuaternion(new THREE.Quaternion()))):point(c.support);
   // The native third-person arms are shorter than the camera rig's reach;

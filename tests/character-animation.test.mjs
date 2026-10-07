@@ -9,6 +9,7 @@ test('character animation selects grounded locomotion from the authoritative mov
  assert.equal(resolveCharacterAnimation({grounded:false,velocity:4}).state,'jump');
  assert.equal(resolveCharacterAnimation({grounded:false,velocity:-2}).state,'fall');
  assert.equal(resolveCharacterAnimation({grounded:true,crouching:true,speed:0}).state,'crouch');
+ assert.equal(resolveCharacterAnimation({grounded:true,crouching:true,sliding:true,speed:8}).state,'slide');
 });
 
 test('animation layers blend smoothly, stay normalized and ignore unsupported clips',()=>{
@@ -24,7 +25,7 @@ test('animation layers blend smoothly, stay normalized and ignore unsupported cl
 
 test('pod entry, pod exit and crouch use the supplied locomotion clips when dedicated clips are absent',()=>{
  const supported=new Set(['idle','walk','run']);
- for(const state of ['pod-enter','pod-exit','crouch']){
+ for(const state of ['pod-enter','pod-exit','crouch','slide']){
   assert.equal(stepAnimationBlend(createAnimationBlend('idle'),{state,supported},.08).state,'walk',state);
  }
 });
