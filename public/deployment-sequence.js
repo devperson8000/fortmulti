@@ -1,4 +1,4 @@
-import {DEPLOYMENT_CUES,MUSIC_START,POD_RELEASE,CINEMATIC_CAMERA_RADIUS,deploymentCinematic} from './deployment-cinematic.js';
+import {DEPLOYMENT_CUES,MUSIC_START,POD_RELEASE,CINEMATIC_CAMERA_RADIUS,deploymentCinematic,podExitPosition,podExitYaw} from './deployment-cinematic.js';
 export const DEPLOYMENT_STATES=Object.freeze([
  'ship_waiting','landing_selection','pod_available','entering_pod','pod_ready',
  'both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','saluting','match_active'
@@ -37,6 +37,30 @@ export function deploymentStageAt(elapsed){
  if(t<time.sealSeconds+time.launchSeconds+time.landedSeconds+time.openingSeconds+time.exitSeconds)return 'exiting';
  if(t<time.sealSeconds+time.launchSeconds+time.landedSeconds+time.openingSeconds+time.exitSeconds+time.saluteSeconds)return 'saluting';
  return 'match_active';
+}
+
+// Drives all clients' cinematic avatars from one monotonic song-relative
+// timestamp, rather than stepping the exit forward only when a snapshot lands.
+// The authoritative Match uses the same geometry and heading helpers.
+export function deploymentActorPose(landing,podYaw=0,side=1,sequenceElapsed=0,groundHeight=()=>landing.y){
+ if(!landing||!Number.isFinite(landing.x)||!Number.isFinite(landing.y)||!Number.isFinite(landing.z))return null;
+ const time=DEPLOYMENT_TIMELINE,t=Math.max(0,Number(sequenceElapsed)||0);
+ const openingAt=time.sealSeconds+time.launchSeconds+time.landedSeconds;
+ const exitingAt=openingAt+time.openingSeconds;
+ const salutingAt=exitingAt+time.exitSeconds;
+ const combatAt=salutingAt+time.saluteSeconds;
+ if(t<openingAt||t>=combatAt)return null;
+ const opening=clamp((t-openingAt)/time.openingSeconds,0,1);
+ const progress=clamp((t-exitingAt)/time.exitSeconds,0,1);
+ const salute=(t-salutingAt)/time.saluteSeconds;
+ const raised=smooth(salute/.23),lowered=smooth((1-salute)/.23);
+ return {
+  position:podExitPosition(landing,podYaw,side,progress,groundHeight),
+  yaw:podExitYaw(podYaw,opening),
+  animationState:t<exitingAt?'idle':t<salutingAt?'pod-exit':'idle',
+  saluteProgress:t<salutingAt?0:Math.min(raised,lowered),
+  exitProgress:progress
+ };
 }
 
 export function deploymentPresentation(stage,elapsed){

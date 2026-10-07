@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEPLOYMENT_TIMELINE, DEPLOYMENT_STATES, createDeploymentClock, stepDeploymentClock, deploymentStageAt, safeLandingPoint } from '../public/deployment-sequence.js';
+import { DEPLOYMENT_TIMELINE, DEPLOYMENT_STATES, createDeploymentClock, stepDeploymentClock, deploymentStageAt, safeLandingPoint, deploymentActorPose } from '../public/deployment-sequence.js';
 import { DEPLOYMENT_CUES, MUSIC_START, CINEMATIC_CAMERA_RADIUS, deploymentCinematic, cinematicPodPosition, DEPLOYMENT_MUSIC_END } from '../public/deployment-cinematic.js';
 import { SHIP_PODS, clampShipPosition, moveInShip } from '../public/deployment-ship.js';
 
@@ -103,4 +103,41 @@ test('terrain sampling rejects steep slopes and invalid heights',()=>{
  const level={height:(x,z)=>3.4+Math.sin(x*.02)*.06+Math.cos(z*.02)*.06,obstacles:[]};
  const safe=safeLandingPoint({x:32,z:40},level);
  assert.ok(safe&&Math.hypot(safe.x-32,safe.z-40)<.01);
+});
+
+test('scripted actor pose is continuous through hatch opening, walk and salute',()=>{
+ const t=DEPLOYMENT_TIMELINE;
+ const opening=t.sealSeconds+t.launchSeconds+t.landedSeconds;
+ const exiting=opening+t.openingSeconds, saluting=exiting+t.exitSeconds, finished=saluting+t.saluteSeconds;
+ const landing={x:45,y:0,z:30},terrain=(x,z)=>.004*x+.006*z,yaw=Math.PI/3,side=-1;
+ assert.equal(deploymentActorPose(landing,yaw,side,opening-.001,terrain),null);
+ const first=deploymentActorPose(landing,yaw,side,opening,terrain);
+ assert.ok(first);
+ assert.equal(first.animationState,'idle');
+ assert.ok(Math.abs(first.yaw-yaw)<1e-8);
+ const opened=deploymentActorPose(landing,yaw,side,exiting,terrain);
+ assert.ok(Math.abs(opened.yaw-yaw-Math.PI)<1e-8,'the Soldier turns towards the hatch');
+ assert.ok(Math.hypot(opened.position[0]-first.position[0],opened.position[2]-first.position[2])<1e-8);
+ const stride=deploymentActorPose(landing,yaw,side,exiting+.4*t.exitSeconds,terrain);
+ assert.equal(stride.animationState,'pod-exit');
+ assert.ok(stride.exitProgress>.39&&stride.exitProgress<.41);
+ const out=deploymentActorPose(landing,yaw,side,saluting,terrain);
+ assert.ok(Math.hypot(out.position[0]-landing.x,out.position[2]-landing.z)>2);
+ const gesture=deploymentActorPose(landing,yaw,side,saluting+.5*t.saluteSeconds,terrain);
+ assert.equal(gesture.animationState,'idle');
+ assert.ok(gesture.saluteProgress>.99,'native model has time to hold a full salute');
+ assert.ok(Math.hypot(...out.position.map((v,i)=>v-gesture.position[i]))<1e-8,'the Soldier remains stationary while saluting');
+ const fade=deploymentActorPose(landing,yaw,side,finished-.01,terrain);
+ assert.ok(fade.saluteProgress<.1,'the salute lowers before gameplay');
+ assert.equal(deploymentActorPose(landing,yaw,side,finished,terrain),null);
+});
+test('continuous actor pose cannot be affected by intermittent network snapshots',()=>{
+ const origin={x:52,y:3,z:-35},t=DEPLOYMENT_TIMELINE;
+ const exit=t.sealSeconds+t.launchSeconds+t.landedSeconds+t.openingSeconds;
+ const sample=Array.from({length:64},(_,i)=>deploymentActorPose(origin,0,1,exit+i*t.exitSeconds/63,()=>origin.y));
+ const increments=sample.slice(1).map((next,i)=>Math.hypot(next.position[0]-sample[i].position[0],next.position[2]-sample[i].position[2]));
+ assert.ok(increments.every(v=>v>.00001&&v<.09),'each rendered frame advances a small, continuous distance');
+ const once=deploymentActorPose(origin,0,1,exit+.4*t.exitSeconds,()=>origin.y);
+ const again=deploymentActorPose(origin,0,1,exit+.4*t.exitSeconds,()=>origin.y);
+ assert.deepEqual(again,once,'the same clock tick always produces the same pose');
 });
