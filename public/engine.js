@@ -7,7 +7,7 @@ import {terrainColor,surfaceAtPoint,litColor,buildPresentation,createMotionPrese
 import {buildingLayout,roadRibbon,OUTPOSTS} from './world-layout.js';
 import {ITEMS,ITEM_SLOTS,validSlot,MATERIALS} from './items.js';
 import {aimedEntity} from './resource-system.js';
-import {gridBounds,gridPlacement,rayRamp} from './build-grid.js';
+import {gridBounds,gridPlacement,gridBaseY,rayRamp} from './build-grid.js';
 import {WEAPON_PROFILES,WEAPON_ORDER,BUILD_SLOTS,createLoadout,weaponForSlot,weaponIdForSlot,isWeaponSlot,isBuildSlot,currentAmmo,shotSpread,spreadDirection,reloadProgress} from './weapon-system.js';
 import {advanceMotionTrack,smoothAngle,selectViewPlayer} from './network-tuning.js';
 import {ReusableFloatBuffer} from './render-buffer.js';
@@ -331,7 +331,7 @@ $('mouse-sensitivity').oninput=e=>{mouseSensitivity=clampSetting(e.target.value,
 document.querySelectorAll('[data-slot]').forEach(e=>e.onclick=()=>{if(running&&matchPhase==='playing'&&!cinematicLock)select(+e.dataset.slot);});document.querySelectorAll('[data-key]').forEach(e=>{e.onpointerdown=ev=>{ev.preventDefault();e.setPointerCapture(ev.pointerId);keys[e.dataset.key]=true;};e.onpointerup=e.onpointercancel=()=>keys[e.dataset.key]=false;});$('touchjump').onpointerdown=()=>keys.Space=true;$('touchjump').onpointerup=$('touchjump').onpointercancel=()=>keys.Space=false;$('touchfire').onpointerdown=e=>{try{e.target.setPointerCapture(e.pointerId);}catch{}if(matchPhase==='playing'&&!cinematicLock){firing=true;shoot(true);}};$('touchfire').onpointerup=$('touchfire').onpointercancel=()=>firing=false;
 function update(){/* Match snapshots own movement, combat and interactions. */}
 function structure(s,ghost=false){
- const material=s.material||selectedMaterial,enough=(player.materials?.[selectedMaterial]||0)>=10,valid=canBuild(s)&&enough,visual=buildVisuals.get(s.id),presentation=buildPresentation(visual?time-visual.born:1,s.hp??MATERIALS[material].hp,MATERIALS[material].hp),base=color(MATERIALS[material].color.slice(1)),outline=color(valid?'7fefff':'ff817c'),col=ghost?outline:base.map((v,i)=>mix(v*(1-presentation.damage*.27),[.72,.92,1][i],Math.max(presentation.reveal*.38,visual?clamp(1-(time-visual.hit)/.16,0,1)*.3:0))),origin=[s.x,s.y,s.z],angle=s.angle||0,point=p=>transform([p[0],p[1]*(ghost?1:presentation.scale),p[2]],origin,angle),part=(p,d,c)=>box(point(p),[d[0],d[1]*(ghost?1:presentation.scale),d[2]],c,angle);
+ const material=s.material||selectedMaterial,enough=(player.materials?.[selectedMaterial]||0)>=10,valid=canBuild(s)&&enough,visual=buildVisuals.get(s.id),presentation=buildPresentation(visual?time-visual.born:1,s.hp??MATERIALS[material].hp,MATERIALS[material].hp),base=color(MATERIALS[material].color.slice(1)),outline=color(valid?'7fefff':'ff817c'),col=ghost?outline:base.map((v,i)=>mix(v*(1-presentation.damage*.27),[.72,.92,1][i],Math.max(presentation.reveal*.38,visual?clamp(1-(time-visual.hit)/.16,0,1)*.3:0))),origin=[s.x,s.type===2?gridBaseY(s):s.y,s.z],angle=s.angle||0,point=p=>transform([p[0],p[1]*(ghost?1:presentation.scale),p[2]],origin,angle),part=(p,d,c)=>box(point(p),[d[0],d[1]*(ghost?1:presentation.scale),d[2]],c,angle);
  if(s.type===2){
   if(!ghost)part([0,1.8,0],[5,3.6,.22],col);
   for(const y of [0,3.6])beam(point([-2.5,y,.14]),point([2.5,y,.14]),ghost?.028:.055,ghost?outline:C.cream);
