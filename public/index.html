@@ -9,10 +9,12 @@
 <link rel="stylesheet" href="game.css">
 <link rel="stylesheet" href="lobby.css">
 <link rel="stylesheet" href="inventory-menu.css">
+<link rel="stylesheet" href="deployment-cinematic.css">
 <style>#interact-prompt{position:fixed;left:50%;top:58%;transform:translateX(-50%);font:700 13px system-ui;color:#fff;text-shadow:0 2px 5px #000;pointer-events:none}#use-indicator{position:fixed;left:50%;top:64%;transform:translateX(-50%);padding:12px 24px;background:linear-gradient(90deg,#287b96 var(--progress),#162b38 var(--progress));border:1px solid #a8eaff;border-radius:6px;font:700 12px system-ui}.slots button.empty{filter:grayscale(1);opacity:.32}.weapon-slots{flex-wrap:wrap;justify-content:flex-end;max-width:760px}.weapon-slots button{min-width:46px}.menu #interact-prompt,.menu #use-indicator{display:none}#inventory{max-width:95vw}</style></head>
 <body class="in-lobby">
 <canvas id="game" aria-label="First-person multiplayer battle royale inside the deployment ship and on the island"></canvas>
 <div id="vignette"></div><div id="damage"></div><div id="deployment-fade" aria-hidden="true"></div>
+<div id="deployment-cinematic" aria-hidden="true"><div class="cinematic-mark"><img src="horizon-logo-transparent.webp" alt=""></div></div>
 <div id="scope" aria-hidden="true">
   <div class="scope-lens">
     <svg viewBox="0 0 600 600" role="presentation"><circle cx="300" cy="300" r="286"/><path d="M300 0v244M300 356v244M0 300h244M356 300h244"/><path class="scope-fine" d="M270 300h60M300 270v60M282 330l18-30 18 30M255 370h90M270 405h60"/></svg>

@@ -1,3 +1,4 @@
+import {deploymentCinematic,cinematicPodPosition} from './deployment-cinematic.js';
 import {createInventory,createWeaponItem,inventoryWeapon,cloneInventory,applyInventoryMove,movedSelection} from './weapon-inventory.js';
 import {moveHorizontal,upwardLimit,canStandAt} from './movement-collision.js';
 import {gridPlacement,gridBounds,gridValid,rampHeight,rayRamp} from './build-grid.js';
@@ -67,8 +68,9 @@ export class Match{
   }
   const previousStage=this.deployment.stage;this.deployment.elapsed+=dt;this.deployment.sequenceElapsed=Math.max(0,this.deployment.elapsed-DEPLOYMENT_TIMELINE.readyBeat);this.deployment.stage=this.deployment.elapsed<DEPLOYMENT_TIMELINE.readyBeat?'both_ready':deploymentStageAt(this.deployment.sequenceElapsed);this.deployment.stageElapsed=this.deployment.elapsed;
   if(this.deployment.stage!==previousStage&&['pod_sealing','launching','transition','pod_opening','exiting'].includes(this.deployment.stage))this.event({type:'deployment_stage',stage:this.deployment.stage,sequence:this.deployment.sequenceId});
-  if(this.deployment.stage==='transition'){for(const p of alive){p.deploymentState='transition';p.dropState='transition';p.animationState='fall';}}
-  if(this.deployment.stage==='landed'&&!this.deployment.teleported){this.deployment.teleported=true;for(const p of alive){const target=p.landingPosition;if(!target)continue;p.p=[target.x,target.y,target.z];p.exitPosition=[target.x,target.y,target.z];p.air='pod';p.deploymentState='landed';p.dropState='landed';p.animationState='idle';}this.event({type:'deployment_landed',sequence:this.deployment.sequenceId});}
+  if(!this.deployment.teleported&&deploymentCinematic(this.deployment.sequenceElapsed).portrait){for(const p of alive){if(p.landingPosition){p.p=cinematicPodPosition(p.landingPosition,this.deployment.sequenceElapsed);p.air='pod';p.animationState='idle';}}}
+  if(this.deployment.stage==='transition'){for(const p of alive){p.deploymentState='transition';p.dropState='transition';p.animationState='idle';}}
+  if(this.deployment.sequenceElapsed>=DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds&&!this.deployment.teleported){this.deployment.teleported=true;for(const p of alive){const target=p.landingPosition;if(!target)continue;p.p=[target.x,target.y,target.z];p.exitPosition=[target.x,target.y,target.z];p.air='pod';p.deploymentState='landed';p.dropState='landed';p.animationState='idle';}this.event({type:'deployment_landed',sequence:this.deployment.sequenceId});}
   else if(this.deployment.stage==='landed'){for(const p of alive){p.deploymentState='landed';p.dropState='landed';p.air='pod';p.animationState='idle';}}
   if(this.deployment.stage==='pod_opening'){for(const p of alive){p.deploymentState='pod_opening';p.dropState='pod_opening';p.air='pod';p.animationState='idle';}}
   if(this.deployment.stage==='exiting'){const exitElapsed=this.deployment.sequenceElapsed-DEPLOYMENT_TIMELINE.sealSeconds-DEPLOYMENT_TIMELINE.launchSeconds-DEPLOYMENT_TIMELINE.landedSeconds-DEPLOYMENT_TIMELINE.openingSeconds,q=clamp(exitElapsed/DEPLOYMENT_TIMELINE.exitSeconds,0,1),ease=q*q*(3-2*q);for(const p of alive){p.deploymentState='exiting';p.dropState='exiting';p.animationState='pod-exit';p.air='pod';const start=p.exitPosition||p.p,pod=SHIP_PODS.find(value=>value.id===p.pod),offset=pod?.side||1;p.p=[start[0]+offset*1.7*ease,start[1]+.16*Math.sin(Math.PI*q),start[2]+.65*ease];}}
@@ -209,8 +211,10 @@ export class Match{
   for(const p of this.players)if(p.hp<=0&&!p.eliminated){p.eliminated=true;this.event({type:'elimination',by:null,hit:p.id,reason:'storm'});}this.checkRoundEnd();
  }
  tick(dt){
-  dt=clamp(dt,0,.05);if(this.phase==='done'||this.phase==='paused'||this.phase==='waiting')return;
-  if(this.phase==='deployment'){this.tickDeployment(dt);return;}
+  const wallStep=Number.isFinite(dt)?Math.max(0,dt):0;dt=clamp(wallStep,0,.05);if(this.phase==='done'||this.phase==='paused'||this.phase==='waiting')return;
+  // Music and the sealed-pod script follow elapsed wall time even if a host
+  // misses a timer callback. Walking, combat and physics retain the 50ms cap.
+  if(this.phase==='deployment'){const scripted=['both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(this.deployment.stage);this.tickDeployment(scripted?wallStep:dt);return;}
   if(this.phase==='countdown'||this.phase==='roundover'){this.timer-=dt;if(this.timer<=0){if(this.phase==='countdown')this.phase='playing';else this.startRound(false);}return;}
   this.elapsed+=dt;this.tickGroundedPlayers(dt);this.finishCombatTick(dt);
  }

@@ -1,4 +1,4 @@
-# Weapon samples
+# Game samples
 
 `ar-shot.wav` is one shot extracted from the user-supplied `download.mp4` on 2026-10-08. The uploaded clip contains a continuous burst; only the final blast and its decay are included in this asset.
 
@@ -6,7 +6,13 @@ The AR now keeps the remaining source tail, pads silence to 360 ms, and fades ou
 
 `shotgun-shot.wav` and `shotgun-reload.wav` come from the user-supplied `download (1).mp4` on 2026-10-08. The separate blast is extracted from 4.700–6.460 seconds, with a 240 ms tail fade. The reload sequence is extracted from 0–3.600 seconds and compressed to 2.700 seconds with pitch-preserving `atempo`; its final pump aligns with the weapon animation's action phase. The shotgun's authoritative reload duration is also 2.700 seconds. These are separate samples; a trigger pull plays one blast, while a confirmed reload plays its own sample.
 
-All assets are mono 48 kHz 16-bit PCM. Normal playback has no looping. Reload audio starts at the corresponding offset if the accepted snapshot arrives late. Switching weapons, death, completion, and menus cancel it with a 45 ms fade, without replaying delayed events.
+Weapon assets are mono 48 kHz 16-bit PCM. Normal playback has no looping. Reload audio starts at the corresponding offset if the accepted snapshot arrives late. Switching weapons, death, completion, and menus cancel it with a 45 ms fade, without replaying delayed events.
+
+`deployment-intro.mp3` comes from the user-supplied `hunumankind.mp3`, with the spoken word “game” isolated from the supplied screen recording. The original “movie” interval at 2.540–2.920 seconds is replaced in place by the recording's 3.330–3.835 second word. Pitch-preserving time compression (1.328947×), 12 ms crossfades, a 110–6500 Hz voice filter and +3.47 dB gain fit the replacement. The original stereo side signal and center below 100 Hz preserve the underlying bed. The full intermediate WAV retains the original sample count and unchanged samples outside this splice. Independent unprompted Whisper Small recognition identifies “game” in both the recording and the edited opening.
+
+The deployment asset is stereo 44.1 kHz, 192 kbps MP3, trimmed to 26.680 seconds and faded from 26.030 seconds. Runtime playback adds a 650 ms fade-in and ending fade at gain 0.65. One decoded buffer serves all rounds; playback never loops. Blackout begins before playback. The camera and title follow the same audio clock, seeking to the current cue when a client recovers late. Leaving resets the player, including for a new match reusing a sequence ID.
+
+Measured song-relative cues are shared in `deployment-cues.js`: first adlib 10.000, “Wait” 20.190, “When” 23.550, “Big” 25.580 and “stepper” 25.770 seconds. The first adlib uses a medium-confidence DTW word center; the remaining onsets combine Small ASR, DTW and forced phone alignment with about 80 ms measurement uncertainty. The selected touchdown cue is the beginning of “Big stepper,” 25.580 seconds.
 
 Reproduction with the original upload:
 

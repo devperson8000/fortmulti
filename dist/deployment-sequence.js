@@ -1,3 +1,4 @@
+import {DEPLOYMENT_CUES,MUSIC_START,deploymentCinematic} from './deployment-cinematic.js';
 export const DEPLOYMENT_STATES=Object.freeze([
  'ship_waiting','landing_selection','pod_available','entering_pod','pod_ready',
  'both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','match_active'
@@ -6,8 +7,8 @@ export const DEPLOYMENT_STATES=Object.freeze([
 export const DEPLOYMENT_TIMELINE=Object.freeze({
  enterSeconds:.92,
  sealSeconds:1.12,
- launchSeconds:3.08,
- fadeAt:2.58,
+ launchSeconds:MUSIC_START+DEPLOYMENT_CUES.impact-1.12,
+ fadeAt:MUSIC_START+DEPLOYMENT_CUES.impact-1.12-.14,
  fadeSeconds:.42,
  landedSeconds:.24,
  openingSeconds:1.18,
@@ -38,8 +39,8 @@ export function deploymentStageAt(elapsed){
 
 export function deploymentPresentation(stage,elapsed){
  const time=DEPLOYMENT_TIMELINE,t=Math.max(0,Number(elapsed)||0);
- const launchStart=time.sealSeconds,transitionStart=launchStart+time.fadeAt,landAt=launchStart+time.launchSeconds;
- const fade=stage==='launching'?0:stage==='transition'?smooth((t-transitionStart)/time.fadeSeconds):stage==='landed'?1:stage==='pod_opening'?Math.max(0,1-smooth((t-landAt-time.landedSeconds)/time.openingSeconds)):0;
+ const launchStart=time.sealSeconds;
+ const fade=['pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(stage)?deploymentCinematic(t).black:0;
  const launchProgress=clamp((t-launchStart)/time.launchSeconds,0,1);
  return {fade,launchProgress,stage,insidePod:['entering_pod','pod_ready','both_ready','pod_sealing','launching','transition','landed','pod_opening'].includes(stage)};
 }

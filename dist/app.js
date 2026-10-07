@@ -138,7 +138,7 @@ async function respondInvite(inv,accept){
  finally{renderInvites();refresh();}
 }
 
-function resetMatchState(){match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';$('deployment-ui').hidden=true;window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('deployment','dropping');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear({resetInventory:true});document.exitPointerLock?.();}
+function resetMatchState(){match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';$('deployment-ui').hidden=true;window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('deployment','dropping','deployment-cinematic');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear({resetInventory:true});document.exitPointerLock?.();}
 function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
 function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);match.beginDeployment();matchId=uid();matchEpoch=Math.max(Date.now(),matchEpoch+1);snapshotFrame=-1;seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;sendSnapshot();updatePresence();status('Deployment ship secured · choose a landing zone and enter a pod.','success');}
@@ -226,7 +226,7 @@ $('open-online').onclick=$('social-toggle').onclick=$('footer-social').onclick=f
 $('social-close').onclick=$('social-scrim').onclick=closeOnline;
 $('lobby-play-toggle').onclick=()=>selectLobbyTab('play');$('profile-toggle').onclick=()=>toggleProfile();$('profile-close').onclick=()=>toggleProfile(false);$('character-preview-toggle').onclick=()=>selectLobbyTab('character');
 $('online-refresh').onclick=()=>social?pollSocial():startSocial();
-$('ready').onclick=()=>{if(!conn||match)return;ready=!ready;game?.startAudio();hello();refresh();if(host)start();};
+$('ready').onclick=()=>{if(!conn||match)return;ready=!ready;game?.startAudio({deployment:true});hello();refresh();if(host)start();};
 function chooseLanding(x,z){if(!game?.setLanding(x,z))return;const me=snapshot?.players.find(player=>player.id===conn?.id);if(snapshot&&me)updateDeploymentUI(snapshot,{...me,destination:{x,z}});}
 $('landing-map').onclick=e=>{const rect=e.currentTarget.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width,z=(e.clientY-rect.top)/rect.height;if(x<.058||x>.942||z<.088||z>.912)return;chooseLanding(((x-.058)/.884-.5)*584,((z-.088)/.824-.5)*584);};
 for(const button of document.querySelectorAll('[data-landing]'))button.onclick=()=>{const key=button.dataset.landing,poi=({suncrest:LANDING_POIS[0],harbor:LANDING_POIS[1],neon:LANDING_POIS[2],citadel:LANDING_POIS[3],depot:LANDING_POIS[4],pinewatch:LANDING_POIS[5]})[key];if(poi)chooseLanding(poi.x,poi.z);};
@@ -254,7 +254,7 @@ window.addEventListener('beforeunload',()=>{voice.stop();conn?.close();social?.c
 
 let previous=performance.now();
 setInterval(()=>{
- const now=performance.now(),dt=Math.min(.05,(now-previous)/1000);previous=now;if(!conn)return;
+ const now=performance.now(),dt=Math.max(0,(now-previous)/1000);previous=now;if(!conn)return;
  const cadence=networkCadence(partyProfiles().length);
  if(now-lastHello>=cadence.helloMs){hello();lastHello=now;}
  if(host&&now-lastPing>=cadence.pingMs){const live=activePeers();if(live.length){const peer=live[pingCursor++%live.length];conn.send('ping',{time:Date.now()},peer.id);}lastPing=now;}

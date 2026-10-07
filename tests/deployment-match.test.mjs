@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Match } from '../public/simulation.js';
 import { DEPLOYMENT_TIMELINE } from '../public/deployment-sequence.js';
+import { DEPLOYMENT_CUES,MUSIC_START } from '../public/deployment-cinematic.js';
 import { SHIP_PODS } from '../public/deployment-ship.js';
 
 const world={height:()=>0,obstacles:[]};
@@ -45,16 +46,17 @@ test('both connected players auto-deploy to their own destinations only after bo
  assert.equal(match.deployment.stage,'both_ready');
  assert.ok(match.players.every(p=>p.deploymentState==='both_ready'));
  tick(match,.75);assert.equal(match.deployment.stage,'pod_sealing');
- tick(match,DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.fadeAt-.7);
- assert.equal(match.deployment.stage,'launching');
- tick(match,.2);
+ const impact=DEPLOYMENT_TIMELINE.readyBeat+MUSIC_START+DEPLOYMENT_CUES.impact;
+ while(match.deployment.elapsed<impact-.1)match.tick(Math.min(.02,impact-.1-match.deployment.elapsed));
  assert.equal(match.deployment.stage,'transition');
- assert.ok(match.players.every(p=>p.p[1]>100),'world reposition stays hidden above full-screen black');
- tick(match,.5);
+ assert.ok(match.players.every(p=>p.p[1]>0&&p.p[1]<10),'pods visibly approach ground before the musical impact');
+ assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,0);
+ while(match.deployment.elapsed<impact+.001)match.tick(Math.min(.01,impact+.001-match.deployment.elapsed));
  assert.equal(match.deployment.stage,'landed');
  assert.ok(Math.hypot(match.players[0].p[0]-30,match.players[0].p[2]-40)<2);
  assert.ok(Math.hypot(match.players[1].p[0]+80,match.players[1].p[2]-65)<2);
  assert.equal(match.phase,'deployment');
+ assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,1);
 });
 
 test('landing picks are reserved distinctly and an invalidated target reopens pods without deadlocking',()=>{
@@ -81,7 +83,7 @@ test('pre-match snapshots carry recovery data and combat stays locked until pod 
  const initial=match.snapshot();assert.equal(initial.deployment.stage,'landing_selection');assert.equal(initial.players[0].destination.x,12);
  match.input('a',{slot:4,fire:true,reload:true,z:1});tick(match,.5);
  assert.equal(match.players[0].slot,0);assert.deepEqual(match.players[0].inventory,Array(5).fill(null));assert.equal(match.players[0].p[0],match.players[0].shipLocal[0]);
- tick(match,12);
+ tick(match,DEPLOYMENT_TIMELINE.enterSeconds+DEPLOYMENT_TIMELINE.readyBeat+DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds+DEPLOYMENT_TIMELINE.landedSeconds+DEPLOYMENT_TIMELINE.openingSeconds+DEPLOYMENT_TIMELINE.exitSeconds+1);
  assert.equal(match.phase,'playing');assert.equal(match.deployment.stage,'match_active');
  assert.ok(match.players.every(p=>p.air==='landed'&&p.slot===0));
 });
@@ -89,11 +91,25 @@ test('pre-match snapshots carry recovery data and combat stays locked until pod 
 test('pod exit eases from the landed position rather than jumping on its first frame',()=>{
  const match=new Match(world,['a','b']);match.beginDeployment();readyPlayer(match,'a',0,{x:12,z:18});readyPlayer(match,'b',1,{x:-22,z:28});
  let last=match.players[0].p.slice();
- for(let n=0;n<300;n++){
+ for(let n=0;n<Math.ceil((DEPLOYMENT_TIMELINE.enterSeconds+DEPLOYMENT_TIMELINE.readyBeat+DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds+DEPLOYMENT_TIMELINE.landedSeconds+DEPLOYMENT_TIMELINE.openingSeconds+1)/.025);n++){
   last=match.players[0].p.slice();match.tick(.025);
   if(match.deployment.stage==='exiting'){
    assert.ok(Math.hypot(match.players[0].p[0]-last[0],match.players[0].p[2]-last[2])<.05,'exit should start at the pod');return;
   }
  }
  assert.fail('never reached pod exit');
+});
+
+test('scripted deployment catches up after a stalled host without skipping touchdown or enabling combat early',()=>{
+ const match=new Match(world,['a','b']);match.beginDeployment();readyPlayer(match,'a',0,{x:30,z:40});readyPlayer(match,'b',1,{x:-80,z:65});tick(match,1.2);
+ const impact=DEPLOYMENT_TIMELINE.readyBeat+MUSIC_START+DEPLOYMENT_CUES.impact;
+ match.tick(impact-.04-match.deployment.elapsed);
+ assert.equal(match.deployment.stage,'transition');assert.equal(match.phase,'deployment');
+ assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,0);
+ match.tick(.7); // One delayed callback crosses the entire landed stage.
+ assert.equal(match.deployment.stage,'pod_opening');assert.equal(match.phase,'deployment');
+ assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,1);
+ assert.deepEqual(match.players[0].exitPosition,[30,0,40]);
+ match.tick(5);
+ assert.equal(match.phase,'playing');assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,1);
 });
