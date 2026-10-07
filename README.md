@@ -103,7 +103,7 @@ Rounds are last-player-standing. The first player to 5 round wins takes the matc
 | 0 | Pickaxe |
 | Z / V | Wall / ramp blueprint |
 | 7 / 8 / 9 | Shield cell / med kit / shockwave |
-| C | Crouch after deployment |
+| Ctrl | Crouch / knee slide while sprinting |
 | G | Rotate build |
 | Q | Toggle last weapon / last blueprint |
 | Mouse wheel | Cycle inventory |

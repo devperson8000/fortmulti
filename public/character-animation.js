@@ -1,11 +1,12 @@
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
-const STATES=Object.freeze(['idle','walk','run','jump','fall','crouch','pod-enter','pod-exit']);
+const STATES=Object.freeze(['idle','walk','run','jump','fall','crouch','slide','pod-enter','pod-exit']);
 
-export function resolveCharacterAnimation({grounded=true,speed=0,velocity=0,sprinting=false,crouching=false,deploymentState='',aiming=false,reloading=false,weapon=1}={}){
+export function resolveCharacterAnimation({grounded=true,speed=0,velocity=0,sprinting=false,crouching=false,sliding=false,deploymentState='',aiming=false,reloading=false,weapon=1}={}){
  const moveSpeed=Math.max(0,Number.isFinite(speed)?speed:0),vertical=Number.isFinite(velocity)?velocity:0;
  let state='idle';
  if(deploymentState==='entering_pod'||deploymentState==='exiting')state=deploymentState==='entering_pod'?'pod-enter':'pod-exit';
  else if(!grounded)state=vertical>.5?'jump':'fall';
+ else if(sliding)state='slide';
  else if(crouching)state='crouch';
  else if(moveSpeed>.18)state=sprinting||moveSpeed>4.1?'run':'walk';
  return {state,speed:moveSpeed,grounded:Boolean(grounded),aiming:Boolean(aiming),reloading:Boolean(reloading),armed:Number(weapon)>0};
@@ -19,7 +20,7 @@ export function createAnimationBlend(state='idle'){
 function supportedState(state,supported){
  const has=name=>supported instanceof Set?supported.has(name):Array.isArray(supported)?supported.includes(name):Boolean(supported?.[name]);
  if(has(state))return state;
- const fallback=['run','crouch','pod-enter','pod-exit'].includes(state)?'walk':'idle';
+ const fallback=state==='slide'?(has('crouch')?'crouch':'walk'):['run','crouch','pod-enter','pod-exit'].includes(state)?'walk':'idle';
  return has(fallback)?fallback:'idle';
 }
 
@@ -37,7 +38,7 @@ export function characterLocomotion(player={}){
  const state=player.locomotionState||player.animationState||'idle';
  const speed=Number.isFinite(player.moveSpeed)?player.moveSpeed:state==='run'?5.4:state==='walk'?2.2:0;
  const grounded=typeof player.grounded==='boolean'?player.grounded:!['jump','fall'].includes(state);
- return resolveCharacterAnimation({grounded,speed,velocity:player.vy||0,sprinting:player.sprinting||state==='run',crouching:player.crouching,deploymentState:state==='pod-enter'?'entering_pod':state==='pod-exit'?'exiting':'',weapon:player.slot,aiming:player.aim,reloading:player.reload>0});
+ return resolveCharacterAnimation({grounded,speed,velocity:player.vy||0,sprinting:player.sprinting||state==='run',crouching:player.crouching,sliding:player.sliding,deploymentState:state==='pod-enter'?'entering_pod':state==='pod-exit'?'exiting':'',weapon:player.slot,aiming:player.aim,reloading:player.reload>0});
 }
 export function characterActionPose(player={}){
  const remaining=Math.max(0,Number(player.actionTime)||0),duration=player.action==='harvest'?.42:.55,progress=clamp(1-remaining/duration,0,1);

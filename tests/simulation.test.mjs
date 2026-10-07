@@ -69,6 +69,14 @@ test('crouch, walk, run, jump and fall animation states are synchronized in snap
  for(let i=0;i<15;i++){match.input('a',{jump:false});match.tick(.05);}assert.ok(['fall','idle'].includes(p.animationState));
 });
 
+test('sprint plus crouch enters a decelerating knee slide, returns standing, then allows a fresh crouch',()=>{
+ const match=new Match(world,['a','b']);landAll(match);const p=match.players[0];
+ for(let n=0;n<8;n++){match.input('a',{z:1,sprint:true});match.tick(.05);}assert.equal(p.sprinting,true);assert.ok(p.moveSpeed>7.5);
+ match.input('a',{z:1,sprint:true,crouch:true});match.tick(.05);assert.equal(p.sliding,true);assert.equal(p.crouching,true);assert.equal(p.animationState,'slide');const start=p.slideSpeed;
+ for(let n=0;n<40;n++){match.input('a',{z:1,sprint:true,crouch:true});match.tick(.05);}assert.equal(p.sliding,false);assert.equal(p.crouching,false);assert.ok(start>2.8);
+ match.input('a',{z:1,crouch:false});match.tick(.05);match.input('a',{z:1,crouch:true});match.tick(.05);assert.equal(p.sliding,false);assert.equal(p.crouching,true);assert.equal(p.animationState,'crouch');
+});
+
 test('invalid inputs cannot introduce NaN or unbounded movement',()=>{const input=sanitize({x:Infinity,yaw:NaN,z:500,slot:888,landing:[Infinity,0]});assert.equal(input.x,0);assert.equal(input.yaw,0);assert.equal(input.z,1);assert.equal(input.slot,0);assert.equal(input.landing,null);assert.ok(ISLAND_LIMIT>280);});
 
 test('large-party input stays active between adaptive network updates',()=>{

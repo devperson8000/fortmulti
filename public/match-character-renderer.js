@@ -142,7 +142,7 @@ export class MatchCharacterRenderer{
   model.scale.setScalar(this.modelScale);model.traverse(object=>{if(object.isMesh){object.castShadow=false;object.receiveShadow=true;object.frustumCulled=false;}});
   holder.add(model);this.scene.add(holder);const contactShadow=createContactShadow();this.scene.add(contactShadow);
   const animatedPose=new Map([...bones.values()].map(bone=>[bone,bone.quaternion.clone()]));
-  const instance={id,holder,model,contactShadow,motion:createMotionPresentation(),mixer,actions,bones,animatedPose,hand,rightArm,rightForeArm,leftArm,leftForeArm,weaponId:'',weaponMount:null,weaponMounts:new Map(),utilityCache:new Map(),blend:createAnimationBlend('idle'),sequenceState:'',fireTime:0,color:source.color||'#6f8470'};
+  const instance={id,holder,model,contactShadow,motion:createMotionPresentation(),mixer,actions,bones,animatedPose,hand,rightArm,rightForeArm,leftArm,leftForeArm,weaponId:'',weaponMount:null,weaponMounts:new Map(),utilityCache:new Map(),blend:createAnimationBlend('idle'),sequenceState:'',fireTime:0,crouchBlend:0,slideBlend:0,color:source.color||'#6f8470'};
   this._tint(instance,instance.color);return instance;
  }
  _tint(instance,value){
@@ -159,7 +159,7 @@ export class MatchCharacterRenderer{
    instance.holder.visible=id!==String(hideId);instance.holder.position.set(p.p?.[0]||0,p.p?.[1]||0,p.p?.[2]||0);instance.holder.rotation.y=Number.isFinite(p.yaw)?p.yaw:0;
    const animation=characterLocomotion(p),motion=stepMotionPresentation(instance.motion,p,dt);instance.model.rotation.x=motion.lean;instance.model.rotation.z=-motion.strafe-motion.turn;
    const altitude=Math.max(0,p.p[1]-(p.groundY??p.p[1]));instance.contactShadow.visible=p.showShadow!==false&&instance.holder.visible&&p.air==='landed';instance.contactShadow.position.set(p.p[0],(p.groundY??p.p[1])+.025,p.p[2]);instance.contactShadow.material.opacity=.72/(1+altitude*.65);instance.contactShadow.scale.set(1.8+Math.min(altitude,4)*.18,1.3+Math.min(altitude,4)*.12,1);
-   const blendState=animation.state==='crouch'&&animation.speed<.18?'idle':animation.state;
+   const blendState=animation.state==='slide'?'crouch':animation.state==='crouch'&&animation.speed<.18?'idle':animation.state;
    instance.blend=stepAnimationBlend(instance.blend,{state:blendState,supported:this.supportedClips},dt);
    for(const [state,action] of instance.actions){action.setEffectiveWeight(instance.blend.weights[state]||0);if(state==='walk'||state==='run')action.setEffectiveTimeScale(clamp((p.moveSpeed||animation.speed)/(state==='run'?6.8:3.2),.65,1.4));}
    // Restore the last mixer pose before applying it again. Constant animation
@@ -167,6 +167,7 @@ export class MatchCharacterRenderer{
    for(const [bone,q] of instance.animatedPose)bone.quaternion.copy(q);
    instance.mixer.update(clamp(dt,0,.06));
    for(const [bone,q] of instance.animatedPose)q.copy(bone.quaternion);
+   const poseBlend=1-Math.exp(-clamp(dt,0,.06)*13);instance.slideBlend+=(Number(Boolean(p.sliding))-instance.slideBlend)*poseBlend;instance.crouchBlend+=(Number(Boolean(p.crouching&&!p.sliding))-instance.crouchBlend)*poseBlend;
    const activeMatch=phase==='playing'&&p.deploymentState==='match_active',armed=activeMatch&&Boolean(inventoryWeapon(p.inventory,p.slot));
    this._weaponFor(instance,armed?inventoryWeapon(p.inventory,p.slot).type:null);
    instance.fireTime=Math.max(0,instance.fireTime-clamp(dt,0,.06));
@@ -192,7 +193,12 @@ export class MatchCharacterRenderer{
 
    if(motion.landing>.001){for(const side of ['left','right']){const thigh=instance.bones.get(`mixamorig${side}upleg`),leg=instance.bones.get(`mixamorig${side}leg`);if(thigh)thigh.rotation.x-=motion.landing*.18;if(leg)leg.rotation.x+=motion.landing*.36;}instance.model.position.y=-motion.landing*.07;}else instance.model.position.y=0;
    const spine=instance.bones.get('mixamorigspine');if(spine)spine.rotation.y+=motion.turn*1.5;
-   if(p.crouching){instance.holder.position.y-=.16;for(const key of['mixamorigleftupleg','mixamorigrightupleg']){const bone=instance.bones.get(key);if(bone)bone.rotation.x-=.36;}for(const key of['mixamorigleftleg','mixamorigrightleg']){const bone=instance.bones.get(key);if(bone)bone.rotation.x+=.68;}}
+   const crouch=instance.crouchBlend,slide=instance.slideBlend,crouchStep=Math.sin((Number(p.walk)||0)*2.15)*Math.min(1,(Number(p.moveSpeed)||0)/3.5)*crouch;
+   instance.holder.position.y-=crouch*.16+slide*.27;instance.model.rotation.x+=slide*.12;
+   const leftThigh=instance.bones.get('mixamorigleftupleg'),rightThigh=instance.bones.get('mixamorigrightupleg'),leftLeg=instance.bones.get('mixamorigleftleg'),rightLeg=instance.bones.get('mixamorigrightleg');
+   if(leftThigh)leftThigh.rotation.x-=crouch*.36+crouchStep*.17+slide*.72;if(rightThigh)rightThigh.rotation.x-=crouch*.36-crouchStep*.17+slide*.72;
+   if(leftLeg)leftLeg.rotation.x+=crouch*.68-crouchStep*.14+slide*1.12;if(rightLeg)rightLeg.rotation.x+=crouch*.68+crouchStep*.14+slide*1.12;
+   const hips=instance.bones.get('mixamorighips'),slideSpine=instance.bones.get('mixamorigspine');if(hips)hips.rotation.x+=slide*.09;if(slideSpine)slideSpine.rotation.x+=slide*.16;
   }
   for(const [id,instance] of this.instances)if(!active.has(id)){this._disposeInstance(instance);this.instances.delete(id);}
  }
