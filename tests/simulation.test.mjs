@@ -92,3 +92,12 @@ test('disconnected players leave the next round and never return as ghosts',()=>
 });
 
 test('a disconnect while still in the lobby shrinks the required roster',()=>{const match=new Match(world,['a','b','c']);assert.equal(match.phase,'waiting');match.disconnect('c');assert.deepEqual(match.ids,['a','b']);assert.equal(match.players.length,2);});
+
+// Remote weapon pitch must survive the authoritative snapshot, with input bounds intact.
+test('snapshots carry sanitized vertical weapon aim for other players',()=>{
+ const match=new Match(world,['a','b']);landAll(match);
+ for(const [pitch,expected] of [[.4,.4],[10,.7],[-10,-.9],[NaN,0]]){
+  match.input('a',{slot:1,pitch});match.tick(.016);
+  assert.equal(match.snapshot().players.find(p=>p.id==='a').pitch,expected);
+ }
+});

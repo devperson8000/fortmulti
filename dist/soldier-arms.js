@@ -36,3 +36,16 @@ export function poseSoldierArms(rig,{right,left,origin=[0,0,0],rotation=[0,0,0],
  }
  rig.model.updateMatrixWorld(true);
 }
+
+// Solve against the weapon's world-space palm contact, then orient/curl the
+// original hand bones. The weapon is independent of the hand hierarchy.
+export function poseWeaponHand(model,bones,side,palm,orientation,spec,pole){
+ const hand=bones.get(`mixamorig${side}hand`);if(!hand)return;
+ const wrist=palm.clone().sub(new THREE.Vector3(0,.09*model.getWorldScale(new THREE.Vector3()).x,0).applyQuaternion(orientation));
+ poseArmChain(model,bones,side,wrist,pole);
+ hand.quaternion.copy(hand.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(orientation));
+ for(const [name,bone]of bones){if(!name.startsWith(`mixamorig${side}hand`)||!/[123]$/.test(name))continue;if(spec.rest?.has(bone))bone.quaternion.copy(spec.rest.get(bone));const finger=['index','middle','ring','pinky','thumb'].find(f=>name.includes(f)),joint=Number(name.at(-1))-1;
+  bone.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),spec.fingers[finger][joint]));const splay=spec.splay?.[finger]?.[joint]||0;if(splay)bone.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),splay));if(finger==='thumb'&&joint===0)bone.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),side==='right'?-1.05:1.05));
+ }
+ model.updateMatrixWorld(true);
+}

@@ -85,3 +85,7 @@ test('utility camera framing is independent of the previously aimed weapon',()=>
  r.renderFirstPersonWeapon('ar',WEAPON_PROFILES.ar,state,createWeaponPartState());assert.ok(r.firstPersonCamera.fov<51);
  for(const id of ['pickaxe','shield','health','shockwave']){r.renderFirstPersonItem(id,state,{moveSpeed:0});assert.equal(r.firstPersonCamera.fov,62);for(const [bone,position]of r.arms.restPositions)assert.ok(bone.position.distanceTo(position)<1e-6,'utility posing detached a native skin attachment');}
 });
+
+test('pickaxe index closes around the actual shaft rather than floating beside it',()=>{
+ const state=createViewModelState();r.renderFirstPersonItem('pickaxe',state,{moveSpeed:0});const item=r.utilities.get('pickaxe'),finger=r.arms.bones.get('mixamorigrighthandindex3'),tip=item.worldToLocal(new THREE.Vector3(0,3.75,0).applyMatrix4(finger.matrixWorld));assert.ok(Math.hypot(tip.x,tip.z)<.065,`index is too far from the shaft ${tip.toArray()}`);assert.ok(tip.y>-.3&&tip.y<.25,'index missed the grip section');
+});

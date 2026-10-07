@@ -69,3 +69,22 @@ test('remote rendering resolves arbitrary slot five from the instance inventory'
  const bytes=await readFile(new URL('../public/models/weapons/Rifle_Assault_East.glb',import.meta.url));r.weaponTemplates.set('ar',(await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'')).scene);
  r.update([{id:'remote',p:[0,0,0],hp:100,slot:5,inventory:[null,null,null,null,{id:'a',type:'ar',ammo:7}],weapon:'ar',air:'landed',deploymentState:'match_active'}]);assert.equal(r.instances.get('remote').weaponId,'ar');assert.ok(r.instances.get('remote').weaponMount);
 });
+
+test('remote firearms face forward and both real palms follow model contacts through animation',async()=>{
+ const {MatchCharacterRenderer}=await import('../public/match-character-renderer.js');const {firstPersonCalibration}=await import('../public/first-person-calibration.js');
+ const r=Object.create(MatchCharacterRenderer.prototype);Object.assign(r,{scene:new THREE.Scene(),firstPersonScene:new THREE.Scene(),instances:new Map(),weaponTemplates:new Map(),clips:new Map()});r._loaded(asset);
+ const files={ar:'Rifle_Assault_East',shotgun:'Shotgun_Pump_East',smg:'SMG_Compact_East',sniper:'Sniper_Rifle_East'};
+ for(const [type,file]of Object.entries(files)){const b=await readFile(new URL('../public/models/weapons/'+file+'.glb',import.meta.url));r.weaponTemplates.set(type,(await loader.parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'')).scene);}
+ for(const type of Object.keys(files))for(const mode of ['idle','run','aim','crouch','reload','up','down']){
+  const p={id:'peer',p:[3,0,2],yaw:.4,pitch:mode==='down'?-.8:mode==='up'?.6:0,hp:100,slot:1,inventory:[{id:'w',type,ammo:5},null,null,null,null],air:'landed',deploymentState:'match_active',grounded:true,moveSpeed:mode==='run'?6:0,aim:mode==='aim',crouching:mode==='crouch',reload:mode==='reload'?1:0};
+  for(let n=0;n<30;n++)r.update([p],{dt:1/60});const instance=r.instances.get('peer'),mount=instance.weaponMount,c=firstPersonCalibration(type);
+  assert.equal(mount.parent,instance.holder,'weapon must not inherit hand rotation');
+  assert.ok(mount.position.z<-.12,'weapon grip is behind the torso');assert.ok(mount.position.y<1.25,'receiver is at head height');assert.ok(mount.position.x>=.14,'stock is centred through the chest');
+  const head=instance.holder.worldToLocal(instance.bones.get('mixamorighead').getWorldPosition(new THREE.Vector3())),receiver=instance.holder.worldToLocal(mount.userData.nodes.get('trigger').getWorldPosition(new THREE.Vector3()));assert.ok(receiver.z<head.z-.08,'actual receiver intersects the head');
+  const direction=new THREE.Vector3(0,0,-1).applyQuaternion(mount.getWorldQuaternion(new THREE.Quaternion()));assert.ok(direction.dot(new THREE.Vector3(-Math.sin(p.yaw)*Math.cos(p.pitch),Math.sin(p.pitch),-Math.cos(p.yaw)*Math.cos(p.pitch)))>.9,'barrel is upright or reversed');
+  for(const side of ['right','left']){const hand=instance.bones.get('mixamorig'+side+'hand'),palm=hand.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,.09*r.modelScale,0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion())));const target=mount.userData.contacts?.[side];assert.ok(target&&palm.distanceTo(target)<.003,`${type} ${mode} ${side} palm lost contact ${target&&palm.distanceTo(target)}`);}
+  const model=mount.children[0],hand=instance.bones.get('mixamorigrighthand'),palm=hand.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,.09*r.modelScale,0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion())));assert.ok(palm.distanceTo(model.localToWorld(new THREE.Vector3(...c.rightPalm)))<.003,'shooting palm does not meet the actual GLB grip');
+  const trigger=mount.userData.nodes.get('trigger').getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(.012*c.scale,0,0).applyQuaternion(mount.getWorldQuaternion(new THREE.Quaternion()))),tip=new THREE.Vector3(0,3.75,0).applyMatrix4(instance.bones.get('mixamorigrighthandindex3').matrixWorld);assert.ok(tip.distanceTo(trigger)<(type==='shotgun'?.028:.012),'actual trigger fingertip misses');
+  assert.equal(mount.userData.calibration,c);
+ }
+});
