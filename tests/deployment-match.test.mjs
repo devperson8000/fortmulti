@@ -154,3 +154,26 @@ test('Soldier walks outside the pod and salutes before any combat inputs unlock'
  assert.equal(match.phase,'playing');
  assert.equal(actor.saluteProgress,0,'the rig returns to normal gameplay idle');
 });
+
+test('exit direction and the Soldier heading both follow the actual pod orientation',()=>{
+ const match=new Match(world,['a','b']);match.beginDeployment();
+ readyPlayer(match,'a',0,{x:40,z:12});readyPlayer(match,'b',1,{x:-40,z:12});
+ match.players[0].yaw=Math.PI/2;match.input('a',{yaw:Math.PI/2});
+ tick(match,1.2);
+ assert.ok(Math.abs(match.players[0].podYaw-Math.PI/2)<1e-9);
+ const exitAt=DEPLOYMENT_TIMELINE.readyBeat+DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds+DEPLOYMENT_TIMELINE.landedSeconds+DEPLOYMENT_TIMELINE.openingSeconds;
+ while(match.deployment.elapsed<exitAt+.05)match.tick(.025);
+ assert.equal(match.deployment.stage,'exiting');
+ const player=match.players[0],landing=player.exitPosition;
+ assert.ok(Math.abs(player.yaw-3*Math.PI/2)<1e-8,'the Soldier faces out of the hatch');
+ assert.ok(Math.hypot(player.p[0]-landing[0],player.p[2]-landing[2])<.12,'walk begins at the hatch');
+ const saluteAt=exitAt+DEPLOYMENT_TIMELINE.exitSeconds;
+ while(match.deployment.elapsed<saluteAt+.3)match.tick(.025);
+ assert.equal(match.deployment.stage,'saluting');
+ assert.ok(player.p[0]>landing[0]+2.2,'a quarter-turned pod exits toward +X rather than world +Z');
+ assert.ok(Math.abs(player.p[2]-landing[2])<.4);
+ const before=player.p.slice();
+ match.tick(DEPLOYMENT_TIMELINE.saluteSeconds);
+ assert.equal(match.phase,'playing');
+ assert.ok(Math.hypot(player.p[0]-before[0],player.p[2]-before[2])<.001,'entering combat does not teleport the character');
+});

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as cinematic from '../public/deployment-cinematic.js';
-const {deploymentCinematic,cinematicCamera,cinematicPodPosition,cinematicFov,DEPLOYMENT_CUES,MUSIC_START}=cinematic;
+const {deploymentCinematic,cinematicCamera,cinematicPodPosition,cinematicFov,podExitPosition,podExitYaw,DEPLOYMENT_CUES,MUSIC_START}=cinematic;
 import {DEPLOYMENT_TIMELINE,deploymentStageAt} from '../public/deployment-sequence.js';
 
 test('music starts only on full black and the title follows the measured vocal cues',()=>{
@@ -82,4 +82,41 @@ test('the complete pod roof and floor fit the portrait shot across screen sizes'
    assert.ok(Math.abs(dot(offset,up)/(depth*lens))<.96,'roof and floor fit vertically');
   }
  }
+});
+
+test('the pod walk-out follows its rotated hatch and preserves terrain height',()=>{
+ const ground=(x,z)=>x*.08+z*.02;
+ const landing={x:22,y:ground(22,-8),z:-8};
+ for(const yaw of [0,Math.PI/2,Math.PI,-Math.PI/2]){
+  const start=podExitPosition(landing,yaw,-1,0,ground);
+  assert.deepEqual(start,[landing.x,landing.y,landing.z]);
+  const exit=podExitPosition(landing,yaw,-1,1,ground);
+  const lateral=-.32,forward=2.35;
+  assert.ok(Math.abs(exit[0]-(landing.x+lateral*Math.cos(yaw)+forward*Math.sin(yaw)))<1e-8);
+  assert.ok(Math.abs(exit[2]-(landing.z-lateral*Math.sin(yaw)+forward*Math.cos(yaw)))<1e-8);
+  assert.ok(Math.abs(exit[1]-ground(exit[0],exit[2]))<1e-8);
+  assert.equal(podExitYaw(yaw,0),yaw);
+  assert.ok(Math.abs(podExitYaw(yaw,1)-yaw-Math.PI)<1e-8);
+ }
+});
+
+test('the exit camera holds outside the stationary pod while panning toward the walking Soldier',()=>{
+ const pod=[12,3,-18],yaw=.4;
+ const a=cinematicCamera(pod,yaw,{musicTime:DEPLOYMENT_CUES.impact+2.5,orbit:1,returnProgress:0},{
+  subjectPosition:pod,returnYaw:yaw});
+ const soldier=[pod[0]+Math.sin(yaw)*2.35,pod[1],pod[2]+Math.cos(yaw)*2.35];
+ const b=cinematicCamera(pod,yaw,{musicTime:DEPLOYMENT_CUES.impact+5,orbit:1,returnProgress:0},{
+  subjectPosition:soldier,returnYaw:yaw+Math.PI});
+ assert.ok(Math.hypot(...a.eye.map((v,i)=>v-b.eye[i]))<1e-8,'tripod remains fixed while the Soldier walks');
+ assert.ok(Math.hypot(...a.target.map((v,i)=>v-b.target[i]))>1.5,'camera pans toward Soldier');
+ const end=cinematicCamera(pod,yaw,{musicTime:DEPLOYMENT_CUES.impact+6,orbit:1,returnProgress:1},{
+  subjectPosition:soldier,returnYaw:yaw+Math.PI});
+ assert.ok(Math.hypot(...end.eye.map((v,i)=>v-[soldier[0],soldier[1]+1.72,soldier[2]][i]))<1e-8,'handoff reaches Soldier eye');
+});
+
+test('reduced-motion mode disables the impact camera vibration',()=>{
+ const pod=[0,1,0],cinema={musicTime:DEPLOYMENT_CUES.impact+.06,impact:1,orbit:1};
+ const shaking=cinematicCamera(pod,0,cinema,{reducedMotion:false});
+ const steady=cinematicCamera(pod,0,cinema,{reducedMotion:true});
+ assert.ok(Math.hypot(...shaking.eye.map((v,i)=>v-steady.eye[i]))>.05);
 });
