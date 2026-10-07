@@ -182,7 +182,7 @@ function roundBanner(s){
 function apply(data){
  if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn||!acceptSnapshot(matchId,snapshotFrame,data.id,data.frame,matchEpoch,data.epoch))return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;matchEpoch=data.epoch;snapshotFrame=data.frame;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('deployment',s.phase==='deployment');document.body.classList.toggle('dropping',s.phase==='deployment'&&['pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(s.deployment?.stage));$('lobby').hidden=true;updateDeploymentUI(s,localPlayer);
  if(fresh||window.Duel.round!==s.round){const me=s.players.find(p=>p.id===conn.id);game.look(me?.yaw||0);seenEvent=0;window.Duel.round=s.round;showMenu=false;$('match-actions').hidden=true;updatePresence();}
- $('round-banner').textContent=roundBanner(s);for(const e of s.events||[])if(e.id>seenEvent){game.effect(e,conn.id);seenEvent=e.id;}
+ $('round-banner').textContent=roundBanner(s);for(const e of s.events||[])if(e.id>seenEvent){game.effect(e,conn.id,s);seenEvent=e.id;}
  if(s.phase==='done'){showMenu=true;$('match-actions').hidden=false;$('resume').hidden=true;$('rematch').hidden=false;$('back-lobby').hidden=false;document.exitPointerLock?.();}else if(!showMenu)$('match-actions').hidden=true;refresh();
 }
 function removePeer(id,reason='left the party'){

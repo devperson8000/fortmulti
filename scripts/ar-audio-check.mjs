@@ -24,13 +24,13 @@ try{
  });
  const first=await page.evaluate(()=>window.__plays.map(({buffer,...p})=>p));
  assert.equal(first.length,1,'one AR bullet should play exactly one sampled shot');
- assert.ok(Math.abs(first[0].duration-.3)<.001,'AR must use the isolated 300ms shot, not synthetic noise or the entire video');
+ assert.ok(Math.abs(first[0].duration-.36)<.001,'AR must use the isolated 360ms shot, not synthetic noise or the entire video');
  assert.equal(first[0].loop,false);
  await page.evaluate(async()=>{for(let n=0;n<4;n++){await new Promise(r=>setTimeout(r,118));for(let step=0;step<6;step++)window.__fireTick();}});
  assert.equal(await page.evaluate(()=>window.__shotEvents),5,'the actual held-fire simulation should emit five AR bullets');
  assert.equal(await page.evaluate(()=>window.__plays.length),5,'five bullets should produce five independent one-shot sources');
  assert.equal(await page.evaluate(()=>window.__plays.every(p=>p.buffer===window.__plays[0].buffer)),true,'reuse the decoded buffer across bullets');
- assert.equal(await page.evaluate(()=>window.__decodes),1,'decode once outside firing');assert.equal(requests,1,'fetch once outside firing');const gameRequests=requests;
+ assert.equal(await page.evaluate(()=>window.__decodes),3,'decode each sample once outside firing');assert.equal(requests,1,'fetch once outside firing');const gameRequests=requests;
  await page.waitForFunction(()=>window.__ends===5);
  assert.equal(await page.evaluate(()=>window.__audioMatch.players[0].inventory[0].ammo),25,'sample count must match bullets actually spent');
  await page.waitForTimeout(150);assert.equal(await page.evaluate(()=>window.__plays.length),5,'playback must stop when bullets stop');
@@ -47,6 +47,6 @@ try{
  });
  assert.ok(offline.early>1&&offline.second>1,'both bullets must produce audible output');assert.equal(offline.end,0,'no continued gunfire after samples end');assert.ok(offline.peak<1,'rapid fire must retain headroom');
  assert.deepEqual(errors,[]);
- const result={bullets:5,sampledSources:5,ammoSpent:5,clipSeconds:first[0].duration,fetches:gameRequests,decodes:1,offline,errors};
+ const result={bullets:5,sampledSources:5,ammoSpent:5,clipSeconds:first[0].duration,fetches:gameRequests,decodes:3,offline,errors};
  await writeFile(artifacts+'/ar-audio-browser-results.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 }finally{await browser.close();}

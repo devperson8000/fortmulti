@@ -16,7 +16,7 @@ export const WEAPON_PROFILES=Object.freeze({
  shotgun:Object.freeze({
   id:'shotgun',slot:2,name:'THUNDER SHOTGUN',shortName:'SHOTGUN',rarity:'epic',color:'#a970f5',icon:'═',
   damage:14,fireInterval:.82,recoil:[.054,.014],spread:{hip:.082,ads:.047,move:.026,max:.12},
-  reloadDuration:2.35,magazineCapacity:6,pellets:8,range:52,automatic:false,
+  reloadDuration:2.7,magazineCapacity:6,pellets:8,range:52,automatic:false,
   adsFov:52,scope:false,equipDuration:.42,projectile:null,
   presentation:presentation({anchor:[.36,-.38,-.86],adsAnchor:[0,-.28,-.68],scale:1.08,recoil:[-.15,.065,.025],sway:.015,bob:.013,sprint:[.34,-.25,.58],model:'shotgun'})
  }),
