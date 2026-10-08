@@ -1,4 +1,5 @@
 import {WEAPON_PROFILES} from './weapon-system.js';
+import {MapEnvironmentRenderer} from './map-environment-renderer.js';
 import {inventoryWeapon} from './weapon-inventory.js';
 import {WEAPON_FILES,createGroundWeapon,groundWeaponPose} from './weapon-assets.js';
 import {firstPersonCalibration,PICKAXE_GRIP} from './first-person-calibration.js';
@@ -48,6 +49,7 @@ export class MatchCharacterRenderer{
   const key=new THREE.DirectionalLight(0xffedc8,2.05);key.position.set(-18,30,14);this.scene.add(key);
   const rim=new THREE.DirectionalLight(0x91d6ff,.75);rim.position.set(13,12,-20);this.scene.add(rim);
   this.cinematicLight=new THREE.DirectionalLight(0xc9eaff,0);this.scene.add(this.cinematicLight,this.cinematicLight.target);
+  this.environment=new MapEnvironmentRenderer(this.scene);
   this.firstPersonScene=new THREE.Scene();this.firstPersonCamera=new THREE.PerspectiveCamera(62,1,.15,820);this.firstPersonCamera.position.set(0,0,0);this.firstPersonCamera.lookAt(0,0,-1);
   this.firstPersonScene.add(new THREE.HemisphereLight(0xd5edff,0x33302a,1.65));
   const fpKey=new THREE.DirectionalLight(0xffe5bc,2.1);fpKey.position.set(-2,3,2);this.firstPersonScene.add(fpKey);
@@ -264,10 +266,15 @@ export class MatchCharacterRenderer{
   for(const geometry of geometries)geometry.dispose();for(const material of materials)material.dispose();
  }
  pulse(id,type='fire'){const instance=this.instances.get(String(id));if(instance&&type==='fire')instance.fireTime=.11;}
+ setMapResources(resources){this.environment.setResources(resources);}
+ setEnvironmentHP(hp){this.environmentHP=hp;}
+ mapModelReady(kind){return this.ready&&this.environment.readyKind(kind);}
+ environmentStats(){return {...this.environment.getStats(),rendererReady:this.ready};}
  render({eye,target,aspect,fov,cinematic=false,dt=.016,width=this.canvas.width,height=this.canvas.height}={}){
   if(!this.ready||!eye||!target)return;
   if(width!==this.width||height!==this.height){this.width=width;this.height=height;this.renderer.setSize(width,height,false);}
   this.camera.aspect=Math.max(.1,aspect||width/Math.max(1,height));this.camera.fov=Number.isFinite(fov)?fov*180/Math.PI:75;this.camera.position.set(...eye);this.camera.lookAt(...target);this.camera.updateProjectionMatrix();
+  this.environment.update(this.environmentHP);
   this.cinematicLight.intensity=cinematic?1.15:0;if(cinematic){this.cinematicLight.position.set(eye[0],eye[1]+.8,eye[2]);this.cinematicLight.target.position.set(...target);}
   this.renderer.resetState();this.renderer.render(this.scene,this.camera);
   // Restore the raw renderer's state before it draws the view model in its own pass.

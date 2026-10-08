@@ -34,6 +34,9 @@ test('Kenney instancing follows resource depletion and restores procedural fallb
  const renderer=await readFile(new URL('../public/map-environment-renderer.js',import.meta.url),'utf8');
  assert.match(engine,/matchCharacterRenderer\?\.setMapResources\(resources\)/);
  assert.match(engine,/!matchCharacterRenderer\?\.mapModelReady\(range.kind\)/);
+ const characters=await readFile(new URL('../public/match-character-renderer.js',import.meta.url),'utf8');
+ assert.match(characters,/this\.environment=new MapEnvironmentRenderer\(this\.scene\)/);
+ assert.match(characters,/mapModelReady\(kind\)/);
  assert.match(renderer,/resourceHP\?\.get\(batch.places\[i\].id\)/);
  assert.match(renderer,/mesh\.instanceMatrix\.needsUpdate=true/);
  assert.match(renderer,/names\.every\(name=>this.models.has\(name\)\)/);
