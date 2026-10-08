@@ -1,6 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import * as weaponAudio from '../public/weapon-audio.js';
+
+test('opponent gunshots get quieter with distance and fade to silence at the hearing limit',()=>{
+ assert.equal(typeof weaponAudio.remoteGunshotGain,'function');
+ const {remoteGunshotGain}=weaponAudio;
+ const listener=[0,0,0],near=remoteGunshotGain([10,0,0],listener),middle=remoteGunshotGain([40,0,0],listener);
+ assert.ok(near>middle&&middle>0);assert.ok(near<1);
+ assert.ok(remoteGunshotGain([119,0,0],listener)<.00001);
+ assert.equal(remoteGunshotGain([120,0,0],listener),0);
+ assert.equal(remoteGunshotGain([200,0,0],listener),0);
+ assert.equal(remoteGunshotGain(null,listener),0);
+ assert.equal(remoteGunshotGain([NaN,0,0],listener),0);
+});
 
 test('AR sample contains one short blast and a fading tail rather than the uploaded burst',async()=>{
  const wav=await readFile(new URL('../public/audio/ar-shot.wav',import.meta.url));

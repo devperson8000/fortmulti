@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Match,placement,validBuild,sanitize,ground,createGroundGrid,ISLAND_LIMIT,INPUT_STALE_SECONDS} from '../public/simulation.js';
 import {POD_BOARDING_SECONDS,DEPLOYMENT_SHIP,SHIP_PODS} from '../public/deployment-ship.js';
+import {accumulateInput} from '../public/network-tuning.js';
 
 const world={height:()=>0,obstacles:[]};
 const landAll=match=>{match.phase='playing';for(const p of match.players){p.p[1]=0;p.air='landed';p.vy=0;p.deploymentState='match_active';p.slot=1;p.inventory=[...Object.entries(createLoadout()).map(([type,state])=>({id:type,type,...state})),null];p.shield=100;p.ammo=30;p.materials={wood:150,stone:0};p.material=150;p.animationState='idle';}};
@@ -123,6 +124,16 @@ test('revision preserves a quick crouch tap between network samples without dupl
  match.input('a',{crouch:false,crouchRevision:1});match.tick(.05);assert.equal(p.crouching,true);
  match.input('a',{crouch:false,crouchRevision:2});match.tick(.05);assert.equal(p.crouching,false);
 });
+
+test('a released R tap survives a missed network sample and starts exactly one reload',()=>{
+ const match=new Match(world,['a','b']);landAll(match);const p=match.players[0];p.inventory[0].ammo=4;
+ match.input('a',{slot:1,reload:false,reloadRevision:1});match.tick(.05);
+ assert.ok(p.reload>0);assert.equal(match.events.filter(e=>e.type==='reload'&&e.by==='a').length,1);
+ for(let n=0;n<50;n++){match.input('a',{slot:1,reload:false,reloadRevision:1});match.tick(.05);}
+ assert.equal(p.inventory[0].ammo,30);assert.equal(match.events.filter(e=>e.type==='reload'&&e.by==='a').length,1);
+ p.inventory[0].ammo=8;match.input('a',{slot:1,reload:false,reloadRevision:2});match.tick(.05);
+ assert.ok(p.reload>0);assert.equal(match.events.filter(e=>e.type==='reload'&&e.by==='a').length,2);
+});
 test('slide continues with both keys released and stands when complete',()=>{
  const match=new Match(world,['a','b']);landAll(match);const p=match.players[0];
  for(let n=0;n<8;n++){match.input('a',{z:1,sprint:true});match.tick(.05);}
@@ -131,12 +142,63 @@ test('slide continues with both keys released and stands when complete',()=>{
  assert.equal(p.sliding,false);assert.equal(p.crouching,false);
 });
 
-test('a quick Shift slide tap starts while moving without sprint held and cannot replay',()=>{
+test('Shift only runs, including inputs from clients that still send the obsolete slide command',()=>{
  const match=new Match(world,['a','b']);landAll(match);const p=match.players[0];
- match.input('a',{z:1,slideRevision:1,sprint:false});match.tick(.05);assert.equal(p.sliding,true);
- for(let n=0;n<40;n++){match.input('a',{z:1,slideRevision:1});match.tick(.05);}
+ for(let n=0;n<8;n++){
+  match.input('a',{z:1,sprint:true,slideRevision:1});match.tick(.05);
+  assert.equal(p.sliding,false);assert.equal(p.crouching,false);assert.equal(p.sprinting,true);
+  assert.equal(p.animationState,'run');assert.ok(Math.abs(p.moveSpeed-10.2)<.001);
+ }
+ match.input('a',{z:1,sprint:false,slideRevision:2});match.tick(.05);
+ assert.equal(p.sliding,false);assert.equal(p.crouching,false);assert.equal(p.animationState,'walk');
+ assert.ok(Math.abs(p.moveSpeed-6.8)<.001);
+ match.input('a',{sprint:true,slideRevision:3});match.tick(.05);
+ assert.equal(p.sliding,false);assert.equal(p.crouching,false);assert.equal(p.animationState,'idle');
+});
+
+test('a released Ctrl tap while running starts one slide and finishes standing without holding any keys',()=>{
+ const match=new Match(world,['a','b']);landAll(match);const p=match.players[0];
+ for(let n=0;n<8;n++){match.input('a',{z:1,sprint:true,crouchRevision:0});match.tick(.05);}
+ match.input('a',{z:1,sprint:true,crouch:false,crouchRevision:1});match.tick(.05);
+ assert.equal(p.sliding,true);assert.equal(p.animationState,'slide');const start=p.p[2];
+ for(let n=0;n<40;n++){match.input('a',{crouchRevision:1});match.tick(.05);}
+ assert.ok(p.p[2]<start-3,'slide carries forward after all movement keys are released');
+ assert.equal(p.sliding,false);assert.equal(p.crouching,false);assert.equal(p.animationState,'idle');
+});
+
+test('Ctrl slide keeps its press direction when all run keys release before the next network sample',()=>{
+ const match=new Match(world,['a','b']);landAll(match);const p=match.players[0];
+ for(let n=0;n<8;n++){match.input('a',{z:1,sprint:true,crouchRevision:0});match.tick(.05);}
+ const start=p.p.slice(),crouchPress={revision:1,x:0,z:1,yaw:Math.PI/2,sprint:true};
+ const pending=accumulateInput(null,{z:1,yaw:Math.PI/2,sprint:true,crouchRevision:1,crouchPress,crouch:true});
+ const released=accumulateInput(pending,{x:0,z:0,yaw:0,sprint:false,crouchRevision:1,crouchPress,crouch:false});
+ match.input('a',released);match.tick(.05);
+ assert.equal(p.sliding,true);assert.equal(p.animationState,'slide');
+ assert.ok(p.p[0]<start[0]-.4,'slide follows the direction at the Ctrl press');
+ assert.ok(Math.abs(p.p[2]-start[2])<.001);
+ for(let n=0;n<40;n++){match.input('a',released);match.tick(.05);}
  assert.equal(p.sliding,false);assert.equal(p.crouching,false);
- match.input('a',{z:1,slideRevision:2});match.tick(.05);assert.equal(p.sliding,true);
+});
+
+test('stale crouch press metadata cannot turn a later standing Ctrl tap or Shift into a slide',()=>{
+ const match=new Match(world,['a','b']);landAll(match);const p=match.players[0],crouchPress={revision:1,x:0,z:1,yaw:0,sprint:true};
+ match.input('a',{sprint:true,z:1,crouchRevision:0,crouchPress});match.tick(.05);
+ assert.equal(p.sliding,false);assert.equal(p.crouching,false);
+ match.input('a',{crouchRevision:2,crouchPress});match.tick(.05);
+ assert.equal(p.sliding,false);assert.equal(p.crouching,false,'two Ctrl toggles cancel');
+ match.input('a',{crouchRevision:3,crouchPress});match.tick(.05);
+ assert.equal(p.sliding,false);assert.equal(p.crouching,true,'standing Ctrl only toggles crouch');
+});
+
+test('Ctrl while walking toggles crouch and Shift cannot change that toggle',()=>{
+ const match=new Match(world,['a','b']);landAll(match);const p=match.players[0];
+ match.input('a',{z:1,crouchRevision:1});match.tick(.05);
+ assert.equal(p.crouching,true);assert.equal(p.sliding,false);
+ match.input('a',{z:1,sprint:true,crouchRevision:1});match.tick(.05);
+ assert.equal(p.crouching,true);assert.equal(p.sliding,false);assert.equal(p.sprinting,false);
+ assert.ok(Math.abs(p.moveSpeed-3.5)<.001);
+ match.input('a',{z:1,sprint:true,crouchRevision:2});match.tick(.05);
+ assert.equal(p.crouching,false);assert.equal(p.sliding,false);assert.equal(p.animationState,'run');
 });
 
 test('standing toggle under a low ceiling takes effect after clearing the obstacle',()=>{

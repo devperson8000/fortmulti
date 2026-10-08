@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Match} from '../public/simulation.js';
+import {shockwaveImpulse} from '../public/shockwave.js';
 function setup(obstacles=[]){const m=new Match({height:()=>0,obstacles},['a','b']);m.phase='playing';for(const [i,p] of m.players.entries()){p.p=[i*30,0,0];p.air='landed';p.deploymentState='match_active';}return m;}
 test('shockwave sprint cannot tunnel across a thin wall',()=>{
  const m=setup([{min:[.45,0,-5],max:[.67,8,5]}]),p=m.players[0];p.p[1]=1;p.impulse=[18,0];m.input('a',{x:1,sprint:true,slot:0});m.tick(.05);
@@ -28,4 +29,12 @@ test('a crouching player cannot stand through a low ceiling',()=>{
 
 test('a crouching player keeps headroom beneath a built ramp',()=>{
  const m=setup(),p=m.players[0];m.structures=[{type:3,x:0,y:0,z:0,angle:0}];p.p=[0,0,.28];p.crouching=true;m.input('a',{slot:0,crouch:false});m.tick(.05);assert.equal(p.crouching,true);
+});
+
+test('a shockwave-boosted slide cannot snap through an overhead ramp or clear its landing immunity',()=>{
+ const m=setup(),p=m.players[0];m.structures=[{type:3,x:0,y:0,z:0,angle:0}];p.p=[-3,0,5/9];p.sprinting=true;p.moveSpeed=10.2;
+ const impulse=shockwaveImpulse([-4.5,0,5/9],p.p);p.impulse=[impulse[0],impulse[2]];p.vy=impulse[1];p.shockwaveImmune=true;
+ m.input('a',{slot:0,x:1,sprint:true,crouchRevision:1});m.tick(.05);
+ assert.ok(p.p[1]<=.05+1e-6,'upward ceiling collision must not be bypassed by floor snapping');
+ assert.equal(p.shockwaveImmune,true,'the actor has not landed on top of the ramp');
 });

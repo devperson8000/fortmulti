@@ -37,6 +37,18 @@ jobs:
         env:
           GAME_TEST_URL: http://127.0.0.1:4174
           GAME_ARTIFACTS: /tmp/horizon-deployment
+      - name: Verify controls, inventory, reloads, chests and real building inputs
+        run: npm run test:browser
+        env:
+          GAME_TEST_URL: http://127.0.0.1:4174
+          GAME_ARTIFACTS: /tmp/horizon-deployment/gameplay
+      - name: Verify gunshot voices, opponent sounds and reload audio
+        run: |
+          node scripts/ar-audio-check.mjs
+          node scripts/shotgun-audio-check.mjs
+        env:
+          GAME_TEST_URL: http://127.0.0.1:4174
+          GAME_ARTIFACTS: /tmp/horizon-deployment/weapons
       - name: Upload browser diagnostics if a test fails
         if: failure()
         uses: actions/upload-artifact@v4

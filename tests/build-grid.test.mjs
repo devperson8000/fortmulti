@@ -1,5 +1,22 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {gridPlacement,rampEndpoints,gridValid,rampHeight,rayRamp} from '../public/build-grid.js';import {placement,Match} from '../public/simulation.js';import {shockwaveImpulse,resolveLanding} from '../public/shockwave.js';
+
+test('walking and running climb a valid ramp whose bottom sits slightly above sloping ground',()=>{
+ for(const yaw of[0,Math.PI/2,Math.PI,-Math.PI/2])for(const dt of[.016,.05])for(const sprint of[false,true]){
+  const terrain={height:(x,z)=>-.18*(Math.sin(yaw)*x+Math.cos(yaw)*z),obstacles:[]},match=new Match(terrain,['a','b']);match.phase='playing';
+  const x=Math.sin(yaw)*3,z=Math.cos(yaw)*3;
+  for(const [n,p]of match.players.entries()){p.air='landed';p.p=n?[50,terrain.height(50,50),50]:[x,terrain.height(x,z),z];p.vy=0;p.materials={wood:100,stone:0};}
+  const p=match.players[0];match.input('a',{yaw,slot:10,fire:true});match.tick(dt);
+  assert.equal(match.structures.length,1);const ramp=match.structures[0];assert.ok(Math.abs(ramp.y)<1e-6);
+  let high=p.p[1];
+  for(let n=0;n<Math.ceil(1.5/dt);n++){
+   match.input('a',{yaw,slot:10,z:1,sprint});match.tick(dt);high=Math.max(high,p.p[1]);
+   const surface=rampHeight(ramp,p.p[0],p.p[2]);
+   if(surface!==null)assert.ok(Math.abs(p.p[1]-surface)<1e-6,'feet must follow the ramp rather than passing underneath');
+  }
+  assert.ok(high>3.2,'player reaches the top while '+(sprint?'running':'walking')+' at dt '+dt);
+ }
+});
 const world={height:()=>0,obstacles:[]};
 test('preview and authority share placement; ramps chain exactly at all rotations',()=>{for(let turn=0;turn<4;turn++){let p={p:[0,0,0]},input={yaw:turn*Math.PI/2,slot:10},structures=[];for(let n=0;n<8;n++){const s=gridPlacement(p,input,world,structures);assert.deepEqual(s,placement(p,input,world,structures));assert.equal(gridValid(s,structures,[],world),true);const {bottom,top}=rampEndpoints(s);assert.ok(Math.abs(Math.hypot(top[0]-bottom[0],top[2]-bottom[2])-5)<1e-6);assert.ok(Math.abs(top[1]-bottom[1]-3.6)<1e-6);if(n){const prior=rampEndpoints(structures.at(-1)).top;for(let k=0;k<3;k++)assert.ok(Math.abs(bottom[k]-prior[k])<1e-5);}structures.push(s);p.p=top;}}});
 test('unsupported floating pieces are rejected and ramp rays ignore empty volume',()=>{const s={x:0,z:0,y:0,type:3,angle:0};assert.equal(gridValid({...s,y:20},[],[],world),false);assert.equal(rampHeight(s,0,2.5),0);assert.equal(rampHeight(s,0,-2.5),3.6);assert.equal(rayRamp([0,3,3],[0,0,-1],s),4.666666666666667);});

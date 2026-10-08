@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
+import {checkBuilding} from './browser-building.mjs';
 import {mkdir,writeFile} from 'node:fs/promises';
+import {existsSync} from 'node:fs';
 import {chromium} from 'playwright';
 const url=process.env.GAME_TEST_URL||'http://127.0.0.1:4174',artifacts=process.env.GAME_ARTIFACTS||'/workspace/fortmulti-artifacts';await mkdir(artifacts,{recursive:true});
-const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--disable-dev-shm-usage','--disable-background-timer-throttling','--disable-renderer-backgrounding']});
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--disable-dev-shm-usage','--disable-background-timer-throttling','--disable-renderer-backgrounding']});
 const context=await browser.newContext({viewport:{width:1280,height:720}}),errors=[],checks=[];
 async function open(){const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));await p.addInitScript(()=>{window.__sampledAudio=[];const start=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...args){const entry={duration:this.buffer?.duration,rate:this.playbackRate.value,offset:args[1]||0,ended:false};window.__sampledAudio.push(entry);this.addEventListener('ended',()=>entry.ended=true);return start.apply(this,args);};});await p.goto(url+'/?local=1');await p.waitForFunction(()=>Boolean(window.Game));await p.evaluate(async()=>{const [{Connection},{Match}]=await Promise.all([import('/network.js'),import('/simulation.js')]);const originalOpen=Connection.prototype.open;Connection.prototype.open=async function(...args){await originalOpen.apply(this,args);window.__testConnection=this;};const startRound=Match.prototype.startRound;Match.prototype.startRound=function(...args){const result=startRound.apply(this,args);window.__testMatch=this;return result;};const move=window.Game.moveInventory.bind(window.Game);window.__moveObservations=[];window.__inventoryAckIds=[];const ack=window.Game.ackInventory.bind(window.Game);window.Game.ackInventory=value=>{window.__inventoryAckIds.push(value.id);ack(value);};window.Game.moveInventory=(from,to)=>{const start=performance.now(),accepted=move(from,to);window.__moveObservations.push({accepted,duration:performance.now()-start,ids:window.Game.inventoryState().inventory.map(w=>w?.id||null)});return accepted;};});return p;}
 async function drag(page,from,to,{capture=false}={}){const a=await page.locator(`[data-inventory-cards] [data-inventory-slot="${from}"]`).boundingBox(),b=to?await page.locator(`[data-inventory-cards] [data-inventory-slot="${to}"]`).boundingBox():{x:5,y:5,width:1,height:1};await page.mouse.move(a.x+a.width/2,a.y+a.height/2);await page.mouse.down();await page.mouse.move(b.x+b.width/2,b.y+b.height/2,{steps:6});if(capture)await page.screenshot({path:artifacts+'/inventory-drag.png'});await page.mouse.up();}
@@ -50,9 +52,25 @@ try{
  await guest.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{code:'ControlLeft',repeat:true,bubbles:true})));
  assert.equal(await host.evaluate(id=>window.__testMatch.players.find(p=>p.id===id).crouching,guestId),true);
  await guest.keyboard.up('ControlLeft');await guest.keyboard.press('ControlLeft');await host.waitForFunction(id=>!window.__testMatch.players.find(p=>p.id===id).crouching,guestId);checks.push('Quick Ctrl tap toggles crouch, survives key release, and ignores auto-repeat');
- await guest.keyboard.down('w');await guest.keyboard.press('ShiftLeft');await host.waitForFunction(id=>window.__testMatch.players.find(p=>p.id===id).sliding,guestId);
- assert.equal(await guest.evaluate(()=>window.Game.input().sprint),false,'Shift has been released');await guest.keyboard.up('w');
- await host.waitForFunction(id=>{const p=window.__testMatch.players.find(p=>p.id===id);return !p.sliding&&!p.crouching;},guestId);checks.push('Quick Shift tap initiates slide over networking and stands automatically with both keys released');
+ await guest.keyboard.down('w');await guest.keyboard.down('ShiftLeft');
+ await host.waitForFunction(id=>{const p=window.__testMatch.players.find(p=>p.id===id);return p.sprinting&&p.moveSpeed>7.5;},guestId);
+ assert.equal(await host.evaluate(id=>{const p=window.__testMatch.players.find(p=>p.id===id);return p.sliding||p.crouching;},guestId),false,'Shift must only run');
+ await guest.keyboard.up('ShiftLeft');
+ await host.waitForFunction(id=>{const p=window.__testMatch.players.find(p=>p.id===id);return !p.sprinting&&!p.sliding&&!p.crouching&&p.moveSpeed>3;},guestId);
+ await guest.keyboard.press('ShiftRight');await guest.waitForTimeout(250);
+ assert.equal(await host.evaluate(id=>{const p=window.__testMatch.players.find(p=>p.id===id);return p.sliding||p.crouching;},guestId),false,'a quick Shift tap must never slide');
+ checks.push('Both Shift keys only run; releasing Shift returns to walking without a crouch or slide');
+ await guest.keyboard.down('ShiftRight');await host.waitForFunction(id=>window.__testMatch.players.find(p=>p.id===id).sprinting,guestId);
+ await guest.keyboard.press('ControlRight');
+ await guest.keyboard.up('ShiftRight');await guest.keyboard.up('w');
+ assert.equal(await guest.evaluate(()=>Boolean(window.Game.input().sprint||window.Game.input().crouch||window.Game.input().z)),false,'all slide keys have been released');
+ await host.waitForFunction(id=>window.__testMatch.players.find(p=>p.id===id).sliding,guestId);
+ await host.waitForFunction(id=>{const p=window.__testMatch.players.find(p=>p.id===id);return !p.sliding&&!p.crouching;},guestId);
+ checks.push('A quick Ctrl tap while running starts a knee slide that completes standing with all keys released');
+ await checkBuilding(host,guest,guestId,artifacts,checks);
  await guest.setViewportSize({width:800,height:600});await guest.keyboard.press('Tab');await guest.screenshot({path:artifacts+'/inventory-compact.png'});assert.equal(await guest.evaluate(()=>document.getElementById('inventory-menu').scrollWidth>innerWidth),false);await guest.keyboard.press('Escape');
  assert.deepEqual(errors,[],'Browser runtime errors');const observations=await guest.evaluate(()=>window.__moveObservations);await writeFile(artifacts+'/browser-results.json',JSON.stringify({checks,errors,moves:observations},null,2));console.log(JSON.stringify({passed:checks.length,checks,maxLocalMoveMs:Math.max(...observations.map(o=>o.duration)),errors},null,2));
+}catch(error){
+ await writeFile(artifacts+'/failure-results.json',JSON.stringify({error:String(error),checks,pages:await Promise.all(context.pages().map(p=>p.evaluate(()=>({pose:window.Game?.pose(),input:window.Game?.input(),host:window.__testMatch?.snapshot()})).catch(e=>({error:String(e)}))))},null,2));
+ throw error;
 }finally{await browser.close();}

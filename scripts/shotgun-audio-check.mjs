@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
+import {existsSync} from 'node:fs';
 import {chromium} from 'playwright';
-const url=process.env.GAME_TEST_URL||'http://127.0.0.1:4174',artifacts='/workspace/fortmulti-artifacts/audio/shotgun';await mkdir(artifacts,{recursive:true});
-const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--disable-dev-shm-usage','--autoplay-policy=no-user-gesture-required']});
+const url=process.env.GAME_TEST_URL||'http://127.0.0.1:4174',artifacts=process.env.GAME_ARTIFACTS||'/workspace/fortmulti-artifacts/audio/shotgun';await mkdir(artifacts,{recursive:true});
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--disable-dev-shm-usage','--autoplay-policy=no-user-gesture-required']});
 try{
  const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{window.__sounds=[];const start=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...args){window.__sounds.push({source:this,buffer:this.buffer,args,rate:this.playbackRate.value,ended:false});this.addEventListener('ended',()=>window.__sounds.find(v=>v.source===this).ended=true);return start.apply(this,args);};});

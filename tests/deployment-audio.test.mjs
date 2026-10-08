@@ -110,7 +110,8 @@ test('ended callbacks from cancelled voices cannot finish a replacement deployme
  assert.equal(c.starts.length,2,'natural completion cannot be undone by stale snapshots');
 });
 
-test('audible output timestamps are projected to the current frame and bounded by render time',async()=>{
+test('audible output timestamps are projected to the current frame and bounded by render time',async t=>{
+ t.mock.method(performance,'now',()=>1000);
  const c=context(),player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
  c.ctx.getOutputTimestamp=()=>({contextTime:c.ctx.currentTime-.052,performanceTime:performance.now()-20});
  assert.ok(Math.abs(player.update(c.ctx,'round:1',5)-4.968)<.001);

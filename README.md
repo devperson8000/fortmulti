@@ -97,13 +97,13 @@ Rounds are last-player-standing. The first player to 5 round wins takes the matc
 | Left mouse | Fire / place selected build after deployment |
 | Right mouse | ADS / sniper scope |
 | Space | Jump after deployment |
-| Shift | Sprint |
+| Shift | Hold to run |
 | 1–5 | Select your five freely arranged weapon slots |
 | Tab | Open/close inventory; drag to move or swap weapons |
 | 0 | Pickaxe |
 | Z / V | Wall / ramp blueprint |
 | 7 / 8 / 9 | Shield cell / med kit / shockwave |
-| Ctrl | Crouch / knee slide while sprinting |
+| Ctrl | Toggle crouch; tap while running for a knee slide that finishes standing |
 | G | Rotate build |
 | Q | Toggle last weapon / last blueprint |
 | Mouse wheel | Cycle inventory |
@@ -172,6 +172,8 @@ Carry up to five weapon instances in any order, including duplicates with separa
 
 Ground firearms use the same GLBs and materials as held firearms, slowly rotating and bobbing. Three.js is served from the checksum-verified npm installation in development and copied into `dist/vendor/three` during builds, so browser startup needs no third-party CDN.
 
-Run `npm run dev`, then `npm run test:browser` in another terminal. The default check URL is `http://127.0.0.1:4174`; set `GAME_TEST_URL=http://127.0.0.1:4173` for the default dev port. Set `CHROMIUM_EXECUTABLE` to an installed Chromium binary (default `/usr/bin/chromium`) and `GAME_ARTIFACTS` to your screenshot/result directory. Browser checks create two isolated local-test party tabs and seed test items through a test-only harness; normal app input, networking and host validation remain in use. They never alter production database state.
+Run `npm run dev`, then `npm run test:browser` in another terminal. The default check URL is `http://127.0.0.1:4174`; set `GAME_TEST_URL=http://127.0.0.1:4173` for the default dev port. Set `CHROMIUM_EXECUTABLE` to an installed Chromium binary and `GAME_ARTIFACTS` to your screenshot/result directory. The gameplay and audio checks use `/usr/bin/chromium` when available, otherwise Playwright’s installed Chromium. Browser checks create two isolated local-test party tabs and seed test items through a test-only harness; normal app input, networking and host validation remain in use. They never alter production database state.
+
+The gameplay check covers inventory, chest holds, reloads, Shift-only running, Ctrl crouch/slide, material costs, build rotation and connected-ramp climbing. Run `node scripts/building-check.mjs` to repeat just the real building inputs. Run `node scripts/ar-audio-check.mjs` and `node scripts/shotgun-audio-check.mjs` to verify single-shot voices, opponent audio, gradual tails, suspended-audio recovery and reload synchronization. GitHub Actions runs these alongside the deployment and music-continuity checks.
 
 Run `node scripts/grip-visual-check.mjs` with the same URL/browser/artifact settings for actual Soldier/weapon rendering in hip, ADS, reload and alternate aspect ratios. Inspect the resulting screenshots; numerical palm tests alone do not establish visual correctness.
