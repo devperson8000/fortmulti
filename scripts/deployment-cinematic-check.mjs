@@ -32,6 +32,13 @@ try{
  await host.waitForFunction(()=>document.getElementById('party-count').textContent.startsWith('2'));await guest.waitForFunction(()=>window.__testConnection?.host);
  await host.locator('#ready').click();await guest.locator('#ready').click();await host.waitForFunction(()=>Boolean(window.__testMatch));
  await Promise.all([host.evaluate(()=>window.Game.startAudio({deployment:true})),guest.evaluate(()=>window.Game.startAudio({deployment:true}))]);
+ // Match input must work immediately after the lobby transitions to the
+ // staging ship; the solo Play overlay is not part of this multiplayer flow.
+ await host.waitForFunction(()=>window.Game.deploymentView().stage==='landing_selection');
+ await host.keyboard.down('w');
+ assert.equal(await host.evaluate(()=>window.Game.input().z),1,'ship movement is enabled without a hidden solo Play click');
+ await host.keyboard.up('w');
+ checks.push('Multiplayer input activates automatically in the staging ship');
  // The first player must board and wait for a teammate; don't skip this with
  // an immediate two-player scripted launch.
  await host.evaluate(async()=>{
@@ -83,7 +90,10 @@ try{
   await guest.screenshot({path:artifacts+'/0'+(phase==='opening'?5:phase==='walkout'?6:7)+'-'+phase+'.png'});
  }
  checks.push('Hatch reveals the operator after impact; walkout and salute remain visible with music and combat locked');
- await host.waitForFunction(()=>window.__testMatch.phase==='playing',{timeout:15000});await guest.waitForFunction(()=>window.Game.deploymentView().stage==='match_active',{timeout:15000});
+ await host.waitForFunction(()=>window.__testMatch.phase==='playing',{timeout:15000});
+ // The local audio clock can reach its final frame before the network delivers
+ // the host's final landed snapshot. Wait for BOTH, not just the camera stage.
+ await Promise.all([host,guest].map(page=>page.waitForFunction(()=>window.Game.deploymentView().stage==='match_active'&&window.Game.pose().air==='landed'&&!document.body.classList.contains('deployment-cinematic'),{timeout:15000})));
  // Frame counts are diagnostic only: one 0.5-second camera handoff can draw
  // anywhere from zero to many frames under GitHub's software WebGL runner.
  // Assert the real shot before it and the authoritative first-person handoff.
