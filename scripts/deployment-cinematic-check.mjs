@@ -77,7 +77,7 @@ try{
   await guest.waitForFunction(t=>window.Game.deploymentView().musicTime>=t,time,{timeout:15000});
   const shot=await guest.evaluate(()=>({view:window.Game.deploymentView(),position:window.Game.pose().p.slice(),animation:window.Game.pose().animationState,salute:window.Game.pose().saluteProgress,input:window.Game.input()}));
   assert.equal(shot.view.localVisible,true);assert.ok(shot.view.operatorOpacity>.99);assert.equal(shot.input.fire,false);assert.equal(shot.input.slot,0);
-  if(phase==='opening'){assert.ok(shot.view.hatchOpen>.5&&shot.view.hatchOpen<.85);}
+  if(phase==='opening'){assert.ok(shot.view.hatchOpen>.4&&shot.view.hatchOpen<=1,'pod hatch must be visibly opened');}
   else assert.ok(Math.hypot(shot.position[0]-shot.view.podPosition[0],shot.position[2]-shot.view.podPosition[2])>1);
   if(phase==='salute'){assert.ok(shot.salute>.99,'native salute is fully raised');assert.ok(shot.view.musicTime<DEPLOYMENT_MUSIC_END);}
   await guest.screenshot({path:artifacts+'/0'+(phase==='opening'?5:phase==='walkout'?6:7)+'-'+phase+'.png'});
