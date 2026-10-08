@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as cinematic from '../public/deployment-cinematic.js';
-const {deploymentCinematic,cinematicCamera,cinematicPodPosition,cinematicFov,podExitPosition,podExitYaw,DEPLOYMENT_CUES,MUSIC_START}=cinematic;
+const {deploymentCinematic,cinematicCamera,cinematicPodPosition,cinematicFov,podExitPosition,podExitYaw,DEPLOYMENT_CUES,MUSIC_START,CINEMATIC_RETURN_SECONDS,DEPLOYMENT_MUSIC_END}=cinematic;
 import {DEPLOYMENT_TIMELINE,deploymentStageAt} from '../public/deployment-sequence.js';
 
 test('music starts only on full black and the title follows the measured vocal cues',()=>{
@@ -176,4 +176,16 @@ test('reduced-motion mode disables the impact camera vibration',()=>{
  const shaking=cinematicCamera(pod,0,cinema,{reducedMotion:false});
  const steady=cinematicCamera(pod,0,cinema,{reducedMotion:true});
  assert.ok(Math.hypot(...shaking.eye.map((v,i)=>v-steady.eye[i]))>.05);
+});
+
+test('the camera holds the full salute shot before the final handoff',()=>{
+ const saluteStart=DEPLOYMENT_MUSIC_END-cinematic.POD_RELEASE.salute;
+ const fullPose=deploymentCinematic(MUSIC_START+saluteStart+cinematic.POD_RELEASE.salute*.58);
+ assert.equal(fullPose.returnProgress,0,'the operator remains fully framed during the held salute');
+ assert.equal(fullPose.avatarOpacity,1);
+ const lastHold=deploymentCinematic(MUSIC_START+DEPLOYMENT_MUSIC_END-CINEMATIC_RETURN_SECONDS-.01);
+ assert.equal(lastHold.returnProgress,0);
+ const midReturn=deploymentCinematic(MUSIC_START+DEPLOYMENT_MUSIC_END-CINEMATIC_RETURN_SECONDS*.5);
+ assert.ok(midReturn.returnProgress>.4&&midReturn.returnProgress<.6);
+ assert.equal(deploymentCinematic(MUSIC_START+DEPLOYMENT_MUSIC_END).returnProgress,1);
 });

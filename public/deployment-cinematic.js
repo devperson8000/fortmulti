@@ -11,6 +11,10 @@ export const CINEMATIC_CAMERA_RADIUS=5.4;
 export const POD_RELEASE=Object.freeze({hold:.48,open:.66,exit:1.35,salute:1.85});
 export const POD_TOUCHDOWN=MUSIC_START+DEPLOYMENT_CUES.impact;
 export const DEPLOYMENT_MUSIC_END=DEPLOYMENT_CUES.impact+Object.values(POD_RELEASE).reduce((a,b)=>a+b,0);
+// Let the complete salute read on camera at full volume. The last half-second
+// blends back to gameplay as the gesture finishes, without changing the beat.
+export const CINEMATIC_RETURN_SECONDS=.5;
+export const DEPLOYMENT_AUDIO_FADE_SECONDS=.38;
 const clamp=t=>Math.max(0,Math.min(1,t));
 const ease=t=>{t=clamp(t);return t*t*(3-2*t);};
 
@@ -23,7 +27,7 @@ export function deploymentCinematic(sequenceTime){
  const black=ease((sequenceTime-DEPLOYMENT_LAUNCH.fadeStart)/DEPLOYMENT_LAUNCH.fadeSeconds)*(1-ease((musicTime-c.lyricsStart-.25)/.85));
  const impact=musicTime>=c.impact?Math.exp(-(musicTime-c.impact)*3.8):0;
  const hatchOpen=clamp((musicTime-c.impact-POD_RELEASE.hold)/POD_RELEASE.open);
- const returnProgress=ease((musicTime-(DEPLOYMENT_MUSIC_END-.62))/.62);
+ const returnProgress=ease((musicTime-(DEPLOYMENT_MUSIC_END-CINEMATIC_RETURN_SECONDS))/CINEMATIC_RETURN_SECONDS);
  const avatarOpacity=1-ease((returnProgress-.68)/.27);
  return {
   musicTime,logo,black,orbit,impact,returnProgress,

@@ -1,4 +1,4 @@
-import {DEPLOYMENT_MUSIC_END} from './deployment-cinematic.js';
+import {DEPLOYMENT_MUSIC_END,DEPLOYMENT_AUDIO_FADE_SECONDS} from './deployment-cinematic.js';
 
 // The decoded song is shared by rounds. Scheduling and camera timing use the
 // same AudioContext clock, including when a recovering client needs to seek.
@@ -77,16 +77,20 @@ export function createDeploymentAudio({fetchAudio=fetch}={}){
    source.connect(gain);gain.connect(context.destination);
    // Keep the last salute on the original recording and end on its natural
    // timeline. Late-joining clients start at the correct already-faded level.
-   const fadeStart=Math.max(0,endMusic-.68),fadeLength=endMusic-fadeStart;
-   const remaining=Math.max(0,endMusic-offset);
-   const level=.65,quiet=level*Math.min(1,remaining/Math.max(.001,fadeLength));
-   const attackEnd=Math.min(deadline,start+.018);
+   const fadeStart=Math.max(0,endMusic-DEPLOYMENT_AUDIO_FADE_SECONDS);
+   const fadeDuration=Math.max(.001,endMusic-fadeStart),level=.65;
    gain.gain.setValueAtTime(0,start);
    if(offset<fadeStart){
-    gain.gain.linearRampToValueAtTime(level,Math.min(deadline,start+.22));
-    if(anchor+fadeStart>=start+.22)gain.gain.setValueAtTime(level,anchor+fadeStart);
+    // Never place a late-join attack past the global fade boundary. Doing so
+    // briefly restored full volume after the outro was already fading.
+    const attackEnd=Math.min(anchor+fadeStart,start+.14);
+    gain.gain.linearRampToValueAtTime(level,attackEnd);
+    if(attackEnd<anchor+fadeStart)gain.gain.setValueAtTime(level,anchor+fadeStart);
    }else{
-    gain.gain.linearRampToValueAtTime(quiet,attackEnd);
+    // Start at the song's CURRENT fade level, not at full gain. Leave enough
+    // space for the short attack even if only a few milliseconds remain.
+    const attackEnd=Math.min(deadline,start+Math.min(.018,(deadline-start)*.2));
+    gain.gain.linearRampToValueAtTime(level*Math.max(0,(deadline-attackEnd)/fadeDuration),attackEnd);
    }
    gain.gain.linearRampToValueAtTime(0,deadline);
    source.onended=()=>{

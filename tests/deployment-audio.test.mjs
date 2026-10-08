@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDeploymentAudio} from '../public/deployment-audio.js';
-import {DEPLOYMENT_MUSIC_END} from '../public/deployment-cinematic.js';
+import {DEPLOYMENT_MUSIC_END,DEPLOYMENT_AUDIO_FADE_SECONDS} from '../public/deployment-cinematic.js';
 
 function context(){
  const starts=[],stops=[],sources=[];let decodes=0;
@@ -185,7 +185,7 @@ test('late recovery in the final fade never restores the full song volume',async
   const deadline=c.ctx.currentTime+remaining;
   assert.ok(c.stops.every(([time])=>Math.abs(time-deadline)<1e-8));
   assert.ok(events.every(e=>e.time<=deadline+1e-8),'no fade ramp can run beyond the handoff');
-  assert.ok(events.every(e=>e.value<=.65*remaining/.68+1e-8),'the volume stays quiet on recovery');
+  assert.ok(events.every(e=>e.value<=.65*remaining/DEPLOYMENT_AUDIO_FADE_SECONDS+1e-8),'the volume stays quiet on recovery');
  }
 });
 
@@ -201,4 +201,18 @@ test('render completion retains the audio clock until the final output samples b
  c.ctx.currentTime+=.15;
  assert.equal(player.update(c.ctx,'tail',0),null);
  assert.equal(player.time(c.ctx,'tail'),null);
+});
+
+test('a late music seek just before fade cannot restore full gain inside the fade',async()=>{
+ const events=[],c=context();c.ctx.decodeAudioData=async()=>({duration:30});
+ c.ctx.createGain=()=>({connect(){},disconnect(){},gain:{value:0,cancelScheduledValues(){},setValueAtTime(value,time){events.push({kind:'set',value,time});},linearRampToValueAtTime(value,time){events.push({kind:'ramp',value,time});}}});
+ const player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
+ const offset=DEPLOYMENT_MUSIC_END-DEPLOYMENT_AUDIO_FADE_SECONDS-.02;
+ player.update(c.ctx,'near-end',offset);
+ const fadeAt=c.ctx.currentTime+.02,stopAt=c.ctx.currentTime+DEPLOYMENT_MUSIC_END-offset;
+ const fullGainEvents=events.filter(e=>e.value>=.65-1e-9);
+ assert.ok(fullGainEvents.length>0);
+ assert.ok(fullGainEvents.every(e=>e.time<=fadeAt+1e-8),'late seek cannot ramp back to full volume after the fade starts');
+ assert.ok(events.every(e=>e.time<=stopAt+1e-8));
+ assert.ok(events.some(e=>e.value===0&&Math.abs(e.time-stopAt)<1e-8));
 });
