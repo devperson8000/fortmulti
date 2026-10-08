@@ -1,11 +1,14 @@
 import {DEPLOYMENT_CUES} from './deployment-cues.js';
+import {DEPLOYMENT_LAUNCH} from './deployment-ship.js';
 export {DEPLOYMENT_CUES};
 
 // All song cues are relative to the edited track. The visuals and the host
 // deployment stages use the same audible AudioContext timing.
-export const MUSIC_START=1.12+.42;
+export const MUSIC_START=DEPLOYMENT_LAUNCH.fadeStart+DEPLOYMENT_LAUNCH.fadeSeconds;
 export const CINEMATIC_CAMERA_RADIUS=5.4;
-export const POD_RELEASE=Object.freeze({hold:1.05,open:1.45,exit:2.4,salute:2.2});
+// The complete exit and a clearly held two-finger salute fit the uninterrupted
+// last seconds of the supplied 30-second song.
+export const POD_RELEASE=Object.freeze({hold:.48,open:.66,exit:1.35,salute:1.85});
 export const POD_TOUCHDOWN=MUSIC_START+DEPLOYMENT_CUES.impact;
 export const DEPLOYMENT_MUSIC_END=DEPLOYMENT_CUES.impact+Object.values(POD_RELEASE).reduce((a,b)=>a+b,0);
 const clamp=t=>Math.max(0,Math.min(1,t));
@@ -15,12 +18,12 @@ export function deploymentCinematic(sequenceTime){
  const musicTime=sequenceTime-MUSIC_START,c=DEPLOYMENT_CUES;
  // The mark hits at the first "uh, yeah", remains for the full ad-lib and
  // dissolves more gradually as the pod exterior returns to view.
- const logo=ease((musicTime-c.uhYeahStart)/.06)*(1-ease((musicTime-c.lyricsStart)/.8));
+ const logo=ease((musicTime-c.uhYeahStart)/.36)*(1-ease((musicTime-(c.lyricsStart-.16))/.84));
  const orbit=ease((musicTime-c.lyricsStart-.12)/(c.businessStart-c.lyricsStart-.25));
- const black=ease((sequenceTime-(MUSIC_START-.42))/.42)*(1-ease((musicTime-c.lyricsStart-.25)/.85));
+ const black=ease((sequenceTime-DEPLOYMENT_LAUNCH.fadeStart)/DEPLOYMENT_LAUNCH.fadeSeconds)*(1-ease((musicTime-c.lyricsStart-.25)/.85));
  const impact=musicTime>=c.impact?Math.exp(-(musicTime-c.impact)*3.8):0;
  const hatchOpen=clamp((musicTime-c.impact-POD_RELEASE.hold)/POD_RELEASE.open);
- const returnProgress=ease((musicTime-(DEPLOYMENT_MUSIC_END-.85))/.85);
+ const returnProgress=ease((musicTime-(DEPLOYMENT_MUSIC_END-.62))/.62);
  const avatarOpacity=1-ease((returnProgress-.68)/.27);
  return {
   musicTime,logo,black,orbit,impact,returnProgress,
@@ -99,7 +102,7 @@ export function podLandingParticleSize(effect){
 
 /** Short landing-gear compression; fully settled before opening the hatch. */
 export function podImpactOffset(age){
- if(age<0||age>1)return 0;
+ if(age<0||age>=POD_RELEASE.hold)return 0;
  return Math.exp(-age*8)*(-.18*Math.sin(Math.min(1,age/.055)*Math.PI/2)+.1*Math.sin(age*21));
 }
 

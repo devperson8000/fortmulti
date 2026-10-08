@@ -10,7 +10,7 @@ const world={height:(x,z)=>Math.sin(x*.02)+Math.cos(z*.02),obstacles:[{min:[-5,-
 test('deployment timeline covers seal, the musical intro, beat touchdown, opening and exit',()=>{
  assert.deepEqual(DEPLOYMENT_STATES,['ship_waiting','landing_selection','pod_available','entering_pod','pod_ready','both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','saluting','match_active']);
  assert.equal(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds,MUSIC_START+DEPLOYMENT_CUES.impact);
- assert.ok(DEPLOYMENT_TIMELINE.fadeAt>2.3&&DEPLOYMENT_TIMELINE.fadeAt<DEPLOYMENT_TIMELINE.launchSeconds);
+ assert.ok(DEPLOYMENT_TIMELINE.fadeAt>1.4&&DEPLOYMENT_TIMELINE.fadeAt<3,'the pod fires before the first music frame');
  assert.equal(deploymentStageAt(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.fadeAt),'transition');
  assert.equal(deploymentStageAt(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds),'landed');
  const touchdown=DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds;
@@ -73,7 +73,8 @@ test('first uh-yeah starts the Horizon mark on cue and the logo holds through th
  const onBeat=deploymentCinematic(MUSIC_START+DEPLOYMENT_CUES.uhYeahStart+.2);
  const late=deploymentCinematic(MUSIC_START+DEPLOYMENT_CUES.lyricsStart-.04);
  assert.equal(before.logo,0);
- assert.ok(onBeat.logo>.95);
+ assert.ok(onBeat.logo>.4&&onBeat.logo<.9,'title has a visible fade-in, not a one-frame pop');
+ assert.ok(deploymentCinematic(MUSIC_START+DEPLOYMENT_CUES.uhYeahStart+.42).logo>.95);
  assert.ok(late.logo>.85);
  const fading=deploymentCinematic(MUSIC_START+DEPLOYMENT_CUES.lyricsStart+.4);
  assert.ok(fading.logo>0&&fading.logo<.8,'mark dissolves as the opening lyric begins');
@@ -86,7 +87,7 @@ test('landing accelerates into the impact and the track continues under the salu
  const later=at(c.impact-.15)-at(c.impact);
  assert.ok(later>earlier,'the final descent accelerates into the kick');
  assert.equal(at(c.impact),5);
- assert.ok(DEPLOYMENT_MUSIC_END>c.impact+5);
+ assert.ok(DEPLOYMENT_MUSIC_END>c.impact+4&&DEPLOYMENT_MUSIC_END<30,'outro fits the original audio clip');
  assert.ok(deploymentCinematic(MUSIC_START+c.impact+.01).impact>.95);
 });
 

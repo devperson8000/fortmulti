@@ -5,3 +5,11 @@
 /* An uninterrupted edit: title, operator and impact have no gameplay overlays. */
 body.deployment-cinematic>header,body.deployment-cinematic>#mapbox,body.deployment-cinematic>#mission,body.deployment-cinematic>#notice,body.deployment-cinematic>#crosshair,body.deployment-cinematic>#health,body.deployment-cinematic>#inventory,body.deployment-cinematic>footer,body.deployment-cinematic>#deployment-ui,body.deployment-cinematic>#chatbox,body.deployment-cinematic>#round-banner,body.deployment-cinematic>#resume-control,body.deployment-cinematic>#touch,body.deployment-cinematic>#interact-prompt,body.deployment-cinematic>#use-indicator,body.deployment-cinematic>#buildhelp,body.deployment-cinematic>#damagevalue,body.deployment-cinematic>#hitmarker,body.deployment-cinematic>#vignette,body.deployment-cinematic>#damage{visibility:hidden!important;pointer-events:none!important}
 @media(prefers-reduced-motion:reduce){#deployment-cinematic .cinematic-mark{transform:none}#deployment-cinematic .cinematic-mark::before{filter:none}}
+
+/* Once E is pressed, the outside-of-pod shot owns the frame. Keep the
+   teammate status readable without covering the capsule or the deck hatch. */
+body.pod-exterior #deployment-ui{top:auto;left:50%;bottom:clamp(16px,4vh,42px);transform:translateX(-50%);width:min(470px,calc(100vw - 24px));padding:10px 18px;background:linear-gradient(110deg,#081724e0,#112b39da);border-color:#75cde080}
+body.pod-exterior #pod-status-card{text-align:center;gap:6px;padding:4px 0}
+body.pod-exterior #pod-hint{color:#d9f0ed}
+body.pod-exterior #landing-picker{display:none!important}
+body.pod-exterior #crosshair,body.pod-exterior #interact-prompt{visibility:hidden}
