@@ -100,7 +100,10 @@ export function createDeploymentAudio({fetchAudio=fetch}={}){
      state.voice=null;state.finished=true;
     }
    };
-   source.start(start,offset);source.stop(deadline);
+   source.start(start,offset);
+   // A full-length buffer ends naturally. Schedule an early stop only if the
+   // cinematic handoff comes before the recording's own final sample.
+   if(endMusic<state.buffer.duration-.001)source.stop(deadline);
    return musicClock(context,voice);
   },
   stop,
