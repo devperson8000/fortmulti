@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { DEPLOYMENT_TIMELINE, DEPLOYMENT_STATES, createDeploymentClock, stepDeploymentClock, deploymentStageAt, safeLandingPoint, deploymentActorPose } from '../public/deployment-sequence.js';
 import { DEPLOYMENT_CUES, MUSIC_START, CINEMATIC_CAMERA_RADIUS, deploymentCinematic, cinematicPodPosition, DEPLOYMENT_MUSIC_END } from '../public/deployment-cinematic.js';
 import { SHIP_PODS, clampShipPosition, moveInShip } from '../public/deployment-ship.js';
+import {characterLocomotion} from '../public/character-animation.js';
 
 const world={height:(x,z)=>Math.sin(x*.02)+Math.cos(z*.02),obstacles:[{min:[-5,-2,-5],max:[5,15,5]}]};
 
@@ -70,10 +71,13 @@ test('ship movement preserves diagonal input instead of snapping to aisle lines'
 test('first uh-yeah starts the Horizon mark on cue and the logo holds through the ad-lib',()=>{
  const before=deploymentCinematic(MUSIC_START+DEPLOYMENT_CUES.uhYeahStart-.25);
  const onBeat=deploymentCinematic(MUSIC_START+DEPLOYMENT_CUES.uhYeahStart+.2);
- const late=deploymentCinematic(MUSIC_START+DEPLOYMENT_CUES.lyricsStart+.2);
+ const late=deploymentCinematic(MUSIC_START+DEPLOYMENT_CUES.lyricsStart-.04);
  assert.equal(before.logo,0);
  assert.ok(onBeat.logo>.95);
  assert.ok(late.logo>.85);
+ const fading=deploymentCinematic(MUSIC_START+DEPLOYMENT_CUES.lyricsStart+.4);
+ assert.ok(fading.logo>0&&fading.logo<.8,'mark dissolves as the opening lyric begins');
+ assert.equal(deploymentCinematic(MUSIC_START+DEPLOYMENT_CUES.lyricsStart+.81).logo,0);
 });
 
 test('landing accelerates into the impact and the track continues under the salute',()=>{
@@ -140,4 +144,13 @@ test('continuous actor pose cannot be affected by intermittent network snapshots
  const once=deploymentActorPose(origin,0,1,exit+.4*t.exitSeconds,()=>origin.y);
  const again=deploymentActorPose(origin,0,1,exit+.4*t.exitSeconds,()=>origin.y);
  assert.deepEqual(again,once,'the same clock tick always produces the same pose');
+});
+
+test('scripted opening and salute clear stale ship locomotion before rendering',()=>{
+ const t=DEPLOYMENT_TIMELINE,opening=t.sealSeconds+t.launchSeconds+t.landedSeconds;
+ for(const at of [opening+.4,opening+t.openingSeconds+t.exitSeconds+t.saluteSeconds*.5]){
+  const pose=deploymentActorPose({x:18,y:0,z:68},0,1,at);
+  const actor={locomotionState:'walk',moveSpeed:5,grounded:false,vy:3,...pose};
+  assert.equal(characterLocomotion(actor).state,'idle','boarding movement cannot leak into the standing cinematic pose');
+ }
 });

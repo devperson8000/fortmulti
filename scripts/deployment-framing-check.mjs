@@ -24,22 +24,34 @@ try{
   };
   window.__portrait();
  });
- await page.waitForFunction(()=>window.__renderer?.ready&&window.Game.deploymentView().localVisible,{timeout:30000});
+ await page.waitForFunction(()=>window.__renderer?.ready&&window.Game.deploymentView().black===0,{timeout:30000});
  for(const [name,width,height] of [['desktop',1280,720],['compact',800,600],['ultrawide',2100,900],['portrait',540,960]]){
   await page.setViewportSize({width,height});await page.evaluate(()=>window.__portrait());
-  await page.waitForFunction(()=>window.Game.deploymentView().localVisible&&window.Game.deploymentView().black===0);
+  await page.waitForFunction(()=>window.Game.deploymentView().black===0);
   await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
   const result=await page.evaluate(()=>{
    const r=window.__renderer,THREE=window.__THREE,view=window.Game.deploymentView(),instance=r.instances.get('a'),anchor=view.podPosition,podPoints=[];
    r.scene.updateMatrixWorld(true);
-   for(const x of[-.94,.94])for(const y of[-.18,2.35])for(const z of[-.89,.89])podPoints.push(new THREE.Vector3(anchor[0]+x,anchor[1]+y,anchor[2]+z).project(r.camera).toArray());
+   for(const x of[-1.03,1.03])for(const y of[0,3.82])for(const z of[-.98,1.12])podPoints.push(new THREE.Vector3(anchor[0]+x,anchor[1]+y,anchor[2]+z).project(r.camera).toArray());
    const feet=[...instance.bones].filter(([n])=>/toebase$/.test(n)).map(([name,bone])=>({name,position:bone.getWorldPosition(new THREE.Vector3()).toArray()}));
-   return {width:innerWidth,height:innerHeight,view,podPoints,feet,bodyOpacity:instance.cinematicOpacity,fill:r.cinematicLight.intensity,ui:['mapbox','deployment-ui','inventory','chatbox','resume-control'].map(id=>getComputedStyle(document.getElementById(id)).visibility)};
+   return {width:innerWidth,height:innerHeight,view,podPoints,feet,bodyOpacity:instance.holder.visible?instance.cinematicOpacity:0,fill:r.cinematicLight.intensity,ui:['mapbox','deployment-ui','inventory','chatbox','resume-control'].map(id=>getComputedStyle(document.getElementById(id)).visibility)};
   });
   assert.ok(result.podPoints.every(p=>Math.abs(p[0])<1&&Math.abs(p[1])<1),'whole capsule must fit the actual camera');
-  assert.equal(result.bodyOpacity,1);assert.ok(result.fill>0);assert.ok(result.ui.every(v=>v==='hidden'));
-  for(const foot of result.feet){assert.ok(foot.position[1]-result.view.podPosition[1]>-.01&&foot.position[1]-result.view.podPosition[1]<.05,'boot soles remain planted at pod floor');assert.ok(Math.abs(foot.position[0]-result.view.podPosition[0])<.7&&Math.abs(foot.position[2]-result.view.podPosition[2])<.7,'feet stay inside capsule');}
+  assert.equal(result.view.localVisible,false,'the operator stays concealed by the closed pod');
+  assert.equal(result.view.operatorOpacity,0);assert.equal(result.view.hatchOpen,0);
+  assert.equal(result.bodyOpacity,0);assert.ok(result.fill>0);assert.ok(result.ui.every(v=>v==='hidden'));
   await page.screenshot({path:artifacts+'/framing-'+name+'.png'});results.push({name,...result});
+ }
+ await page.setViewportSize({width:1280,height:720});
+ for(const phase of ['opening','walkout','salute']){
+  await page.evaluate(async phase=>{const {DEPLOYMENT_CUES:c,POD_RELEASE:r}=await import('/deployment-cinematic.js');window.__portrait(c.impact+r.hold+(phase==='opening'?r.open*.55:r.open+(phase==='walkout'?r.exit*.5:r.exit+r.salute*.5)));},phase);
+  await page.waitForFunction(()=>window.Game.deploymentView().localVisible);
+  const result=await page.evaluate(()=>{const view=window.Game.deploymentView(),p=window.Game.pose(),r=window.__renderer;return {view,position:p.p.slice(),animation:p.animationState,salute:p.saluteProgress,feet:[...r.instances.get('a').bones].filter(([n])=>/toebase$/.test(n)).map(([,b])=>b.getWorldPosition(new window.__THREE.Vector3()).toArray()),input:window.Game.input()};});
+  assert.ok(result.view.operatorOpacity>.99);assert.equal(result.input.fire,false);assert.equal(result.input.slot,0);
+  if(phase==='opening'){assert.ok(result.view.hatchOpen>.5&&result.view.hatchOpen<.8);assert.ok(Math.hypot(result.position[0]-result.view.podPosition[0],result.position[2]-result.view.podPosition[2])<.01);}
+  else assert.ok(Math.hypot(result.position[0]-result.view.podPosition[0],result.position[2]-result.view.podPosition[2])>1,'operator steps outside the stationary pod');
+  if(phase==='salute')assert.ok(result.salute>.99,'native salute is fully raised');
+  await page.screenshot({path:artifacts+'/framing-'+phase+'.png'});results.push({name:phase,...result});
  }
  // A delayed server snapshot can still say exiting after the local music
  // clock finishes. Keep the open shell anchored until gameplay is confirmed.

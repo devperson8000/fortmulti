@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDeploymentAudio} from '../public/deployment-audio.js';
+import {DEPLOYMENT_RIFF} from '../public/deployment-cues.js';
+import {DEPLOYMENT_MUSIC_END} from '../public/deployment-cinematic.js';
 
 function context(){
  const starts=[],stops=[],sources=[];let decodes=0;
@@ -158,9 +160,48 @@ test('the instrument riff is extended after impact without restarting the vocal 
  const c=context(),player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
  assert.equal(player.update(c.ctx,'round:1',0),0);
  assert.equal(c.starts.length,1);
- c.ctx.currentTime+=26.2;
- assert.ok(player.update(c.ctx,'round:1',0)>26);
+ c.ctx.currentTime+=27.95;
+ assert.ok(player.update(c.ctx,'round:1',0)>27);
  assert.equal(c.starts.length,2,'the instrument loop starts only around touchdown');
  assert.equal(c.sources[1].loop,true);
  assert.ok(c.stops.length>=1,'the loop has a finite fade-out at gameplay start');
+});
+
+test('the full supplied verse continues after impact and blends into a phase-matched riff at its end',async()=>{
+ const c=context();c.ctx.decodeAudioData=async()=>({duration:30});
+ const player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);player.update(c.ctx,'round:1',0);
+ c.ctx.currentTime=36.3;player.update(c.ctx,'round:1',0);
+ assert.equal(c.starts.length,1,'the verse after Big stepper must not be replaced by an early loop');
+ c.ctx.currentTime=39.85;player.update(c.ctx,'round:1',0);
+ assert.equal(c.starts.length,2);const loop=c.sources[1],start=c.starts[1];
+ assert.equal(loop.loop,true);assert.equal(loop.loopStart,DEPLOYMENT_RIFF.start);assert.equal(loop.loopEnd,DEPLOYMENT_RIFF.end);
+ assert.ok(Math.abs(start[0]-39.88)<1e-8,'overlap is confined to the final 120 ms of the upload');
+ assert.ok(Math.abs(start[1]-(29.88-4*16/3))<1e-8,'the outro follows the original riff phase');
+ assert.ok(c.stops.some(([time])=>Math.abs(time-(10+DEPLOYMENT_MUSIC_END))<1e-8),'the music ends with the gameplay handoff');
+});
+
+test('recovering in the final fade preserves its quiet level and stops at the original deadline',async()=>{
+ for(const remaining of [.085,.015,.001]){
+  const c=context(),events=[];
+  c.ctx.createGain=()=>({connect(){},disconnect(){},gain:{value:0,cancelScheduledValues(){},setValueAtTime(value,time){events.push({value,time});},linearRampToValueAtTime(value,time){events.push({value,time});}}});
+  const player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
+  player.update(c.ctx,'late',DEPLOYMENT_MUSIC_END-remaining);
+  const deadline=c.ctx.currentTime+remaining;
+  assert.ok(c.stops.every(([time])=>Math.abs(time-deadline)<1e-8),'recovery cannot extend the song');
+  assert.ok(events.every(e=>e.time<=deadline+1e-8),'all gain ramps fit the remaining fade');
+  assert.ok(events.every(e=>e.value<=.88*remaining/.85+1e-8),'a late recovery cannot restore full volume');
+ }
+});
+
+test('a finished render source retains its clock until the ending reaches the speakers',async()=>{
+ const c=context(),player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
+ player.update(c.ctx,'tail',31);
+ c.ctx.currentTime=10+DEPLOYMENT_MUSIC_END-31;
+ c.ctx.getOutputTimestamp=()=>({contextTime:c.ctx.currentTime-.15,performanceTime:performance.now()});
+ c.sources.at(-1).onended();
+ assert.ok(Math.abs(player.time(c.ctx,'tail')-(DEPLOYMENT_MUSIC_END-.15))<.001,'render completion must not erase the audible ending clock');
+ assert.ok(player.update(c.ctx,'tail',0)<DEPLOYMENT_MUSIC_END);assert.equal(c.starts.length,1);
+ c.ctx.currentTime+=.17;
+ assert.ok(player.update(c.ctx,'tail',0)>=DEPLOYMENT_MUSIC_END);assert.equal(c.starts.length,1);
+ assert.equal(player.time(c.ctx,'tail'),null);
 });

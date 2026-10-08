@@ -1,4 +1,5 @@
 import {DEPLOYMENT_CUES,DEPLOYMENT_MUSIC_END} from './deployment-cinematic.js';
+import {DEPLOYMENT_RIFF} from './deployment-cues.js';
 
 // The decoded song is shared by rounds. Scheduling and camera timing use the
 // same AudioContext clock, including when a recovering client needs to seek.
@@ -33,29 +34,56 @@ export function createDeploymentAudio({fetchAudio=fetch}={}){
   return voice.clock=Math.max(voice.clock??-Infinity,audible-voice.anchor);
  }
  function scheduleOutro(context,state,voice,musicTime){
-  const riffStart=DEPLOYMENT_CUES.mainRiff,loopLength=3.96,loopEnd=riffStart+loopLength,tailCue=DEPLOYMENT_CUES.impact+.38;
+  const riffStart=DEPLOYMENT_RIFF.start,loopEnd=DEPLOYMENT_RIFF.end,loopLength=loopEnd-riffStart,tailCue=state.buffer.duration-DEPLOYMENT_RIFF.crossfade;
   if(voice.outro||musicTime<tailCue-.08||state.buffer.duration<loopEnd+.1)return;
   const now=context.currentTime,source=context.createBufferSource(),gain=context.createGain(),start=Math.max(now,voice.anchor+tailCue),end=voice.anchor+DEPLOYMENT_MUSIC_END;
-  const offset=riffStart+Math.max(0,musicTime-tailCue)%loopLength;
-  source.buffer=state.buffer;source.loop=true;source.loopStart=riffStart;source.loopEnd=loopEnd;
+  // Continue the eight-beat phase instead of restarting the riff on a new bar.
+  const songTime=start-voice.anchor,phase=((songTime-riffStart)%loopLength+loopLength)%loopLength;
+  source.buffer=state.riff||state.buffer;source.loop=true;source.loopStart=state.riff?0:riffStart;source.loopEnd=state.riff?state.riff.duration:loopEnd;
+  const offset=(state.riff?0:riffStart)+phase,level=.88;
   source.connect(gain);gain.connect(context.destination);
   gain.gain.setValueAtTime(0,start);
-  gain.gain.linearRampToValueAtTime(.46,Math.max(start+.015,Math.min(end-.7,start+.35)));
-  gain.gain.setValueAtTime(.46,Math.max(start+.02,end-.85));
-  gain.gain.linearRampToValueAtTime(0,Math.max(start+.03,end));
+  const fadeAt=end-.85;
+  if(start>=fadeAt){
+   // Recovery inside the ending keeps its global fade level and deadline.
+   const attackEnd=Math.min(end,start+Math.min(.015,(end-start)*.2));
+   gain.gain.linearRampToValueAtTime(level*Math.max(0,(end-attackEnd)/.85),attackEnd);
+  }else{
+   gain.gain.linearRampToValueAtTime(level,Math.min(fadeAt,Math.max(start+.015,voice.anchor+state.buffer.duration)));
+   gain.gain.setValueAtTime(level,fadeAt);
+  }
+  gain.gain.linearRampToValueAtTime(0,end);
   voice.layers.push({source,gain});voice.outro=true;
-  source.onended=()=>{source.disconnect();gain.disconnect();if(state.voice===voice){state.voice=null;state.finished=true;}};
-  source.start(start,offset);source.stop(Math.max(start+.04,end));
+  source.onended=()=>{
+   source.disconnect();gain.disconnect();
+   // Render completion can precede speaker output by the device latency.
+   // Keep the anchor available until the final audible frame has completed.
+   if(state.voice===voice)voice.outroEnded=true;
+  };
+  source.start(start,offset);source.stop(end);
  }
  return {
   load(context){
    if(!context)return Promise.resolve(false);
    if(contexts.has(context))return contexts.get(context).ready;
-   const state={buffer:null,voice:null,sequence:'',ready:null};contexts.set(context,state);
+   const state={buffer:null,riff:null,voice:null,sequence:'',ready:null};contexts.set(context,state);
    // Audio time freezes while the server's deployment continues. A suspended
    // voice must not resume at its old offset, even if animation frames pause.
    context.addEventListener?.('statechange',()=>{if(context.state!=='running')cancelVoice(context);});
-   state.ready=encoded.then(async bytes=>{try{if(bytes)state.buffer=await context.decodeAudioData(bytes.slice(0));}catch{}return Boolean(state.buffer);});
+   state.ready=encoded.then(async bytes=>{try{
+    if(bytes)state.buffer=await context.decodeAudioData(bytes.slice(0));
+    const buffer=state.buffer;
+    if(buffer?.getChannelData&&context.createBuffer&&buffer.duration>DEPLOYMENT_RIFF.end){
+     const a=Math.round(DEPLOYMENT_RIFF.start*buffer.sampleRate),b=Math.round(DEPLOYMENT_RIFF.end*buffer.sampleRate),fade=Math.round(.02*buffer.sampleRate);
+     state.riff=context.createBuffer(buffer.numberOfChannels,b-a,buffer.sampleRate);
+     for(let channel=0;channel<buffer.numberOfChannels;channel++){
+      const input=buffer.getChannelData(channel),output=state.riff.getChannelData(channel);output.set(input.subarray(a,b));
+      // Blend into the samples immediately before the loop start. Keep all
+      // 235200 samples, so smoothing cannot shorten the measured beat period.
+      for(let i=0;i<fade;i++){const blend=(1-Math.cos(i/(fade-1)*Math.PI))*.5;output[output.length-fade+i]=output[output.length-fade+i]*(1-blend)+input[a-fade+i]*blend;}
+     }
+    }
+   }catch{}return Boolean(state.buffer);});
    return state.ready;
   },
   time(context,sequence){
@@ -67,18 +95,22 @@ export function createDeploymentAudio({fetchAudio=fetch}={}){
    if(state&&context.state!=='running'){cancelVoice(context);return null;}
    if(!state?.buffer||context.state!=='running'||!sequence||!Number.isFinite(musicTime))return null;
    if(state.sequence!==sequence){stop(context);state.sequence=sequence;state.finished=false;}
-   if(state.voice){const current=musicClock(context,state.voice);scheduleOutro(context,state,state.voice,current);return current;}
+   if(state.voice){
+    const current=musicClock(context,state.voice);
+    if(state.voice.outroEnded&&current>=DEPLOYMENT_MUSIC_END){state.voice=null;state.finished=true;return current;}
+    scheduleOutro(context,state,state.voice,current);return current;
+   }
    if(state.finished)return null;
    if(musicTime>=DEPLOYMENT_MUSIC_END){state.finished=true;return null;}
    const now=context.currentTime,anchor=now-musicTime,layers=[],voice={layers,anchor};
    state.voice=voice;
-   // The original edited opening/verse is unchanged, including its fade.
+   // Play the entire supplied opening and verse, keeping the spoken edit.
    if(musicTime<state.buffer.duration){
     const source=context.createBufferSource(),gain=context.createGain(),start=Math.max(now,anchor),offset=Math.max(0,musicTime),level=.65;
     source.buffer=state.buffer;source.connect(gain);gain.connect(context.destination);
     gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(level,start+Math.max(.02,.65-offset));
     const tail=anchor+state.buffer.duration;
-    gain.gain.setValueAtTime(level,Math.max(start+.02,tail-.65));
+    gain.gain.setValueAtTime(level,Math.max(start+.02,tail-DEPLOYMENT_RIFF.crossfade));
     gain.gain.linearRampToValueAtTime(0,Math.max(start+.03,tail));
     layers.push({source,gain});
     source.onended=()=>{
@@ -92,7 +124,7 @@ export function createDeploymentAudio({fetchAudio=fetch}={}){
     };
     source.start(start,offset);
    }
-   // Lazily schedule the instrumental only near touchdown; earlier calls
+   // Lazily schedule the instrumental near the end of the supplied verse; earlier calls
    // retain a single voice and cannot flood nodes with speculative loops.
    scheduleOutro(context,state,voice,musicTime);
    return musicClock(context,voice);

@@ -32,7 +32,7 @@ test('camera finishes facing the operator and stays outside the pod and characte
  }
  const front=cinematicCamera(p,0,{orbit:1,impact:0});
  assert.ok(front.eye[2]>p[2],'the door-facing camera stays in front of the sealed pod');
- assert.ok(front.target[1]>p[1]+.8&&front.target[1]<p[1]+1.4);
+ assert.ok(front.target[1]>p[1]+1.7&&front.target[1]<p[1]+2,'frame the centre of the full-height sealed capsule');
 });
 
 test('descent is continuous, stays above the island, and touches chosen ground on the beat',()=>{
@@ -76,12 +76,69 @@ test('the complete pod roof and floor fit the portrait shot across screen sizes'
  const dot=(a,b)=>a.reduce((v,n,k)=>v+n*b[k],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],norm=a=>a.map(v=>v/Math.hypot(...a));
  for(const aspect of [9/16,4/3,16/9,21/9])for(const orbit of [.4,.7,1]){
   const view=cinematicCamera([0,0,0],0,{orbit}),forward=norm(view.target.map((v,k)=>v-view.eye[k])),right=norm(cross(forward,[0,1,0])),up=cross(right,forward),lens=Math.tan(cinematicFov(aspect)/2);
-  for(const x of[-.94,.94])for(const y of[-.18,2.35])for(const z of[-.89,.89]){
+  for(const x of[-1.03,1.03])for(const y of[0,3.82])for(const z of[-.98,1.12]){
    const offset=[x,y,z].map((v,k)=>v-view.eye[k]),depth=dot(offset,forward);
    assert.ok(Math.abs(dot(offset,right)/(depth*lens*aspect))<.96,'pod rails fit horizontally');
    assert.ok(Math.abs(dot(offset,up)/(depth*lens))<.96,'roof and floor fit vertically');
   }
  }
+});
+
+test('the heavy final descent reaches the beat with a finite velocity instead of teleporting the last metres',()=>{
+ const landing={x:2,y:7,z:9},at=t=>cinematicPodPosition(landing,MUSIC_START+t)[1],hit=DEPLOYMENT_CUES.impact;
+ const speeds=[.2,.1,.04,.02].map(dt=>(at(hit-dt)-landing.y)/dt);
+ assert.ok(speeds.every(speed=>speed>30&&speed<60),'the final approach is fast, with bounded motion between frames');
+ assert.ok(at(hit-.2)-at(hit-.1)<6,'the exterior camera can follow the final approach without a cut');
+});
+
+test('impact has a downward camera punch and settles before the hatch opens',()=>{
+ const c=DEPLOYMENT_CUES,at=age=>cinematicCamera([0,0,0],0,{musicTime:c.impact+age,orbit:1,impact:Math.exp(-age*3.8)}),steady=age=>cinematicCamera([0,0,0],0,{musicTime:c.impact+age,orbit:1,impact:Math.exp(-age*3.8)},{reducedMotion:true});
+ assert.ok(at(0).eye[1]<steady(0).eye[1]-.16,'the initial hit must push the camera down');
+ assert.ok(Math.hypot(...at(.09).eye.map((v,k)=>v-steady(.09).eye[k]))>.12,'the heavy impact is visible after the first frame');
+ assert.ok(Math.hypot(...at(1).eye.map((v,k)=>v-steady(1).eye[k]))<.01,'camera settles before walkout');
+});
+
+test('landing launches visible earth chunks and dust within every graphics budget',()=>{
+ assert.equal(typeof cinematic.podLandingBurst,'function');
+ for(const budget of [0,40,80,144]){
+  const burst=cinematic.podLandingBurst({x:12,y:7,z:-18},budget,()=>.5);
+  assert.equal(burst.length,budget);
+  if(!budget)continue;
+  const debris=burst.filter(p=>p.kind==='pod-debris'),dust=burst.filter(p=>p.kind==='pod-dust');
+  assert.ok(debris.length>=8&&dust.length>=20,'each quality retains both chunks and dust');
+  assert.ok(debris.every(p=>p.v[1]>=8&&p.radius>=.08),'earth chunks fly upward and are large enough to see');
+  assert.ok(burst.every(p=>p.p[1]>7&&p.life<=2.5&&p.maxLife===p.life),'nothing starts below ground or persists into gameplay');
+  assert.ok(new Set(burst.map(p=>Math.sign(p.v[0])+','+Math.sign(p.v[2]))).size>=4,'the burst spreads around all sides of the capsule');
+ }
+});
+
+test('landing particles expand and settle above terrain instead of falling through the map',()=>{
+ assert.equal(typeof cinematic.stepPodLandingParticle,'function');
+ assert.equal(typeof cinematic.podLandingParticleSize,'function');
+ const [rock,...particles]=cinematic.podLandingBurst({x:0,y:2,z:0},40,()=>.5),dust=particles.find(p=>p.kind==='pod-dust');
+ const initial=cinematic.podLandingParticleSize(dust);dust.life*=.6;
+ assert.ok(cinematic.podLandingParticleSize(dust)>initial,'the dust plume grows after the hit');
+ for(let n=0;n<100;n++){rock.life-=.016;cinematic.stepPodLandingParticle(rock,.016,()=>2);assert.ok(rock.p[1]>=2,'the chunk cannot pass through terrain');}
+ dust.life=0;assert.equal(cinematic.podLandingParticleSize(dust),0);
+});
+
+test('landing gear compresses on impact and is stationary before the door opens',()=>{
+ assert.equal(typeof cinematic.podImpactOffset,'function');
+ assert.equal(cinematic.podImpactOffset(-.01),0);
+ assert.equal(cinematic.podImpactOffset(0),0);
+ assert.ok(cinematic.podImpactOffset(.055)<-.045,'the hull visibly compresses after the impact');
+ assert.equal(cinematic.podImpactOffset(cinematic.POD_RELEASE.hold),0,'the open pod floor cannot move under the exiting Soldier');
+ for(let t=0;t<1;t+=.01)assert.ok(Math.abs(cinematic.podImpactOffset(t))<.16,'landing gear travel stays small');
+});
+
+test('the operator stays concealed until the hatch actually opens after impact',()=>{
+ const c=DEPLOYMENT_CUES,r=cinematic.POD_RELEASE,at=t=>deploymentCinematic(MUSIC_START+t);
+ for(const t of [c.businessStart,c.impact-.001,c.impact,c.impact+r.hold-.001]){
+  assert.equal(at(t).hatchOpen,0);assert.equal(at(t).operatorOpacity,0,'no cutaway view during descent or touchdown');
+ }
+ assert.equal(at(c.impact+r.hold+r.open*.04).operatorOpacity,0,'a tiny opening does not pop the Soldier into view');
+ assert.ok(at(c.impact+r.hold+r.open*.5).operatorOpacity>.95,'opening hatch naturally reveals the Soldier');
+ assert.equal(at(c.impact+r.hold+r.open+r.exit*.5).operatorOpacity,1,'the walkout remains fully visible');
 });
 
 test('the pod walk-out follows its rotated hatch and preserves terrain height',()=>{

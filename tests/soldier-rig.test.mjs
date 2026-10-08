@@ -13,6 +13,28 @@ const loader=new GLTFLoader().register(()=>({name:'TestTextures',loadTexture:()=
 const bytes=await readFile(new URL('../public/models/Soldier.glb',import.meta.url));
 const asset=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
 const scale=1.78/new THREE.Box3().setFromObject(asset.scene).getSize(new THREE.Vector3()).y;
+test('deployment salute places the actual native fingertips at the forehead without stretching or accumulating',async()=>{
+ const {MatchCharacterRenderer}=await import('../public/match-character-renderer.js');
+ const {buildForeheadSaluteProbes}=await import('../public/lobby-rig.js');
+ for(const yaw of [0,.8,2.6]){
+  const r=Object.create(MatchCharacterRenderer.prototype);Object.assign(r,{scene:new THREE.Scene(),firstPersonScene:new THREE.Scene(),instances:new Map(),weaponTemplates:new Map(),clips:new Map()});r._loaded(asset);
+  const p={id:'salute',p:[18,4,68],yaw,hp:100,air:'pod',deploymentState:'saluting',animationState:'idle',locomotionState:'idle',grounded:true,moveSpeed:0,saluteProgress:1};
+  for(let n=0;n<100;n++)r.update([p],{phase:'deployment',dt:1/60});
+  const a=r.instances.get('salute'),v=()=>new THREE.Vector3();a.holder.updateMatrixWorld(true);a.model.traverse(o=>{if(o.isSkinnedMesh)o.skeleton.update();});
+  const head=a.bones.get('mixamorighead').getWorldPosition(v()),shoulder=a.bones.get('mixamorigrightshoulder').getWorldPosition(v());
+  const camera=a.holder.localToWorld(new THREE.Vector3(0,1.6,-5)),probe=buildForeheadSaluteProbes(head.toArray(),shoulder.toArray(),camera.toArray(),1.78),direction=new THREE.Vector3(...probe.direction);
+  const ray=new THREE.Raycaster(new THREE.Vector3(...probe.center).addScaledVector(direction,1),direction.clone().negate()),meshes=[];
+  a.model.traverse(o=>{if(o.isSkinnedMesh&&o.skeleton.bones.some(b=>b.name==='mixamorigHead'))meshes.push(o);});
+  const target=ray.intersectObjects(meshes,false)[0].point.clone().addScaledVector(direction,.004);
+  const tips=[['index3',[-.0972724658,3.7575946381,-.0024291103]],['middle3',[-.8392463825,3.7000995029,.0195624377]]].map(([name,offset])=>a.bones.get('mixamorigrighthand'+name).localToWorld(new THREE.Vector3(...offset)));
+  assert.ok(tips[0].clone().add(tips[1]).multiplyScalar(.5).distanceTo(target)<.02,'actual two-finger salute misses the helmet');
+  const lengths=['rightarm','rightforearm','righthand'].map(name=>a.bones.get('mixamorig'+name).position.length());
+  r.update([p],{phase:'deployment',dt:0});const pose=new Map([...a.bones].map(([name,b])=>[name,b.quaternion.clone()]));
+  for(let n=0;n<40;n++)r.update([p],{phase:'deployment',dt:0});
+  for(const [name,b]of a.bones)assert.ok(1-Math.abs(b.quaternion.dot(pose.get(name)))<1e-7,'salute accumulates '+name);
+  assert.deepEqual(['rightarm','rightforearm','righthand'].map(name=>a.bones.get('mixamorig'+name).position.length()),lengths);
+ }
+});
 test('actual Soldier wrists reach all weapon grips and reload targets without stretching',()=>{
  const rig=createSoldierArms(asset.scene,scale);
  for(const profile of Object.values(WEAPON_PROFILES))for(const remaining of [0,profile.reloadDuration*.7,profile.reloadDuration*.4]){

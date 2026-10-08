@@ -66,6 +66,8 @@ export class Match{
    if(alive.every(p=>p.destination&&p.pod&&p.deploymentState==='pod_ready')){this.deployment.stage='both_ready';this.deployment.elapsed=0;this.deployment.sequenceElapsed=0;this.deployment.teleported=false;this.deployment.landings=[];for(const p of alive){const landing=safeLandingPoint(p.destination,this.world,this.deployment.landings);if(!landing){this.deployment.stage='landing_selection';this.podOwners.clear();for(const player of alive){const pod=SHIP_PODS.find(value=>value.id===player.pod);player.pod=null;player.landingPosition=null;player.podProgress=0;player.entryStart=null;player.shipLocal=pod?[pod.x,0,pod.z+pod.entryOffset]:player.shipLocal;player.p=shipWorld(player.shipLocal);player.deploymentState='pod_available';player.dropState='pod_available';player.animationState='idle';}this.event({type:'landing_rejected',sequence:this.deployment.sequenceId});return;}this.deployment.landings.push(landing);p.landingPosition=landing;p.destination={x:landing.x,z:landing.z,y:landing.y};p.podYaw=p.yaw;p.deploymentState='both_ready';}this.event({type:'both_pods_ready',sequence:this.deployment.sequenceId});}
    return;
   }
+  // Ship inputs must not leave a walking/airborne pose under the cinematic.
+  for(const p of alive){p.moveSpeed=0;p.locomotionState='idle';p.grounded=true;p.vy=0;}
   const previousStage=this.deployment.stage;this.deployment.elapsed+=dt;this.deployment.sequenceElapsed=Math.max(0,this.deployment.elapsed-DEPLOYMENT_TIMELINE.readyBeat);this.deployment.stage=this.deployment.elapsed<DEPLOYMENT_TIMELINE.readyBeat?'both_ready':deploymentStageAt(this.deployment.sequenceElapsed);this.deployment.stageElapsed=this.deployment.elapsed;
   if(this.deployment.stage!==previousStage&&['pod_sealing','launching','transition','pod_opening','exiting','saluting'].includes(this.deployment.stage))this.event({type:'deployment_stage',stage:this.deployment.stage,sequence:this.deployment.sequenceId});
   if(!this.deployment.teleported&&deploymentCinematic(this.deployment.sequenceElapsed).portrait){for(const p of alive){if(p.landingPosition){p.p=cinematicPodPosition(p.landingPosition,this.deployment.sequenceElapsed);p.air='pod';p.animationState='idle';}}}
@@ -81,7 +83,7 @@ export class Match{
    const exitElapsed=this.deployment.sequenceElapsed-DEPLOYMENT_TIMELINE.sealSeconds-DEPLOYMENT_TIMELINE.launchSeconds-DEPLOYMENT_TIMELINE.landedSeconds-DEPLOYMENT_TIMELINE.openingSeconds;
    const q=clamp(exitElapsed/DEPLOYMENT_TIMELINE.exitSeconds,0,1),ease=q*q*(3-2*q);
    for(const p of alive){
-    p.deploymentState='exiting';p.dropState='exiting';p.animationState='pod-exit';p.air='pod';
+    p.deploymentState='exiting';p.dropState='exiting';p.animationState=p.locomotionState='pod-exit';p.moveSpeed=6*q*(1-q)*Math.hypot(.32,2.35)/DEPLOYMENT_TIMELINE.exitSeconds;p.air='pod';
     const start=p.exitPosition||p.p,pod=SHIP_PODS.find(value=>value.id===p.pod),offset=pod?.side||1;
     p.p=podExitPosition({x:start[0],y:start[1],z:start[2]},p.podYaw??0,offset,q,this.world.height);
     p.yaw=podExitYaw(p.podYaw??0);

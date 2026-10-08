@@ -5,7 +5,7 @@ import {firstPersonCalibration,PICKAXE_GRIP} from './first-person-calibration.js
 import {createContactShadow} from './character-lighting.js';
 import {SALUTE_FINGER_CURLS} from './lobby-rig.js';
 import {createMotionPresentation,stepMotionPresentation} from './visual-presentation.js';
-import {createSoldierArms,poseSoldierArms,poseWeaponHand,supportHandPose} from './soldier-arms.js';
+import {createSoldierArms,poseSoldierArms,poseWeaponHand,supportHandPose,poseArmChain} from './soldier-arms.js';
 import {createHeldItem} from './held-items.js';
 import {handAttachmentScale} from './view-model.js';
 import * as THREE from 'three';
@@ -17,6 +17,28 @@ import {createAnimationBlend,stepAnimationBlend,characterLocomotion,characterAct
 const clipState=name=>String(name||'').toLowerCase().replace(/[^a-z]/g,'');
 const normBone=name=>String(name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+
+// Measured on the shipped Soldier mesh: helmet surface in head-bone space,
+// and the actual terminal skin vertices of its two extended fingers.
+const saluteForehead=[-5.12026438883,17.57254662871,11.46768078850];
+const saluteTips=[['index3',[-.0972724658,3.7575946381,-.0024291103]],['middle3',[-.8392463825,3.7000995029,.0195624377]]];
+const saluteHandRotation=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(0,0,1),new THREE.Vector3(-.866,.5,0).normalize(),new THREE.Vector3(-.5,-.866,0).normalize()));
+function poseNativeSalute(instance,amount){
+ const {model,holder,bones,fingerRest}=instance,arm=bones.get('mixamorigrightarm'),fore=bones.get('mixamorigrightforearm'),hand=bones.get('mixamorigrighthand'),head=bones.get('mixamorighead');
+ if(!arm||!fore||!hand||!head)return;
+ const base=[arm,fore,hand].map(b=>b.quaternion.clone()),fingers=[];
+ for(const [bone,rest] of fingerRest)if(/righthand(index|middle)/.test(normBone(bone.name))){fingers.push([bone,bone.quaternion.clone(),rest]);bone.quaternion.copy(rest);}
+ holder.updateMatrixWorld(true);
+ const target=head.localToWorld(new THREE.Vector3(...saluteForehead)),orientation=holder.getWorldQuaternion(new THREE.Quaternion()).multiply(saluteHandRotation);
+ const orient=()=>{hand.quaternion.copy(hand.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(orientation));hand.updateWorldMatrix(false,true);};
+ orient();
+ const midpoint=saluteTips.map(([name,offset])=>bones.get('mixamorigrighthand'+name).localToWorld(new THREE.Vector3(...offset))).reduce((a,b)=>a.add(b),new THREE.Vector3()).multiplyScalar(.5);
+ const wrist=target.clone().sub(midpoint.sub(hand.getWorldPosition(new THREE.Vector3())));
+ poseArmChain(model,bones,'right',wrist,holder.localToWorld(new THREE.Vector3(.55,1.3,-.02)));orient();
+ for(const [index,bone] of [arm,fore,hand].entries())bone.quaternion.copy(base[index].slerp(bone.quaternion.clone(),amount));
+ for(const [bone,base,rest] of fingers)bone.quaternion.copy(base.slerp(rest,amount));
+ for(const curl of SALUTE_FINGER_CURLS){const bone=bones.get(normBone(curl.name));if(bone)bone.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(...curl.axis),curl.angle*amount));}
+}
 
 export class MatchCharacterRenderer{
  constructor(gl,canvas,{modelUrl='/models/Soldier.glb',weaponBase='/models/weapons/'}={}){
@@ -209,21 +231,7 @@ export class MatchCharacterRenderer{
    // Cinematic exit salute uses the native Soldier arm/finger rig. Apply
    // after mixer.update() so Idle cannot overwrite the gesture.
    const salute=clamp(Number(p.saluteProgress)||0,0,1);
-   if(salute>.001&&instance.rightArm&&instance.rightForeArm){
-    instance.rightArm.quaternion.slerp(new THREE.Quaternion(.4095411,0,-.0013047,.9122907),salute);
-    instance.rightForeArm.quaternion.slerp(new THREE.Quaternion(.5717739,0,-.5741454,.5860305),salute);
-    const shoulder=instance.bones.get('mixamorigrightshoulder'),hand=instance.bones.get('mixamorigrighthand');
-    if(shoulder){shoulder.rotation.x-=.015*salute;shoulder.rotation.z-=.075*salute;}
-    if(hand){hand.rotation.x-=.24*salute;hand.rotation.y-=.08*salute;hand.rotation.z+=.28*salute;}
-    for(const digit of ['index','middle'])for(let joint=1;joint<=4;joint++){
-     const bone=instance.bones.get('mixamorigrighthand'+digit+joint),rest=instance.fingerRest.get(bone);
-     if(bone&&rest)bone.quaternion.slerp(rest,salute);
-    }
-    for(const curl of SALUTE_FINGER_CURLS){
-     const bone=instance.bones.get(normBone(curl.name));
-     if(bone)bone.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(...curl.axis),curl.angle*salute));
-    }
-   }
+   if(salute>.001)poseNativeSalute(instance,salute);
    if(armed&&instance.weaponMount)this._poseRemoteWeapon(instance,p,dt);
   }
   for(const [id,instance] of this.instances)if(!active.has(id)){this._disposeInstance(instance);this.instances.delete(id);}

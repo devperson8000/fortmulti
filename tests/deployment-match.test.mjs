@@ -114,11 +114,11 @@ test('scripted deployment catches up after a stalled host without skipping touch
  match.tick(impact-.04-match.deployment.elapsed);
  assert.equal(match.deployment.stage,'transition');assert.equal(match.phase,'deployment');
  assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,0);
- match.tick(.98); // One delayed callback crosses the entire landed hold.
+ match.tick(DEPLOYMENT_TIMELINE.landedSeconds+.08); // One delayed callback crosses the entire landed hold.
  assert.equal(match.deployment.stage,'pod_opening');assert.equal(match.phase,'deployment');
  assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,1);
  assert.deepEqual(match.players[0].exitPosition,[30,0,40]);
- match.tick(6);
+ match.tick(DEPLOYMENT_TIMELINE.openingSeconds+DEPLOYMENT_TIMELINE.exitSeconds+DEPLOYMENT_TIMELINE.saluteSeconds+.2);
  assert.equal(match.phase,'playing');assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,1);
 });
 

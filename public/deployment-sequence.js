@@ -54,10 +54,12 @@ export function deploymentActorPose(landing,podYaw=0,side=1,sequenceElapsed=0,gr
  const progress=clamp((t-exitingAt)/time.exitSeconds,0,1);
  const salute=(t-salutingAt)/time.saluteSeconds;
  const raised=smooth(salute/.23),lowered=smooth((1-salute)/.23);
+ const animationState=t<exitingAt?'idle':t<salutingAt?'pod-exit':'idle';
  return {
   position:podExitPosition(landing,podYaw,side,progress,groundHeight),
   yaw:podExitYaw(podYaw,opening),
-  animationState:t<exitingAt?'idle':t<salutingAt?'pod-exit':'idle',
+  animationState,locomotionState:animationState,grounded:true,vy:0,
+  moveSpeed:t>=exitingAt&&t<salutingAt?6*progress*(1-progress)*Math.hypot(.32,2.35)/time.exitSeconds:0,
   saluteProgress:t<salutingAt?0:Math.min(raised,lowered),
   exitProgress:progress
  };
@@ -82,7 +84,7 @@ export function safeLandingPoint(destination,world,reserved=[]){
  const requested=pointFrom(destination);if(!requested||!world||typeof world.height!=='function')return null;
  const obstacles=Array.isArray(world.obstacles)?world.obstacles:[];
  const candidates=[[0,0]];
- for(let ring=1;ring<=9;ring++){const radius=ring*2.2,steps=Math.max(12,ring*8);for(let i=0;i<steps;i++){const angle=i/steps*Math.PI*2+.31;candidates.push([Math.cos(angle)*radius,Math.sin(angle)*radius]);}}
+ for(let ring=1;ring<=12;ring++){const radius=ring*2.2,steps=Math.max(12,ring*8);for(let i=0;i<steps;i++){const angle=i/steps*Math.PI*2+.31;candidates.push([Math.cos(angle)*radius,Math.sin(angle)*radius]);}}
  for(const [dx,dz] of candidates){const x=requested.x+dx,z=requested.z+dz;if(Math.hypot(x,z)>292)continue;
   const y=Number(world.height(x,z));if(!Number.isFinite(y))continue;
   // Reserve the full portrait orbit at selection time. A .75m body clearance
