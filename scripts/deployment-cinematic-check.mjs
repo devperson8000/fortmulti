@@ -45,8 +45,12 @@ try{
   const {SHIP_PODS}=await import('/deployment-ship.js'),m=window.__testMatch,p=m.players[0],pod=SHIP_PODS[0];
   if(!m.chooseLanding(p.id,{x:18,z:68}))throw Error('First landing rejected');
   p.shipLocal=[pod.x,0,pod.z+pod.entryOffset];p.p=m.shipWorld(p.shipLocal);
-  if(!m.enterPod(p.id))throw Error('First pod entry rejected');
  });
+ // The keyboard must flow through Game.input -> host Match.input -> Match.tick.
+ // A direct Match.enterPod() would hide broken in-game interaction handling.
+ await host.keyboard.down('e');
+ await host.waitForFunction(()=>window.__testMatch.players[0].deploymentState==='entering_pod',{timeout:6000});
+ await host.keyboard.up('e');
  await host.waitForFunction(()=>window.Game.pose().deploymentState==='pod_ready',{timeout:10000});
  await host.waitForFunction(()=>document.body.classList.contains('pod-exterior'),{timeout:10000});
  const waiting=await host.evaluate(()=>({stage:window.Game.deploymentView().stage,pose:window.Game.pose().deploymentState,camera:window.Game.deploymentView().eye,player:window.Game.pose().p,exterior:document.body.classList.contains('pod-exterior'),cinematic:document.body.classList.contains('deployment-cinematic')}));
@@ -55,18 +59,22 @@ try{
  assert.equal(waiting.cinematic,false,'no cinematic before teammate boards');
  assert.ok(Math.hypot(waiting.camera[0]-waiting.player[0],waiting.camera[2]-waiting.player[2])>3,'camera is outside sealed pod');
  await host.screenshot({path:artifacts+'/00-waiting-pod.png'});
- checks.push('First operator waits in closed capsule with exterior camera until teammate arrives');
+ checks.push('Host presses E to board and waits in sealed pod with exterior camera until teammate arrives');
  await host.evaluate(async()=>{
   const {SHIP_PODS}=await import('/deployment-ship.js'),m=window.__testMatch,p=m.players[1],pod=SHIP_PODS[1];
   if(!m.chooseLanding(p.id,{x:-85,z:70}))throw Error('Second landing rejected');
   p.shipLocal=[pod.x,0,pod.z+pod.entryOffset];p.p=m.shipWorld(p.shipLocal);
-  if(!m.enterPod(p.id))throw Error('Second pod entry rejected');
  });
+ // Here E is sent by the GUEST tab and has to survive the network transport.
+ await guest.waitForFunction(()=>window.Game.pose().deploymentState==='pod_available',{timeout:6000});
+ await guest.keyboard.down('e');
+ await host.waitForFunction(()=>window.__testMatch.players[1].deploymentState==='entering_pod',{timeout:7000});
+ await guest.keyboard.up('e');
  await host.waitForFunction(()=>window.__testMatch.deployment.stage==='launching',{timeout:15000});
  await Promise.all([host,guest].map(p=>p.waitForFunction(()=>document.body.classList.contains('pod-exterior'),{timeout:10000})));
  const launched=await Promise.all([host,guest].map(p=>p.evaluate(()=>({exterior:document.body.classList.contains('pod-exterior'),fade:Number(document.getElementById('deployment-fade').style.opacity)}))));
  assert.ok(launched.every(v=>v.exterior&&v.fade<.05),'both pods visible before blackout');
- checks.push('Both real network clients show outside camera during launch before blackout');
+ checks.push('Guest presses E across the network; both clients show exterior launch before blackout');
  await guest.waitForFunction(()=>window.Game.deploymentView().musicTime>=.15,{timeout:30000});
  const black=await guest.evaluate(()=>({view:window.Game.deploymentView(),fade:Number(document.getElementById('deployment-fade').style.opacity),ui:['mapbox','deployment-ui','inventory','chatbox','round-banner','resume-control'].map(id=>[id,getComputedStyle(document.getElementById(id)).visibility])}));
  assert.equal(black.fade,1);assert.ok(black.ui.every(([,v])=>v==='hidden'));await guest.screenshot({path:artifacts+'/01-black-screen.png'});checks.push('Music begins on full black with gameplay UI hidden');
