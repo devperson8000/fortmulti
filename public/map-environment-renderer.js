@@ -59,17 +59,27 @@ export class MapEnvironmentRenderer{
    if(batches.length){this.batches.set(kind,batches);this.kinds.add(kind);}
   }
  }
- update(resourceHP){
-  for(const groups of this.batches.values())for(const batch of groups)
+ update(resourceHP,eye){
+  // Submit only nearby resource instances. The battle island is broad, but
+  // the player only needs scenery near their camera (especially on laptops).
+  // Packed instance matrices avoid a draw for every far-away tree or rock.
+  const x=eye?.[0]??0,z=eye?.[2]??0,altitude=eye?.[1]??0;
+  const radius=altitude>115?0:altitude>55?195:140,radius2=radius*radius;
+  for(const groups of this.batches.values())for(const batch of groups){
+   let visible=0;
    for(let i=0;i<batch.places.length;i++){
+    const place=batch.places[i];
     const alive=(resourceHP?.get(batch.places[i].id)??100)>0;
-    if(alive===batch.alive[i])continue;
     batch.alive[i]=alive;
-    for(const mesh of batch.meshes){
-     mesh.setMatrixAt(i,alive?batch.transforms[i]:new THREE.Matrix4().makeScale(0,0,0));
-     mesh.instanceMatrix.needsUpdate=true;
-    }
+    if(!alive||(place.x-x)**2+(place.z-z)**2>radius2)continue;
+    for(const mesh of batch.meshes)mesh.setMatrixAt(visible,batch.transforms[i]);
+    visible++;
    }
+   for(const mesh of batch.meshes){
+    mesh.count=visible;
+    if(visible)mesh.instanceMatrix.needsUpdate=true;
+   }
+  }
  }
  getStats(){return {readyKinds:[...this.kinds],count:[...this.batches.values()].flat().reduce((sum,b)=>sum+b.places.length,0),drawBatches:[...this.batches.values()].flat().reduce((sum,b)=>sum+b.meshes.length,0)};}
 }

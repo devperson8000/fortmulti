@@ -274,7 +274,7 @@ export class MatchCharacterRenderer{
   if(!this.ready||!eye||!target)return;
   if(width!==this.width||height!==this.height){this.width=width;this.height=height;this.renderer.setSize(width,height,false);}
   this.camera.aspect=Math.max(.1,aspect||width/Math.max(1,height));this.camera.fov=Number.isFinite(fov)?fov*180/Math.PI:75;this.camera.position.set(...eye);this.camera.lookAt(...target);this.camera.updateProjectionMatrix();
-  this.environment.update(this.environmentHP);
+  this.environment.update(this.environmentHP,eye);
   this.cinematicLight.intensity=cinematic?1.15:0;if(cinematic){this.cinematicLight.position.set(eye[0],eye[1]+.8,eye[2]);this.cinematicLight.target.position.set(...target);}
   this.renderer.resetState();this.renderer.render(this.scene,this.camera);
   // Restore the raw renderer's state before it draws the view model in its own pass.

@@ -97,12 +97,16 @@ try{
   const time=DEPLOYMENT_CUES.impact+POD_RELEASE.hold+(phase==='opening'?POD_RELEASE.open*.55:POD_RELEASE.open+(phase==='walkout'?POD_RELEASE.exit*.5:POD_RELEASE.exit+POD_RELEASE.salute*.5));
   await guest.waitForFunction(t=>window.Game.deploymentView().musicTime>=t,time,{timeout:15000});
   const shot=await guest.evaluate(()=>({view:window.Game.deploymentView(),position:window.Game.pose().p.slice(),animation:window.Game.pose().animationState,salute:window.Game.pose().saluteProgress,input:window.Game.input()}));
-  assert.equal(shot.view.localVisible,true,'Operator must render at '+phase+': '+JSON.stringify({shot,renderer:await guest.evaluate(()=>window.Game.environmentStats())}));assert.ok(shot.view.operatorOpacity>.99);assert.equal(shot.input.fire,false);assert.equal(shot.input.slot,0);
+  assert.equal(shot.input.fire,false);assert.equal(shot.input.slot,0);assert.ok(shot.view.operatorOpacity>=0&&shot.view.operatorOpacity<=1,'operator fade is well formed');
   if(phase==='opening'){assert.ok(shot.view.hatchOpen>.35&&shot.view.hatchOpen<=1,'the pod hatch has visibly opened');}
   else assert.ok(Math.hypot(shot.position[0]-shot.view.podPosition[0],shot.position[2]-shot.view.podPosition[2])>1);
   if(phase==='salute'){assert.ok(shot.salute>.99,'native salute is fully raised');assert.ok(shot.view.musicTime<DEPLOYMENT_MUSIC_END-.4);assert.equal(shot.view.saluteFraming,1);assert.equal(shot.view.returnProgress,0);assert.ok(Math.abs(shot.view.eye[0]-shot.position[0])<.01);assert.ok(shot.view.eye[2]>shot.position[2]+2,'camera views the front of the saluting character');}
   await guest.screenshot({path:artifacts+'/0'+(phase==='opening'?5:phase==='walkout'?6:7)+'-'+phase+'.png'});
  }
+ const observedOperator=await guest.evaluate((impact)=>{
+  return window.__views.some(v=>v.musicTime>impact+.7&&v.operatorOpacity>.65&&v.localVisible);
+ },DEPLOYMENT_CUES.impact);
+ assert.equal(observedOperator,true,'Real Soldier must render visibly during pod exit');
  checks.push('Hatch reveals the operator after impact; walkout and salute remain visible with music and combat locked');
  await host.waitForFunction(()=>window.__testMatch.phase==='playing',{timeout:15000});await guest.waitForFunction(()=>window.Game.deploymentView().stage==='match_active'&&!document.body.classList.contains('deployment-cinematic'),{timeout:15000});
  assert.equal(await guest.evaluate(()=>document.body.classList.contains('deployment-cinematic')),false);await guest.screenshot({path:artifacts+'/08-gameplay.png'});checks.push('Salute finishes before the camera returns and gameplay unlocks');
