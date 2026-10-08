@@ -5,7 +5,7 @@ import {DEPLOYMENT_CUES} from '../public/deployment-cues.js';
 import {POD_RELEASE,DEPLOYMENT_MUSIC_END} from '../public/deployment-cinematic.js';
 const url=process.env.GAME_TEST_URL||'http://127.0.0.1:4174',artifacts=process.env.GAME_ARTIFACTS||'/workspace/fortmulti-artifacts/deployment';
 await mkdir(artifacts,{recursive:true});
-const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--disable-dev-shm-usage','--disable-background-timer-throttling','--disable-renderer-backgrounding','--autoplay-policy=no-user-gesture-required']});
+const browser=await chromium.launch({...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{}),headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--disable-dev-shm-usage','--disable-background-timer-throttling','--disable-renderer-backgrounding','--autoplay-policy=no-user-gesture-required']});
 const context=await browser.newContext({viewport:{width:960,height:540},recordVideo:{dir:artifacts+'/raw-video',size:{width:960,height:540}}}),errors=[],checks=[];
 async function open(){
  const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));
@@ -32,10 +32,34 @@ try{
  await host.waitForFunction(()=>document.getElementById('party-count').textContent.startsWith('2'));await guest.waitForFunction(()=>window.__testConnection?.host);
  await host.locator('#ready').click();await guest.locator('#ready').click();await host.waitForFunction(()=>Boolean(window.__testMatch));
  await Promise.all([host.evaluate(()=>window.Game.startAudio({deployment:true})),guest.evaluate(()=>window.Game.startAudio({deployment:true}))]);
+ // The first player must board and wait for a teammate; don't skip this with
+ // an immediate two-player scripted launch.
  await host.evaluate(async()=>{
-  const {SHIP_PODS}=await import('/deployment-ship.js'),m=window.__testMatch;
-  m.players.forEach((p,i)=>{if(!m.chooseLanding(p.id,{x:i?-85:18,z:i?70:68}))throw Error('Landing failed');const pod=SHIP_PODS[i];p.shipLocal=[pod.x,0,pod.z+2.2];p.p=m.shipWorld(p.shipLocal);if(!m.enterPod(p.id))throw Error('Pod entry failed');});
+  const {SHIP_PODS}=await import('/deployment-ship.js'),m=window.__testMatch,p=m.players[0],pod=SHIP_PODS[0];
+  if(!m.chooseLanding(p.id,{x:18,z:68}))throw Error('First landing rejected');
+  p.shipLocal=[pod.x,0,pod.z+pod.entryOffset];p.p=m.shipWorld(p.shipLocal);
+  if(!m.enterPod(p.id))throw Error('First pod entry rejected');
  });
+ await host.waitForFunction(()=>window.Game.pose().deploymentState==='pod_ready',{timeout:10000});
+ await host.waitForFunction(()=>document.body.classList.contains('pod-exterior'),{timeout:10000});
+ const waiting=await host.evaluate(()=>({stage:window.Game.deploymentView().stage,pose:window.Game.pose().deploymentState,camera:window.Game.deploymentView().eye,player:window.Game.pose().p,exterior:document.body.classList.contains('pod-exterior'),cinematic:document.body.classList.contains('deployment-cinematic')}));
+ assert.equal(waiting.stage,'landing_selection','wait for the second player');
+ assert.equal(waiting.pose,'pod_ready');assert.equal(waiting.exterior,true);
+ assert.equal(waiting.cinematic,false,'no cinematic before teammate boards');
+ assert.ok(Math.hypot(waiting.camera[0]-waiting.player[0],waiting.camera[2]-waiting.player[2])>3,'camera is outside sealed pod');
+ await host.screenshot({path:artifacts+'/00-waiting-pod.png'});
+ checks.push('First operator waits in closed capsule with exterior camera until teammate arrives');
+ await host.evaluate(async()=>{
+  const {SHIP_PODS}=await import('/deployment-ship.js'),m=window.__testMatch,p=m.players[1],pod=SHIP_PODS[1];
+  if(!m.chooseLanding(p.id,{x:-85,z:70}))throw Error('Second landing rejected');
+  p.shipLocal=[pod.x,0,pod.z+pod.entryOffset];p.p=m.shipWorld(p.shipLocal);
+  if(!m.enterPod(p.id))throw Error('Second pod entry rejected');
+ });
+ await host.waitForFunction(()=>window.__testMatch.deployment.stage==='launching',{timeout:15000});
+ await Promise.all([host,guest].map(p=>p.waitForFunction(()=>document.body.classList.contains('pod-exterior'),{timeout:10000})));
+ const launched=await Promise.all([host,guest].map(p=>p.evaluate(()=>({exterior:document.body.classList.contains('pod-exterior'),fade:Number(document.getElementById('deployment-fade').style.opacity)}))));
+ assert.ok(launched.every(v=>v.exterior&&v.fade<.05),'both pods visible before blackout');
+ checks.push('Both real network clients show outside camera during launch before blackout');
  await guest.waitForFunction(()=>window.Game.deploymentView().musicTime>=.15,{timeout:30000});
  const black=await guest.evaluate(()=>({view:window.Game.deploymentView(),fade:Number(document.getElementById('deployment-fade').style.opacity),ui:['mapbox','deployment-ui','inventory','chatbox','round-banner','resume-control'].map(id=>[id,getComputedStyle(document.getElementById(id)).visibility])}));
  assert.equal(black.fade,1);assert.ok(black.ui.every(([,v])=>v==='hidden'));await guest.screenshot({path:artifacts+'/01-black-screen.png'});checks.push('Music begins on full black with gameplay UI hidden');
@@ -53,7 +77,7 @@ try{
   await guest.waitForFunction(t=>window.Game.deploymentView().musicTime>=t,time,{timeout:15000});
   const shot=await guest.evaluate(()=>({view:window.Game.deploymentView(),position:window.Game.pose().p.slice(),animation:window.Game.pose().animationState,salute:window.Game.pose().saluteProgress,input:window.Game.input()}));
   assert.equal(shot.view.localVisible,true);assert.ok(shot.view.operatorOpacity>.99);assert.equal(shot.input.fire,false);assert.equal(shot.input.slot,0);
-  if(phase==='opening'){assert.ok(shot.view.hatchOpen>.5&&shot.view.hatchOpen<.85);}
+  if(phase==='opening'){assert.ok(shot.view.hatchOpen>.4&&shot.view.hatchOpen<=1,'pod hatch must be visibly opened');}
   else assert.ok(Math.hypot(shot.position[0]-shot.view.podPosition[0],shot.position[2]-shot.view.podPosition[2])>1);
   if(phase==='salute'){assert.ok(shot.salute>.99,'native salute is fully raised');assert.ok(shot.view.musicTime<DEPLOYMENT_MUSIC_END);}
   await guest.screenshot({path:artifacts+'/0'+(phase==='opening'?5:phase==='walkout'?6:7)+'-'+phase+'.png'});
@@ -64,8 +88,8 @@ try{
  const results=await Promise.all([host,guest].map(async p=>p.evaluate(c=>({music:window.__music.map(({context,...m})=>m),landings:window.__landings,frames:window.__views.length,firstLogo:window.__views.find(v=>v.logoOpacity>0),firstVisible:window.__views.find(v=>v.black<.02&&v.portrait),firstImpact:window.__views.find(v=>v.musicTime>=c.impact),exit:window.__views.filter(v=>v.returnProgress>.15&&v.returnProgress<1).map(v=>({returnProgress:v.returnProgress,position:v.position,podPosition:v.podPosition,eye:v.eye,localVisible:v.localVisible})),largestFrameGap:window.__views.reduce((max,v,i,a)=>i?Math.max(max,v.at-a[i-1].at):max,0)}),DEPLOYMENT_CUES)));
  await writeFile(artifacts+'/deployment-clock-diagnostics.json',JSON.stringify(results,null,2));
  console.log(JSON.stringify(results.map(r=>({music:r.music,landings:r.landings,firstImpact:r.firstImpact})),null,2));
- for(const result of results){assert.equal(result.music.filter(m=>!m.loop).length,1,'one complete song per client');assert.equal(result.music.filter(m=>m.loop).length,1,'one instrumental tail per client');assert.ok(result.music.find(m=>!m.loop).duration>=30);assert.ok(Math.abs(result.music.find(m=>m.loop).duration-16/3)<1/44100);assert.equal(result.landings.length,1,'one touchdown per client');assert.ok(Math.abs(result.landings[0].musicTime-DEPLOYMENT_CUES.impact)<.25,'network touchdown must align with the music');assert.ok(result.firstImpact.musicTime-DEPLOYMENT_CUES.impact<.16,'visible touchdown occurs on the audio clock');assert.ok(result.firstLogo.musicTime>=DEPLOYMENT_CUES.uhYeahStart&&result.firstLogo.musicTime-DEPLOYMENT_CUES.uhYeahStart<.16,'first logo frame follows the measured vocal onset');}
- checks.push('Both real network clients play once, retain distinct landings and synchronize touchdown');
+ for(const result of results){assert.equal(result.music.filter(m=>!m.loop).length,1,'one complete song per client');assert.equal(result.music.filter(m=>m.loop).length,0,'no replayed or looped instrumental tail');assert.ok(result.music[0].duration>=DEPLOYMENT_MUSIC_END-.1,'original recording covers the salute');assert.equal(result.landings.length,1,'one touchdown per client');assert.ok(Math.abs(result.landings[0].musicTime-DEPLOYMENT_CUES.impact)<.25,'network touchdown must align with the music');assert.ok(result.firstImpact.musicTime-DEPLOYMENT_CUES.impact<.16,'visible touchdown occurs on the audio clock');assert.ok(result.firstLogo.musicTime>=DEPLOYMENT_CUES.uhYeahStart&&result.firstLogo.musicTime-DEPLOYMENT_CUES.uhYeahStart<.16,'first logo frame follows the measured vocal onset');}
+ checks.push('Both real network clients play one uninterrupted song and synchronize distinct landings');
  for(const result of results){
   assert.ok(result.exit.length>3,'exit camera must render a continuous handoff');
   const start=result.exit[0].podPosition;

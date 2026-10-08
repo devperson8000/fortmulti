@@ -64,3 +64,11 @@ test('ship rendering uses the outside camera, perforated deck and sealed exterio
  assert.match(engine,/if\(!boardingView&&\(cinematic/);
  assert.match(engine,/body\.classList\.toggle\('pod-exterior'/);
 });
+
+test('exterior boarding camera cannot read a timeline variable before initialization',async()=>{
+ const engine=await readFile(new URL('../public/engine.js',import.meta.url),'utf8');
+ const begin=engine.indexOf('const sequenceElapsed=deploymentData?.sequenceElapsed||0;');
+ const camera=engine.indexOf('shipBoardingCamera(boardingPod');
+ assert.ok(begin>=0&&begin<camera,'shared sequence time must be initialized before the boarding camera');
+ assert.doesNotMatch(engine,/const sequence=deploymentData\?\.stage\|\|'',sequenceElapsed=/,'do not redeclare timeline after camera has used it');
+});
