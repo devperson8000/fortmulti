@@ -1,0 +1,15 @@
+Godot Third Person Shooter Demo — level geometry and textures
+Source: https://github.com/godotengine/tps-demo
+Pinned revision: a82f15448e9b015440d3bbdf5e10801b260c4e9f
+Copyright (c) 2018 Juan Linietsky, Fernando Miguel Calabró.
+Original Substance Painter materials kindly provided by GameTextures.com.
+See UPSTREAM-LICENSE.md for the complete original notices.
+Visual assets licensed under Creative Commons Attribution 3.0 Unported (CC BY 3.0).
+License: https://creativecommons.org/licenses/by/3.0/
+Changes: Godot material remaps translated to Three.js PBR materials; positions
+quantized to 16 bits, normals packed; textures resized to at most 1024 pixels
+and encoded as WebP. Authored scene transforms baked into indexed spatial material chunks.
+Two reduced-detail index sets generated with Meshoptimizer; vertex positions,
+UV seams, normals, and chunk boundaries retained.
+Eight entry gates cut into outer
+wall geometry to connect the facility to the external landing pads.

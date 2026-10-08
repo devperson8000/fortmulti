@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="deployment-cinematic.css">
 <style>#interact-prompt{position:fixed;left:50%;top:58%;transform:translateX(-50%);font:700 13px system-ui;color:#fff;text-shadow:0 2px 5px #000;pointer-events:none}#use-indicator{position:fixed;left:50%;top:64%;transform:translateX(-50%);padding:12px 24px;background:linear-gradient(90deg,#287b96 var(--progress),#162b38 var(--progress));border:1px solid #a8eaff;border-radius:6px;font:700 12px system-ui}.slots button.empty{filter:grayscale(1);opacity:.32}.weapon-slots{flex-wrap:wrap;justify-content:flex-end;max-width:760px}.weapon-slots button{min-width:46px}.menu #interact-prompt,.menu #use-indicator{display:none}#inventory{max-width:95vw}</style></head>
 <body class="in-lobby">
-<canvas id="game" aria-label="First-person multiplayer battle royale inside the deployment ship and on the island"></canvas>
+<canvas id="game" aria-label="First-person multiplayer battle royale inside the deployment ship and on the selected battlefield"></canvas>
 <div id="vignette"></div><div id="damage"></div><div id="deployment-fade" aria-hidden="true"></div>
 <div id="deployment-cinematic" aria-hidden="true"><div class="cinematic-mark"><img src="horizon-logo-transparent.webp" alt=""></div></div>
 <div id="scope" aria-hidden="true">
@@ -40,7 +40,7 @@
 <section id="deployment-ui" hidden aria-live="polite">
   <div id="landing-picker">
     <div class="deployment-title"><small>DEPLOYMENT CONTROL</small><b>Choose your drop zone</b><span id="landing-destination">SELECT A DROP ZONE</span></div>
-    <canvas id="landing-map" width="520" height="340" aria-label="Choose a landing position on the island map"></canvas>
+    <canvas id="landing-map" width="520" height="340" aria-label="Choose a landing position on the selected map"></canvas>
     <div class="landing-quick-picks"><button data-landing="suncrest">COMMAND BASE</button><button data-landing="harbor">HARBOR POST</button><button data-landing="neon">EAST GARRISON</button><button data-landing="citadel">RIDGE STATION</button><button data-landing="depot">SUPPLY DEPOT</button><button data-landing="pinewatch">PINEWATCH</button></div>
   </div>
   <div id="pod-status-card"><small>STAGING SHIP · STATIONARY</small><b id="pod-status">CHOOSE YOUR DROP ZONE</b><span id="pod-hint">Move through the ship · Press E at an available pod</span><i id="landing-roster"></i></div>
@@ -64,6 +64,8 @@
     <div class="mode-card">
       <small>SELECTED EXPERIENCE</small>
       <h1>BATTLE<br>ROYALE</h1>
+      <label>Map<select id="map-choice"><option value="island">Ironwood Island · outdoor</option><option value="facility">Reactor Facility · industrial</option></select></label>
+      <p id="map-description" class="map-description">Open terrain · six military outposts</p>
       <label>Mode<select id="mode"><option value="build">Build skirmish · harvest & build</option><option value="town">Town royale · chests & storm</option></select></label>
       <div class="mode-meta"><span>PRIVATE PARTY</span><b>2–8 PLAYERS</b></div>
       <div id="connect">
@@ -141,5 +143,6 @@
 <script src="config.js"></script>
 <script type="module" src="lobby-characters.js"></script>
 <script type="module" src="app.js"></script>
+<a class="map-credits" href="/maps/reactor/SOURCE.md" target="_blank" rel="noopener">Map credits</a>
 </body>
 </html>

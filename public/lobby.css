@@ -127,3 +127,7 @@ body.character-preview-open #lobby-characters{z-index:6}
 body:not(.in-lobby) #chatbox{background:#09263be6;box-shadow:0 8px 22px #03162e44}
 @media(max-width:760px){#hero-label{top:13%}#hero-label b{font-size:12px}.mode-card h1{font-size:25px}.mode-card .primary{padding:11px}}
 @media(prefers-reduced-motion:reduce){.mode-card .primary,.social-panel,.party-card,.online-player{transition:none}.mode-card .primary:hover{transform:none}}
+
+.mode-card .map-description{margin:-2px 0 10px;font-size:9px;line-height:1.4;color:#a9cadb;letter-spacing:.2px}
+
+.map-credits{position:fixed;right:18px;bottom:7px;color:#abc6cf;font:10px Arial;text-decoration:none;opacity:.65;z-index:5}body:not(.in-lobby) .map-credits{display:none}.map-credits:hover{opacity:1;text-decoration:underline}

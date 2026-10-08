@@ -14,6 +14,14 @@ Ground queries use nearby terrain and rooftop collision buckets rather than scan
 
 The island and its gameplay systems are original. Bundled model sources and licenses are documented in [`public/models/ASSET-LICENSES.md`](public/models/ASSET-LICENSES.md). The project is not affiliated with or endorsed by Epic Games.
 
+## Match maps
+
+The party leader chooses **Ironwood Island** (outdoor military terrain and forests) or **Reactor Facility** (the detailed Godot TPS industrial arena). The selected map synchronizes across the party and loads before deployment begins. Facility visuals load only when selected; downloaded textures, spatial geometry and shader variants are reused between matches.
+
+Eight exterior facility outposts have separately selectable pod landing decks, visible entrance gates and supported routes into the inner gallery. Native lower levels keep independent floor, camera and building support. Supply pallets grant building materials; chests provide the existing weapons and items. The music, capsule, walkout and salute timeline remains unchanged.
+
+The facility retains authored detail nearby and uses offline simplified indices at distance. Low and Medium graphics use lighter textured shading; High retains the authored physical materials and reflections. Assets and adaptations are credited in [`public/maps/reactor/SOURCE.md`](public/maps/reactor/SOURCE.md). The first facility selection downloads roughly 55 MB of geometry and textures, so startup time depends on the connection; performance still depends on the player's GPU and graphics setting.
+
 ## Foreground party lobby
 
 The v5.1 lobby is structured around the playable character instead of covering the 3D scene with large blurred panels. It includes a crisp moonlit resort backdrop, luminous party platforms, a centered foreground lineup for up to eight players, compact top navigation, a lower-left mode/play card, an outfit popover and a slide-out **People Online** drawer. Online discovery stays out of the way until the player opens it from the header, play card, party slot or footer.
@@ -177,3 +185,5 @@ Run `npm run dev`, then `npm run test:browser` in another terminal. The default 
 The gameplay check covers inventory, chest holds, reloads, Shift-only running, Ctrl crouch/slide, material costs, build rotation and connected-ramp climbing. Run `node scripts/building-check.mjs` to repeat just the real building inputs. Run `node scripts/ar-audio-check.mjs` and `node scripts/shotgun-audio-check.mjs` to verify single-shot voices, opponent audio, gradual tails, suspended-audio recovery and reload synchronization. GitHub Actions runs these alongside the deployment and music-continuity checks.
 
 Run `node scripts/grip-visual-check.mjs` with the same URL/browser/artifact settings for actual Soldier/weapon rendering in hip, ADS, reload and alternate aspect ratios. Inspect the resulting screenshots; numerical palm tests alone do not establish visual correctness.
+
+Run `npm run test:facility-browser` to check party map synchronization, all eight drop choices, and actual native exterior/interior/lower-floor rendering. It records frame times and screenshots; functional success is not a frame-rate guarantee. `FACILITY_FRAME_SAMPLES` controls profiling samples (40 by default). Use `GAME_TEST_MAP=facility GAME_TEST_GRAPHICS=low npm run test:deployment-browser` to test the unchanged deployment and music sequence on the facility with Low graphics. These scripts accept the same URL/browser/artifact settings above.

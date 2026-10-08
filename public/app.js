@@ -1,4 +1,5 @@
 import {ISLAND_POIS,drawIslandMap,militaryLayout,islandRoadRibbon} from './island-map.js';
+import {REACTOR_POIS,drawReactorMap} from './reactor-map.js';
 import './engine.js';
 import {Connection,Voice,SocialDirectory,uid} from './network.js';
 import {Match,placement,validBuild} from './simulation.js';
@@ -7,6 +8,9 @@ import {networkCadence,accumulateInput,acceptSnapshot} from './network-tuning.js
 
 const $=id=>document.getElementById(id),game=window.Game;
 let conn=null,peers=new Map(),host=false,ready=false,match=null,snapshot=null,matchId='',seenEvent=0,lastHello=0,lastPing=0,pingCursor=0,lastSnap=0,lastInput=0,pendingInput=null,busy=false,voiceWanted=false,muted=false,showMenu=false,snapshotFrame=-1,matchEpoch=0;
+let selectedMap='island',startingMatch=false,mapGeneration=0,pendingSnapshot=null,loadingSnapshot=false;
+const validMap=id=>id==='island'||id==='facility';
+const mapName=id=>id==='facility'?'REACTOR FACILITY':'IRONWOOD ISLAND';
 let social=null,onlinePlayers=[],incomingInvites=[],socialBusy=false,socialTimer=null,socialError='',lastStatusAt=0,latencies=new Map();
 
 const readStore=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null;}};
@@ -87,7 +91,8 @@ function updateNetworkChip(){
 function refresh(){
  const party=partyProfiles();window.Duel.myColor=profile.color;window.Duel.party=party;window.Duel.peerColors=colors();
  $('hero-name').textContent=profile.name;$('character-preview-name').textContent=profile.name+' · CURRENT OUTFIT';$('hero-state').textContent=ready?'READY':'NOT READY';$('hero-state').classList.toggle('ready',ready);
- $('ready').textContent=ready?'CANCEL READY':'READY UP';$('ready').disabled=!conn||party.length<2||!game||!!match;$('mode').disabled=(!!conn&&!host)||!!match;$('room-actions').hidden=!conn;$('connect').hidden=!!conn;
+ $('ready').textContent=startingMatch?'LOADING MAP…':ready?'CANCEL READY':'READY UP';$('ready').disabled=!conn||party.length<2||!game||!!match||startingMatch;
+ $('map-choice').value=selectedMap;$('map-choice').disabled=(!!conn&&!host)||inMatch()||startingMatch;$('map-description').textContent=selectedMap==='facility'?'Armored reactor · exterior landing pads':'Open terrain · six military outposts';$('mode').disabled=(!!conn&&!host)||!!match||startingMatch;$('room-actions').hidden=!conn;$('connect').hidden=!!conn;
  if(conn){$('room-code').textContent=host?'PRIVATE PARTY · YOU ARE LEADER':'PRIVATE PARTY · MEMBER';$('invite-more').disabled=inMatch()||party.length>=(conn.maxPlayers||8);}
  $('outfit').disabled=inMatch();$('name').disabled=inMatch();$('local').disabled=!!conn;drawPartyCards();renderOnlinePlayers();renderInvites();updateNetworkChip();
 }
@@ -100,7 +105,7 @@ function selectLobbyTab(tab){
  $('character-preview-panel').hidden=!state.characterPreview;if(window.Duel)window.Duel.characterPreview=state.characterPreview;
 }
 function toggleProfile(force){const open=force??!document.body.classList.contains('profile-open');selectLobbyTab(open?'outfit':'play');}
-function hello(){conn?.send('hello',{name:profile.name,color:profile.color,ready,host:conn.host||null,mode:$('mode').value,match:matchId,voice:voiceWanted,maxPlayers:conn.maxPlayers||8});}
+function hello(){conn?.send('hello',{name:profile.name,color:profile.color,ready,host:conn.host||null,mode:$('mode').value,mapId:selectedMap,match:matchId,voice:voiceWanted,maxPlayers:conn.maxPlayers||8});}
 function everyoneReady(){const party=partyProfiles();return party.length>=2&&party.every(p=>p.ready);}
 
 async function updatePresence(){if(!social)return;try{await social.presence(profile.name,profile.color,currentActivity(),conn?.code||null);}catch(e){if(Date.now()-lastStatusAt>5000)status(e.message,'error');}}
@@ -139,22 +144,35 @@ async function respondInvite(inv,accept){
  finally{renderInvites();refresh();}
 }
 
-function resetMatchState(){match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';$('deployment-ui').hidden=true;window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('deployment','dropping','deployment-cinematic');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear({resetInventory:true});document.exitPointerLock?.();}
+function resetMatchState(){mapGeneration++;pendingSnapshot=null;startingMatch=false;match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';$('deployment-ui').hidden=true;window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('deployment','dropping','deployment-cinematic');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear({resetInventory:true});document.exitPointerLock?.();}
 function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
-function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);match.beginDeployment();matchId=uid();matchEpoch=Math.max(Date.now(),matchEpoch+1);snapshotFrame=-1;seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;sendSnapshot();updatePresence();status('Deployment ship secured · choose a landing zone and enter a pod.','success');}
-function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;const data={id:matchId,epoch:matchEpoch,frame:snapshotFrame+1,state};conn.send('snapshot',data);apply(data);}
-const LANDING_POIS=ISLAND_POIS,LANDING_ROADS=militaryLayout().roads.map(islandRoadRibbon);
+async function start(){
+ if(!game||!host||match||startingMatch||!everyoneReady())return;
+ const connection=conn,generation=mapGeneration,mapId=selectedMap;startingMatch=true;refresh();
+ try{
+  status('Loading '+mapName(mapId)+' · preparing the map…');
+  await game.setMap(mapId);
+  if(conn!==connection||generation!==mapGeneration||!host||selectedMap!==mapId||!everyoneReady())return;
+  const ids=participantIds();if(ids.length<2)return;
+  match=new Match(game.world,ids,$('mode').value);match.beginDeployment();matchId=uid();matchEpoch=Math.max(Date.now(),matchEpoch+1);snapshotFrame=-1;seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;sendSnapshot();updatePresence();status('Deployment ship secured · choose a landing zone and enter a pod.','success');
+ }catch(e){ready=false;hello();status('Map could not load. Please ready up to try again.','error');}
+ finally{startingMatch=false;refresh();}
+}
+function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;const data={id:matchId,epoch:matchEpoch,frame:snapshotFrame+1,mapId:selectedMap,state};conn.send('snapshot',data);apply(data);}
+const landingPois=()=>selectedMap==='facility'?REACTOR_POIS:ISLAND_POIS;
+const LANDING_ROADS=militaryLayout().roads.map(islandRoadRibbon);
 function renderLandingMap(s,me){
- const canvas=$('landing-map'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,pad=30,scaleX=(w-pad*2)/584,scaleZ=(h-pad*2)/584,map=(x,z)=>[w/2+x*scaleX,h/2+z*scaleZ];
+ const LANDING_POIS=landingPois();renderLandingQuickPicks();
+ const canvas=$('landing-map'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,pad=30,extent=selectedMap==='facility'?360:584,scaleX=(w-pad*2)/extent,scaleZ=(h-pad*2)/extent,map=(x,z)=>[w/2+x*scaleX,h/2+z*scaleZ];
  ctx.clearRect(0,0,w,h);const bg=ctx.createLinearGradient(0,0,w,h);bg.addColorStop(0,'#122d43');bg.addColorStop(1,'#081927');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
  ctx.strokeStyle='#8dc0ce16';ctx.lineWidth=1;for(let i=0;i<=10;i++){const x=pad+i*(w-pad*2)/10,y=pad+i*(h-pad*2)/10;ctx.beginPath();ctx.moveTo(x,pad);ctx.lineTo(x,h-pad);ctx.stroke();ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke();}
- const [mx,my]=map(-320,-320);drawIslandMap(ctx,mx,my,640*scaleX,640*scaleZ);
- ctx.strokeStyle='#acbba0';ctx.lineWidth=2;ctx.beginPath();for(const points of LANDING_ROADS)for(const [i,p] of points.entries()){const [x,y]=map(p.center[0],p.center[2]);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
+ const [mx,my]=map(-320,-320);(selectedMap==='facility'?drawReactorMap:drawIslandMap)(ctx,mx,my,640*scaleX,640*scaleZ);
+ ctx.strokeStyle='#acbba0';ctx.lineWidth=2;ctx.beginPath();for(const points of selectedMap==='facility'?[]:LANDING_ROADS)for(const [i,p] of points.entries()){const [x,y]=map(p.center[0],p.center[2]);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
  ctx.font='700 10px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
  for(const poi of LANDING_POIS){const [x,y]=map(poi.x,poi.z);ctx.beginPath();ctx.fillStyle='#ffe19a';ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#142b36';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#edf3e0';ctx.shadowColor='#061421';ctx.shadowBlur=4;ctx.fillText(poi.name,x,y-8);}
  const dest=window.Game?.landingChoice?.()||me?.destination;if(dest){const [x,y]=map(dest.x,dest.z);ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fillStyle='#60dafa55';ctx.fill();ctx.strokeStyle='#b8f8ff';ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.moveTo(x-14,y);ctx.lineTo(x+14,y);ctx.moveTo(x,y-14);ctx.lineTo(x,y+14);ctx.stroke();}
- ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='#d9edf0a0';ctx.font='700 9px Arial';ctx.fillText('N',w/2-4,8);ctx.fillText('IRONWOOD ISLAND · DROP GRID',14,h-19);
+ ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='#d9edf0a0';ctx.font='700 9px Arial';ctx.fillText('N',w/2-4,8);ctx.fillText(mapName(selectedMap)+' · DROP GRID',14,h-19);
  const picked=dest&&LANDING_POIS.reduce((best,poi)=>Math.hypot(dest.x-poi.x,dest.z-poi.z)<best.distance?{poi,distance:Math.hypot(dest.x-poi.x,dest.z-poi.z)}:best,{poi:LANDING_POIS[0],distance:Infinity});$('landing-destination').textContent=dest?`${picked.poi.name} · ${Math.round(dest.x)}, ${Math.round(dest.z)}`:'SELECT A DROP ZONE';
  $('landing-roster').textContent=s.players.filter(p=>p.hp>0).map(p=>`${playerName(p.id)} · ${p.deploymentState==='pod_ready'||p.deploymentState==='both_ready'?'POD READY':p.destination?'DESTINATION SET':'CHOOSING'}`).join('   /   ');
 }
@@ -182,6 +200,25 @@ function roundBanner(s){
  if(me?.hp<=0)return 'ELIMINATED · SPECTATING';return '';
 }
 function apply(data){
+ if(!validMap(data?.mapId)||!conn||!acceptSnapshot(matchId,snapshotFrame,data.id,data.frame,matchEpoch,data.epoch))return;
+ if(game.mapId()!==data.mapId||loadingSnapshot){
+  if(!pendingSnapshot||acceptSnapshot(pendingSnapshot.id,pendingSnapshot.frame,data.id,data.frame,pendingSnapshot.epoch,data.epoch))pendingSnapshot=data;
+  if(!loadingSnapshot)loadSnapshotMap();return;
+ }
+ selectedMap=data.mapId;applyReadySnapshot(data);
+}
+async function loadSnapshotMap(){
+ loadingSnapshot=true;status('Loading the party’s map · preparing deployment…');const connection=conn,generation=mapGeneration;
+ try{
+  while(pendingSnapshot&&conn===connection&&generation===mapGeneration){
+   const data=pendingSnapshot;pendingSnapshot=null;await game.setMap(data.mapId);
+   if(conn!==connection||generation!==mapGeneration)return;
+   if(pendingSnapshot)continue;selectedMap=data.mapId;applyReadySnapshot(data);
+  }
+ }catch(e){pendingSnapshot=null;ready=false;status('Map could not load. Return to the lobby and try again.','error');}
+ finally{loadingSnapshot=false;if(pendingSnapshot)loadSnapshotMap();}
+}
+function applyReadySnapshot(data){
  if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn||!acceptSnapshot(matchId,snapshotFrame,data.id,data.frame,matchEpoch,data.epoch))return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;matchEpoch=data.epoch;snapshotFrame=data.frame;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('deployment',s.phase==='deployment');document.body.classList.toggle('dropping',s.phase==='deployment'&&['pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(s.deployment?.stage));$('lobby').hidden=true;updateDeploymentUI(s,localPlayer);
  if(fresh||window.Duel.round!==s.round){const me=s.players.find(p=>p.id===conn.id);game.look(me?.yaw||0);seenEvent=0;window.Duel.round=s.round;showMenu=false;$('match-actions').hidden=true;updatePresence();}
  $('round-banner').textContent=roundBanner(s);for(const e of s.events||[])if(e.id>seenEvent){game.effect(e,conn.id,s);seenEvent=e.id;}
@@ -197,7 +234,8 @@ function receive(m){
  if(m.type==='hello'){
   const known=peers.has(m.from);if(host&&!known&&peers.size>=((conn.maxPlayers||8)-1)){conn.send('full',{},m.from);return;}if(host&&match&&!match.ids.includes(m.from)){conn.send('locked',{},m.from);return;}
   if(!conn.host&&d.host===m.from){conn.host=m.from;host=false;}
-  const old=peers.get(m.from),peer={id:m.from,name:cleanName(d.name),color:cleanColor(d.color),ready:!!d.ready,voice:!!d.voice,lastSeen:Date.now()};peers.set(m.from,peer);
+  const old=peers.get(m.from),peer={id:m.from,name:cleanName(d.name),color:cleanColor(d.color),ready:!!d.ready&&(!host||d.mapId===selectedMap),voice:!!d.voice,lastSeen:Date.now()};peers.set(m.from,peer);
+  if(m.from===conn.host&&validMap(d.mapId)&&!inMatch()&&selectedMap!==d.mapId){selectedMap=d.mapId;ready=false;hello();}
   if(m.from===conn.host&&['build','town'].includes(d.mode)&&$('mode').value!==d.mode){$('mode').value=d.mode;ready=false;}
   if(!known)say('Party',`${peer.name} joined the party.`,true);refresh();syncVoice();if(host)start();return;
  }
@@ -213,6 +251,7 @@ function receive(m){
  if(m.type==='lobby'&&m.from===conn.host&&!host){resetToLobby(false);return;}
  if(m.type==='lobby-request'&&host){resetToLobby(true);return;}
  if(m.type==='mode'&&m.from===conn.host&&!host&&['build','town'].includes(d.mode)){if($('mode').value!==d.mode){$('mode').value=d.mode;ready=false;hello();refresh();status('Party leader changed the match mode · ready up again.');}return;}
+ if(m.type==='map'&&m.from===conn.host&&!host&&validMap(d.mapId)&&!inMatch()){if(selectedMap!==d.mapId){selectedMap=d.mapId;ready=false;for(const p of peers.values())p.ready=false;hello();refresh();status('Party leader changed the map · ready up again.');}return;}
  if(m.type==='voice'&&peer){if(typeof d.enabled==='boolean'){peer.voice=d.enabled;if(!d.enabled)voice.remove(m.from);syncVoice();refresh();}else voice.receive(m.from,d).catch(e=>renderVoice({message:'Voice connection issue: '+e.message,tone:'warning'}));return;}
  if(m.type==='ping'){conn.send('pong',{time:d.time},m.from);return;}
  if(m.type==='pong'&&Number.isFinite(d.time)){latencies.set(m.from,Math.max(0,Date.now()-d.time));updateNetworkChip();}
@@ -230,8 +269,19 @@ $('lobby-play-toggle').onclick=()=>selectLobbyTab('play');$('profile-toggle').on
 $('online-refresh').onclick=()=>social?pollSocial():startSocial();
 $('ready').onclick=()=>{if(!conn||match)return;ready=!ready;game?.startAudio({deployment:true});hello();refresh();if(host)start();};
 function chooseLanding(x,z){if(!game?.setLanding(x,z))return;const me=snapshot?.players.find(player=>player.id===conn?.id);if(snapshot&&me)updateDeploymentUI(snapshot,{...me,destination:{x,z}});}
-$('landing-map').onclick=e=>{const rect=e.currentTarget.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width,z=(e.clientY-rect.top)/rect.height;if(x<.058||x>.942||z<.088||z>.912)return;chooseLanding(((x-.058)/.884-.5)*584,((z-.088)/.824-.5)*584);};
-for(const button of document.querySelectorAll('[data-landing]'))button.onclick=()=>{const key=button.dataset.landing,poi=({suncrest:LANDING_POIS[0],harbor:LANDING_POIS[1],neon:LANDING_POIS[2],citadel:LANDING_POIS[3],depot:LANDING_POIS[4],pinewatch:LANDING_POIS[5]})[key];if(poi)chooseLanding(poi.x,poi.z);};
+$('landing-map').onclick=e=>{const rect=e.currentTarget.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width,z=(e.clientY-rect.top)/rect.height;if(x<.058||x>.942||z<.088||z>.912)return;const extent=selectedMap==='facility'?360:584;chooseLanding(((x-.058)/.884-.5)*extent,((z-.088)/.824-.5)*extent);};
+let quickPickMap='';
+function renderLandingQuickPicks(){
+ if(quickPickMap===selectedMap)return;quickPickMap=selectedMap;
+ const tray=document.querySelector('.landing-quick-picks');tray.textContent='';
+ for(const poi of landingPois()){const button=document.createElement('button');button.textContent=poi.name.toUpperCase();button.onclick=()=>chooseLanding(poi.x,poi.z);tray.append(button);}
+ $('landing-map').setAttribute('aria-label','Choose a landing position on '+mapName(selectedMap));
+}
+$('map-choice').onchange=()=>{
+ if((conn&&!host)||inMatch()||startingMatch){refresh();return;}
+ const id=$('map-choice').value;if(!validMap(id))return;selectedMap=id;ready=false;for(const p of peers.values())p.ready=false;
+ conn?.send('map',{mapId:selectedMap});hello();refresh();status('Map changed · everyone needs to ready up again.');
+};
 $('name').onchange=$('name').onblur=()=>{profile.name=cleanName($('name').value);$('name').value=profile.name;writeStore('duel-profile',profile);ready=false;hello();refresh();updatePresence();};
 $('outfit').onchange=()=>{profile.color=cleanColor($('outfit').value);writeStore('duel-profile',profile);ready=false;hello();refresh();updatePresence();};
 $('mode').onchange=()=>{if(!host&&conn)return;ready=false;for(const p of peers.values())p.ready=false;if(conn)conn.send('mode',{mode:$('mode').value});hello();refresh();status('Match mode changed · everyone needs to ready up again.');};

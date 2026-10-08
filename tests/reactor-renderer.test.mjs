@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {gzipSync} from 'node:zlib';import * as THREE from 'three';import {createReactorEnvironment} from '../public/reactor-environment.js';
+test('low facility quality keeps authored geometry and color with lighter shading and reusable materials',async()=>{
+ const bytes=new ArrayBuffer(80);new Uint16Array(bytes,0,9).set([0,0,0,65535,0,0,0,65535,0]);new Int16Array(bytes,20,9).set([0,0,32767,0,0,32767,0,0,32767]);new Float32Array(bytes,40,6).set([0,0,1,0,0,1]);new Uint16Array(bytes,64,3).set([0,1,2]);
+ const manifest={spatialChunks:true,materials:{plate:{color:[.4,.5,.6,1],metalness:.5,roughness:.7}},models:[{name:'test',roots:[0],nodes:[{mesh:0}],meshes:[[{min:[0,0,0],span:[1,1,1],position:{offset:0,length:9},normal:{offset:20,length:9},uv:{offset:40,length:6},index:{offset:64,length:3},indexType:16,material:'plate'}]]}]};
+ const original=globalThis.fetch;globalThis.fetch=async url=>new Response(String(url).endsWith('.json')?JSON.stringify(manifest):gzipSync(Buffer.from(bytes)));
+ try{const env=createReactorEnvironment(new THREE.Scene());await env.ready;const batch=env.group.children[0],geometry=batch.geometry,standard=batch.material;
+ const camera=new THREE.PerspectiveCamera(75,1,.1,100);camera.position.set(.3,8.3,2);camera.lookAt(.3,8.3,0);env.update(camera);const indexArray=geometry.index.array,uploads=env.stats.indexUploads;for(let i=0;i<10;i++)env.update(camera);assert.equal(env.stats.indexUploads,uploads);assert.equal(geometry.index.array,indexArray);assert.equal(geometry.drawRange.count,3);
+ env.setQuality('low');assert.equal(batch.material.isMeshLambertMaterial,true);const light=batch.material;assert.equal(batch.geometry,geometry);assert.equal(light.color.getHex(),standard.color.getHex());env.setQuality('high');assert.equal(batch.material,standard);env.setQuality('medium');env.update(camera);assert.equal(batch.material,light);env.setQuality('low');assert.equal(batch.material,light);env.dispose();
+ }finally{globalThis.fetch=original;}
+});

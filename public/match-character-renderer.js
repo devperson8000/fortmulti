@@ -10,6 +10,8 @@ import {createHeldItem} from './held-items.js';
 import {handAttachmentScale} from './view-model.js';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import {renderFacilityPass,prepareFacilityDepth,restoreFacilityColor,warmFacilityResources} from './facility-render-pass.js';
 import {clone as cloneSkinned} from 'three/addons/utils/SkeletonUtils.js';
 import {createAnimationBlend,stepAnimationBlend,characterLocomotion,characterActionPose} from './character-animation.js';
 
@@ -58,6 +60,28 @@ export class MatchCharacterRenderer{
   this.loader.load(modelUrl,gltf=>this._loaded(gltf),undefined,error=>{this.failed=true;console.error('Horizon match character model could not load.',error);});
   for(const [id,file] of Object.entries(WEAPON_FILES))this.loader.load(`${weaponBase}${file}`,gltf=>{this.weaponTemplates.set(id,gltf.scene);const warm=()=>{this.getWeaponThumbnail(id);if(this.weaponThumbnails.size===4&&this.thumbnailRenderer){this.thumbnailRenderer.dispose();this.thumbnailRenderer=null;}};if(globalThis.requestIdleCallback)requestIdleCallback(warm);else setTimeout(warm,0);},undefined,error=>console.warn(`Horizon ${id} third-person weapon could not load.`,error));
  }
+ async loadFacilityEnvironment(quality='medium'){
+  if(this.facilityLoading)return this.facilityLoading;
+  this.facilityLoading=(async()=>{
+   const {createReactorEnvironment}=await import('./reactor-environment.js');
+   this.facilityScene=new THREE.Scene();
+   const room=new RoomEnvironment(),pmrem=new THREE.PMREMGenerator(this.renderer);this.renderer.resetState();this.facilityReflection=pmrem.fromScene(room,.04);this.facilityScene.environment=this.facilityReflection.texture;this.facilityScene.environmentIntensity=.7;room.dispose();pmrem.dispose();this.restoreRawState();
+   this.facilityScene.fog=new THREE.FogExp2(0x17242c,.0025);
+   this.facilityScene.add(new THREE.HemisphereLight(0x96b0bf,0x725139,1.1));
+   const warm=new THREE.DirectionalLight(0xffd0a0,1.25);warm.position.set(-15,35,10);this.facilityScene.add(warm);
+   const cool=new THREE.DirectionalLight(0x64c9ff,.7);cool.position.set(25,18,-12);this.facilityScene.add(cool);
+   this.facilityEnvironment=createReactorEnvironment(this.facilityScene);
+   await this.facilityEnvironment.ready;
+   this.facilityDepthMaterials=[THREE.FrontSide,THREE.BackSide,THREE.DoubleSide].map(side=>new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:true,side,fog:false,toneMapped:false}));
+   const camera=new THREE.PerspectiveCamera(75,1,.15,820);camera.position.set(140,12,0);camera.lookAt(0,8,0);
+   prepareFacilityDepth(this.facilityEnvironment.group,this.facilityDepthMaterials);this.renderer.resetState();const depthCompiled=this.renderer.compileAsync(this.facilityScene,camera);restoreFacilityColor(this.facilityEnvironment.group);this.restoreRawState();await depthCompiled;this.restoreRawState();
+   for(const quality of ['low','high']){this.facilityEnvironment.setQuality(quality);this.renderer.resetState();const compiled=this.renderer.compileAsync(this.facilityScene,camera);this.restoreRawState();await compiled;this.restoreRawState();}
+   this.facilityEnvironment.setQuality(quality);this.renderer.resetState();try{warmFacilityResources(this.renderer,this.facilityScene,camera,this.facilityEnvironment.group);}finally{this.restoreRawState();}
+   return true;
+  })().catch(error=>{this.facilityEnvironment?.dispose?.();this.facilityEnvironment=null;this.facilityReflection?.dispose();this.facilityDepthMaterials?.forEach(material=>material.dispose());this.facilityScene=null;this.facilityLoading=null;throw error;});
+  return this.facilityLoading;
+ }
+ setMap(id){this.activeMap=id;}
  _loaded(gltf){
   this.template=gltf.scene;this.template.updateMatrixWorld(true);
   const bounds=new THREE.Box3().setFromObject(this.template),size=bounds.getSize(new THREE.Vector3());
@@ -264,12 +288,14 @@ export class MatchCharacterRenderer{
   for(const geometry of geometries)geometry.dispose();for(const material of materials)material.dispose();
  }
  pulse(id,type='fire'){const instance=this.instances.get(String(id));if(instance&&type==='fire')instance.fireTime=.11;}
- render({eye,target,aspect,fov,cinematic=false,dt=.016,width=this.canvas.width,height=this.canvas.height}={}){
+ render({eye,target,aspect,fov,cinematic=false,quality='high',dt=.016,width=this.canvas.width,height=this.canvas.height}={}){
   if(!this.ready||!eye||!target)return;
   if(width!==this.width||height!==this.height){this.width=width;this.height=height;this.renderer.setSize(width,height,false);}
   this.camera.aspect=Math.max(.1,aspect||width/Math.max(1,height));this.camera.fov=Number.isFinite(fov)?fov*180/Math.PI:75;this.camera.position.set(...eye);this.camera.lookAt(...target);this.camera.updateProjectionMatrix();
   this.cinematicLight.intensity=cinematic?1.15:0;if(cinematic){this.cinematicLight.position.set(eye[0],eye[1]+.8,eye[2]);this.cinematicLight.target.position.set(...target);}
-  this.renderer.resetState();this.renderer.render(this.scene,this.camera);
+  this.renderer.resetState();
+  if(this.activeMap==='facility'&&this.facilityEnvironment){this.facilityEnvironment.setQuality(quality);this.facilityEnvironment.update(this.camera,performance.now()/1000);renderFacilityPass(this.renderer,this.facilityScene,this.camera,this.facilityEnvironment.group,this.facilityDepthMaterials,{depth:quality==='high'});this.facilityRenderStats={calls:this.renderer.info.render.calls+(this.facilityEnvironment.group.userData.depthCalls||0),colorCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles+(this.facilityEnvironment.group.userData.depthTriangles||0)};}
+  this.renderer.render(this.scene,this.camera);
   // Restore the raw renderer's state before it draws the view model in its own pass.
   this.restoreRawState();
  }
