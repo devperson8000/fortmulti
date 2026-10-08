@@ -24,3 +24,10 @@ test('effect slots reuse their vector storage across respawns',()=>{
  assert.equal(second.col,color);
  assert.deepEqual(second.p,[7,8,9]);
 });
+
+test('effect lifetime follows elapsed time even when physics steps are capped',()=>{
+ const pool=createEffectPool(1),effect=pool.spawn({kind:'pod-dust',life:1.5,maxLife:1.5});
+ for(let i=0;i<9;i++)pool.update(.035,.18);
+ assert.equal(pool.activeCount,0,'landing debris expires on time during slow rendered frames');
+ assert.ok(effect.life<=0);
+});

@@ -38,6 +38,7 @@ export function podBoardingPose(pod,start,progress=0){
  return {position,yaw:walk<1?Math.atan2(position[0]-look[0],position[2]-look[2]):0,doorOpen:1-ease((t-.64)/.36),
   animationState:walk<1?(moveSpeed>4.5?'run':'pod-enter'):'idle',moveSpeed};
 }
+export function podBoardingAvatarOpacity(pose){return clamp((Number(pose?.doorOpen)-.25)/.4,0,1);}
 export function podShipLaunch(sequenceTime=0){
  const t=Math.max(0,sequenceTime),flight=Math.max(0,t-.34);
  return {hatchOpen:ease((t-.1)/.22),drop:Math.min(80,flight*flight*46)};

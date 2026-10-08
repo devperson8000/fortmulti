@@ -12,6 +12,13 @@ test('boarding finishes walking into the capsule before its doors start closing'
  assert.deepEqual(sealed.position,[pod.x,0,pod.z]);assert.equal(sealed.doorOpen,0);assert.equal(sealed.moveSpeed,0);
 });
 
+test('the boarding operator fades out before the closing pod doors hide the body',()=>{
+ const pod=boarding.SHIP_PODS[0],start=[pod.x,0,pod.z+2.35],opacity=t=>boarding.podBoardingAvatarOpacity(boarding.podBoardingPose(pod,start,t));
+ assert.equal(opacity(.64),1,'the character remains visible while the doors are fully open');
+ assert.ok(opacity(.82)>0&&opacity(.82)<1,'the character fades as the pod closes');
+ assert.equal(opacity(.92),0,'the body is hidden before the hatch seals');
+});
+
 test('launch hatches clear before the capsule accelerates below the entire deck',()=>{
  assert.equal(typeof boarding.podShipLaunch,'function');
  const opening=boarding.podShipLaunch(.22),moving=boarding.podShipLaunch(.6),gone=boarding.podShipLaunch(1.1);

@@ -24,7 +24,10 @@ export function deploymentCinematic(sequenceTime){
  const returnProgress=ease((musicTime-(DEPLOYMENT_MUSIC_END-.55))/.55);
  const saluteAt=c.impact+POD_RELEASE.hold+POD_RELEASE.open+POD_RELEASE.exit;
  const saluteFraming=ease((musicTime-saluteAt+.45)/.45);
- const avatarOpacity=1-ease((returnProgress-.68)/.27);
+ // Fade the operator before the return camera crosses the torso and head.
+ // Keeping the body visible until the final frames makes the camera render
+ // from inside the Soldier mesh, which looks like the model has torn apart.
+ const avatarOpacity=1-ease((returnProgress-.4)/.18);
  return {
   musicTime,logo,black,orbit,impact,returnProgress,
   avatarOpacity,hatchOpen,saluteFraming,operatorOpacity:ease((hatchOpen-.08)/.22)*avatarOpacity,
@@ -66,7 +69,7 @@ export function cinematicCamera(position,yaw,{orbit=0,impact=0,returnProgress=0,
  const target=[position[0]+delta[0]*gaze-Math.sin(heading)*targetBlend*2,position[1]+focusHeight+delta[1]*gaze+(1.72-focusHeight-Math.tan(.04)*2)*targetBlend,position[2]+delta[2]*gaze-Math.cos(heading)*targetBlend*2];
  // The operator faces a stable portrait camera for the held salute. Ease in
  // during the final steps, then share the same first-person handoff endpoint.
- const heroEye=[actor[0]-Math.sin(heading)*3.1*(1-q),actor[1]+1.4+.32*q,actor[2]-Math.cos(heading)*3.1*(1-q)];
+ const heroEye=[actor[0]-Math.sin(heading)*4.4*(1-q),actor[1]+1.4+.32*q,actor[2]-Math.cos(heading)*4.4*(1-q)];
  const heroTarget=[actor[0]-Math.sin(heading)*targetBlend*2,actor[1]+1.0+(.72-Math.tan(.04)*2)*targetBlend,actor[2]-Math.cos(heading)*targetBlend*2];
  for(let k=0;k<3;k++){eye[k]+=(heroEye[k]-eye[k])*saluteFraming;target[k]+=(heroTarget[k]-target[k])*saluteFraming;}
  if(wallDistance){

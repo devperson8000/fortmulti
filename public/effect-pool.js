@@ -42,11 +42,11 @@ export function createEffectPool(capacity=96){
    copy3(slot.v,data.v);copy3(slot.col,data.col||[1,1,1]);
    return slot;
   },
-  update(dt){
-   const step=Math.max(0,Number(dt)||0);
+  update(dt,elapsed=dt){
+   const age=Math.max(0,Number(elapsed)||0);
    for(const slot of slots){
     if(!slot.active)continue;
-    slot.life-=step;
+    slot.life-=age;
     if(slot.life<=0){slot.active=false;activeCount--;}
    }
   },

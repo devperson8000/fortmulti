@@ -29,6 +29,14 @@ test('the salute gets a frontal held shot before fading the unrepeated supplied 
  assert.ok(Math.abs(view.target[0]-actor[0])<.01);
 });
 
+test('the local character fades out before the camera returns through its body',()=>{
+ const end=cinematic.DEPLOYMENT_MUSIC_END,at=t=>deploymentCinematic(MUSIC_START+t);
+ const fade=at(end-.24),inside=at(end-.12);
+ assert.ok(fade.returnProgress>.4&&fade.returnProgress<.8);
+ assert.ok(fade.operatorOpacity<.25,'the operator is mostly faded before the camera enters the character');
+ assert.equal(inside.operatorOpacity,0,'the character is hidden before the first-person camera handoff');
+});
+
 test('the authoritative landing boundary is the exact Big stepper cue',()=>{
  const impact=MUSIC_START+DEPLOYMENT_CUES.impact;
  assert.equal(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds,impact);
@@ -47,6 +55,12 @@ test('camera finishes facing the operator and stays outside the pod and characte
  const front=cinematicCamera(p,0,{orbit:1,impact:0});
  assert.ok(front.eye[2]>p[2],'the door-facing camera stays in front of the sealed pod');
  assert.ok(front.target[1]>p[1]+1.7&&front.target[1]<p[1]+2,'frame the centre of the full-height sealed capsule');
+});
+
+test('salute portrait keeps the complete character comfortably inside the frame',()=>{
+ const actor=[4,0,7],yaw=Math.PI,view=cinematicCamera([0,0,0],0,{orbit:1,saluteFraming:1},{subjectPosition:actor,returnYaw:yaw});
+ assert.ok(Math.hypot(view.eye[0]-actor[0],view.eye[2]-actor[2])>=4.3,'portrait camera leaves breathing room around the operator');
+ assert.ok(Math.hypot(view.target[0]-actor[0],view.target[2]-actor[2])<.01,'portrait remains centred on the operator');
 });
 
 test('descent is continuous, stays above the island, and touches chosen ground on the beat',()=>{
