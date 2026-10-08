@@ -1,0 +1,12 @@
+Kenney Nature Kit — Creative Commons Zero (CC0 1.0 Universal)
+
+Source: https://kenney.nl/assets/nature-kit
+Original creator: Kenney (https://kenney.nl)
+Reference GLB copies: https://github.com/Hidencod/tge-assets/tree/main/packs/nature-kit
+Asset names: tree-pinedefaulta, tree-pinetallb, tree-oak, tree-default,
+tree-palmtall, rock-largea, rock-largec.
+
+The models are free for personal and commercial use, with no attribution
+required under CC0. Credit is provided voluntarily. Models are kept in the
+repository and served from Horizon's own deployment, with no runtime
+dependency on the source site.

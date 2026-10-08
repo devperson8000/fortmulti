@@ -36,6 +36,15 @@ try{
  await host.locator('#ready').click();await guest.locator('#ready').click();await host.waitForFunction(()=>Boolean(window.__testMatch));
  await Promise.all([host.evaluate(()=>window.Game.startAudio({deployment:true})),guest.evaluate(()=>window.Game.startAudio({deployment:true}))]);
  await host.waitForFunction(()=>window.Game.deploymentView().stage==='landing_selection');
+ // Both clients must decode the actual locally hosted CC0 GLBs, not silently
+ // show procedural fallback or hotlink external content.
+ await Promise.all([host,guest].map(page=>page.waitForFunction(()=>{
+  const stats=window.Game.environmentStats?.();
+  return stats?.readyKinds.includes('wood')&&stats?.readyKinds.includes('stone')&&stats.count>100;
+ },{timeout:20000})));
+ const environment=await Promise.all([host,guest].map(page=>page.evaluate(()=>window.Game.environmentStats())));
+ assert.ok(environment.every(stats=>stats.drawBatches>0&&stats.drawBatches<30),'batch imported island models efficiently');
+ checks.push('Both clients load real CC0 Kenney trees and rocks as GPU-instanced map scenery');
  await host.keyboard.down('w');assert.equal(await host.evaluate(()=>window.Game.input().z),1);await host.keyboard.up('w');
  checks.push('Multiplayer controls activate from lobby without clicking the hidden solo Play button');
  async function pickLanding(page,x,z){
