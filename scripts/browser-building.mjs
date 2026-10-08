@@ -52,7 +52,19 @@ export async function checkBuilding(host,guest,guestId,artifacts,checks){
  const upper=await host.evaluate(()=>window.__testMatch.structures[1]);
  for(const key of['x','y','z','angle','type','material'])assert.equal(upper[key],upperPreview[key],'upper ramp preview matches authoritative placement: '+key);
  await guest.screenshot({path:artifacts+'/building-ramp-chain.png'});
- await guest.keyboard.down('w');await host.waitForFunction(({id,origin})=>window.__testMatch.players.find(p=>p.id===id).p[1]>origin[1]+5.4,{id:guestId,origin:buildOrigin});await guest.keyboard.up('w');
+ await guest.keyboard.down('w');try{
+  await host.waitForFunction(({id,origin})=>window.__testMatch.players.find(p=>p.id===id).p[1]>origin[1]+5.4,{id:guestId,origin:buildOrigin},{timeout:12000});
+ }catch(error){
+  const diagnostics=await host.evaluate(({id,origin})=>{
+   const m=window.__testMatch,p=m.players.find(p=>p.id===id),history=window.__buildObservations||[];
+   return {origin,position:p.p.slice(),grounded:p.grounded,velocity:p.vy,input:p.input,moveSpeed:p.moveSpeed,
+    structures:m.structures,history:history.filter((_,i)=>i%20===0).slice(-80),
+    maxHeight:Math.max(...history.map(x=>x.p[1]))};
+  },{id:guestId,origin:buildOrigin});
+  await guest.keyboard.up('w');
+  throw Error('Second ramp ascent failed: '+JSON.stringify(diagnostics));
+ }
+ await guest.keyboard.up('w');
  assert.equal(await host.evaluate(id=>window.__testMatch.players.find(p=>p.id===id).materials.wood,guestId),70);
  checks.push('Real V input builds connected ramps, preview matches upper-level authority, and walking climbs both levels');
 }
