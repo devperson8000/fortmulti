@@ -1,11 +1,12 @@
 import {DEPLOYMENT_CUES,MUSIC_START,POD_RELEASE,CINEMATIC_CAMERA_RADIUS,deploymentCinematic,podExitPosition,podExitYaw} from './deployment-cinematic.js';
+import {POD_BOARDING_SECONDS} from './deployment-ship.js';
 export const DEPLOYMENT_STATES=Object.freeze([
  'ship_waiting','landing_selection','pod_available','entering_pod','pod_ready',
  'both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','saluting','match_active'
 ]);
 
 export const DEPLOYMENT_TIMELINE=Object.freeze({
- enterSeconds:.92,
+ enterSeconds:POD_BOARDING_SECONDS,
  sealSeconds:1.12,
  launchSeconds:MUSIC_START+DEPLOYMENT_CUES.impact-1.12,
  fadeAt:MUSIC_START+DEPLOYMENT_CUES.impact-1.12-.14,

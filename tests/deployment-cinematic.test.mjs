@@ -1,18 +1,32 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as cinematic from '../public/deployment-cinematic.js';
-const {deploymentCinematic,cinematicCamera,cinematicPodPosition,cinematicFov,podExitPosition,podExitYaw,DEPLOYMENT_CUES,MUSIC_START,CINEMATIC_RETURN_SECONDS,DEPLOYMENT_MUSIC_END}=cinematic;
+const {deploymentCinematic,cinematicCamera,cinematicPodPosition,cinematicFov,podExitPosition,podExitYaw,DEPLOYMENT_CUES,MUSIC_START}=cinematic;
 import {DEPLOYMENT_TIMELINE,deploymentStageAt} from '../public/deployment-sequence.js';
 
 test('music starts only on full black and the title follows the measured vocal cues',()=>{
  const at=t=>deploymentCinematic(MUSIC_START+t);
  assert.equal(at(0).black,1);
  assert.equal(at(DEPLOYMENT_CUES.uhYeahStart-.07).logo,0);
- assert.ok(at(DEPLOYMENT_CUES.uhYeahStart+.4).logo>.95);
+ assert.ok(at(DEPLOYMENT_CUES.uhYeahStart+.8).logo>.95);
  assert.equal(at(DEPLOYMENT_CUES.lyricsStart+1.56).logo,0);
  assert.equal(at(DEPLOYMENT_CUES.businessStart).black,0);
  assert.equal(at(DEPLOYMENT_CUES.businessStart).orbit,1);
  assert.equal(at(DEPLOYMENT_CUES.impact).black,0);
+});
+
+test('the Horizon mark fades visibly from the first uh instead of flashing on',()=>{
+ const on=DEPLOYMENT_CUES.uhYeahStart,at=t=>deploymentCinematic(MUSIC_START+on+t).logo;
+ assert.equal(at(0),0);assert.ok(at(.12)>0&&at(.12)<.2);assert.ok(at(.35)>.35&&at(.35)<.65);assert.ok(at(.7)>.99);
+});
+
+test('the salute gets a frontal held shot before fading the unrepeated supplied song',()=>{
+ const r=cinematic.POD_RELEASE,start=DEPLOYMENT_CUES.impact+r.hold+r.open+r.exit,end=cinematic.DEPLOYMENT_MUSIC_END;
+ assert.ok(end<=30,'the ending fits inside the uploaded audio');
+ assert.ok(end-cinematic.DEPLOYMENT_MUSIC_FADE-start-r.salute*.23>=.8,'full raised salute holds before music fade');
+ const actor=[.32,0,2.35],yaw=Math.PI,state=deploymentCinematic(MUSIC_START+start+r.salute*.5),view=cinematicCamera([0,0,0],0,state,{subjectPosition:actor,returnYaw:yaw});
+ assert.equal(state.returnProgress,0);assert.ok(view.eye[2]>actor[2]+2);assert.ok(Math.abs(view.eye[0]-actor[0])<.01,'camera is directly in front of the operator');
+ assert.ok(Math.abs(view.target[0]-actor[0])<.01);
 });
 
 test('the authoritative landing boundary is the exact Big stepper cue',()=>{
@@ -49,16 +63,17 @@ test('the exit camera returns continuously to the actual first-person position a
  assert.equal(deploymentCinematic(exitAt).returnProgress,0);
  assert.equal(deploymentCinematic(exitAt+time.exitSeconds).returnProgress,0,'the camera stays outside for the salute');
  assert.equal(deploymentCinematic(exitAt+time.exitSeconds+time.saluteSeconds).returnProgress,1);
- let previous=cinematicCamera(p,yaw,{orbit:1,returnProgress:0});
+ const heading=yaw+Math.PI;
+ let previous=cinematicCamera(p,yaw,{orbit:1,returnProgress:0},{returnYaw:heading});
  for(let i=1;i<=120;i++){
-  const state=deploymentCinematic(exitAt+(time.exitSeconds+time.saluteSeconds)*i/120),view=cinematicCamera(p,yaw,state);
+  const state=deploymentCinematic(exitAt+(time.exitSeconds+time.saluteSeconds)*i/120),view=cinematicCamera(p,yaw,state,{returnYaw:heading});
   assert.ok(Math.hypot(...view.eye.map((v,k)=>v-previous.eye[k]))<.5,'no single-frame camera cut');
   assert.ok(Math.hypot(...view.target.map((v,k)=>v-view.eye[k]))>.03,'look direction never degenerates');
   previous=view;
  }
  assert.ok(Math.hypot(...previous.eye.map((v,k)=>v-[12,8.72,-18][k]))<1e-9);
  const forward=previous.target.map((v,k)=>v-previous.eye[k]);
- assert.ok(forward[0]<0&&forward[2]<0,'camera faces the same direction as the player');
+ assert.ok(forward[0]*-Math.sin(heading)+forward[2]*-Math.cos(heading)>0,'camera faces the same direction as the exiting player');
  assert.ok(Math.abs(Math.atan2(forward[1],Math.hypot(forward[0],forward[2]))+.04)<1e-8);
 });
 
@@ -176,16 +191,4 @@ test('reduced-motion mode disables the impact camera vibration',()=>{
  const shaking=cinematicCamera(pod,0,cinema,{reducedMotion:false});
  const steady=cinematicCamera(pod,0,cinema,{reducedMotion:true});
  assert.ok(Math.hypot(...shaking.eye.map((v,i)=>v-steady.eye[i]))>.05);
-});
-
-test('the camera holds the full salute shot before the final handoff',()=>{
- const saluteStart=DEPLOYMENT_MUSIC_END-cinematic.POD_RELEASE.salute;
- const fullPose=deploymentCinematic(MUSIC_START+saluteStart+cinematic.POD_RELEASE.salute*.58);
- assert.equal(fullPose.returnProgress,0,'the operator remains fully framed during the held salute');
- assert.equal(fullPose.avatarOpacity,1);
- const lastHold=deploymentCinematic(MUSIC_START+DEPLOYMENT_MUSIC_END-CINEMATIC_RETURN_SECONDS-.01);
- assert.equal(lastHold.returnProgress,0);
- const midReturn=deploymentCinematic(MUSIC_START+DEPLOYMENT_MUSIC_END-CINEMATIC_RETURN_SECONDS*.5);
- assert.ok(midReturn.returnProgress>.4&&midReturn.returnProgress<.6);
- assert.equal(deploymentCinematic(MUSIC_START+DEPLOYMENT_MUSIC_END).returnProgress,1);
 });

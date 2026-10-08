@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDeploymentAudio} from '../public/deployment-audio.js';
-import {DEPLOYMENT_MUSIC_END,DEPLOYMENT_AUDIO_FADE_SECONDS} from '../public/deployment-cinematic.js';
+import {DEPLOYMENT_MUSIC_END,DEPLOYMENT_MUSIC_FADE} from '../public/deployment-cinematic.js';
 
 function context(){
  const starts=[],stops=[],sources=[];let decodes=0;
- const ctx={currentTime:10,state:'running',destination:{},decodeAudioData:async()=>{decodes++;return {duration:28};},createBufferSource:()=>{const source={connect(){},disconnect(){},start(...args){starts.push(args);},stop(...args){stops.push(args);}};sources.push(source);return source;},createGain:()=>({connect(){},disconnect(){},gain:{value:0,cancelScheduledValues(){},setValueAtTime(){},linearRampToValueAtTime(){}}})};
+ const ctx={currentTime:10,state:'running',destination:{},decodeAudioData:async()=>{decodes++;return {duration:30};},createBufferSource:()=>{const source={connect(){},disconnect(){},start(...args){starts.push(args);},stop(...args){stops.push(args);}};sources.push(source);return source;},createGain:()=>({connect(){},disconnect(){},gain:{value:0,cancelScheduledValues(){},setValueAtTime(){},linearRampToValueAtTime(){}}})};
  return {ctx,starts,stops,sources,get decodes(){return decodes;}};
 }
 const fetchAudio=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
@@ -19,7 +19,7 @@ test('one music source per deployment, scheduled from black onset, follows the a
  assert.equal(c.starts.length,1);
  assert.equal(c.decodes,1);
  player.stop(c.ctx);
- assert.equal(c.stops.length,1);
+ assert.equal(c.stops.length,2);
  assert.equal(player.update(c.ctx,'round:1',5),null,'leaving cannot restart the cancelled sequence');
  assert.equal(c.starts.length,1);
 });
@@ -30,7 +30,7 @@ test('late join seeks to the current cue and a rematch plays a fresh source',asy
  assert.deepEqual(c.starts,[[10,20]]);
  player.update(c.ctx,'round:2',0);
  assert.equal(c.starts.length,2);
- assert.equal(c.stops.length,1);
+ assert.equal(c.stops.length,3);
  player.reset(c.ctx);player.update(c.ctx,'round:2',0);
  assert.equal(c.starts.length,3,'a new full match may reuse a sequence ID');
 });
@@ -48,7 +48,7 @@ test('resuming after suspension seeks the current cue even without animation fra
  const c=context(),events=new EventTarget();c.ctx.addEventListener=events.addEventListener.bind(events);
  const player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);player.update(c.ctx,'round:1',5);
  c.ctx.currentTime=10.35;c.ctx.state='suspended';events.dispatchEvent(new Event('statechange'));
- assert.deepEqual(c.stops,[[10.35]],'a frozen voice must stop immediately so it cannot play behind the camera on resume');
+ assert.deepEqual(c.stops.at(-1),[10.35],'a frozen voice must stop immediately so it cannot play behind the camera on resume');
  c.ctx.state='running';events.dispatchEvent(new Event('statechange'));c.ctx.currentTime=10.4;
  assert.equal(player.update(c.ctx,'round:1',6.6),6.6);
  assert.deepEqual(c.starts,[[10,5],[10.4,6.6]]);
@@ -58,7 +58,7 @@ test('resuming after suspension seeks the current cue even without animation fra
 test('a suspended update cancels a scheduled voice before its future start',async()=>{
  const c=context(),player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);player.update(c.ctx,'round:1',-2);
  c.ctx.state='suspended';assert.equal(player.update(c.ctx,'round:1',-1),null);
- assert.deepEqual(c.stops,[[10]],'a cancelled future voice cannot burst into playback when the browser resumes');
+ assert.deepEqual(c.stops.at(-1),[10],'a cancelled future voice cannot burst into playback when the browser resumes');
  c.ctx.state='running';assert.equal(player.update(c.ctx,'round:1',1),1);assert.deepEqual(c.starts,[[12,0],[10,1]]);
 });
 
@@ -137,8 +137,8 @@ test('read-only cue lookup follows the active voice without loading, scheduling 
  await player.load(c.ctx);assert.equal(player.time(c.ctx,'round:1'),null);
  player.update(c.ctx,'round:1',5);c.ctx.currentTime=11;
  assert.equal(player.time(c.ctx,'round:1'),6);assert.equal(player.time(c.ctx,'round:2'),null);
- assert.equal(player.update(c.ctx,'round:1',0),6);assert.equal(c.starts.length,1);assert.equal(c.stops.length,0);
- c.ctx.state='suspended';assert.equal(player.time(c.ctx,'round:1'),null);assert.equal(c.stops.length,0,'lookup cannot change voice lifecycle');
+ assert.equal(player.update(c.ctx,'round:1',0),6);assert.equal(c.starts.length,1);assert.equal(c.stops.length,1);
+ c.ctx.state='suspended';assert.equal(player.time(c.ctx,'round:1'),null);assert.equal(c.stops.length,1,'lookup cannot change voice lifecycle');
  c.ctx.state='running';c.sources[0].onended();assert.equal(player.time(c.ctx,'round:1'),null);
  player.update(c.ctx,'round:2',3);assert.equal(player.time(c.ctx,'round:1'),null);assert.equal(player.time(c.ctx,'round:2'),3);
  assert.equal(c.starts.length,2);player.stop(c.ctx);assert.equal(player.time(c.ctx,'round:2'),null);
@@ -155,64 +155,36 @@ test('read-only cue lookup shares audible output timing and its monotonic guard'
  assert.ok(Math.abs(player.time(c.ctx,'round:1')-5.068)<.001);assert.equal(c.starts.length,1);
 });
 
-test('the entire supplied song plays from a single source through the walkout and salute',async()=>{
- const c=context();c.ctx.decodeAudioData=async()=>({duration:30});
- const player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
- assert.equal(player.update(c.ctx,'round:1',0),0);
- c.ctx.currentTime=10+29;
- assert.ok(player.update(c.ctx,'round:1',0)>=29);
- assert.equal(c.starts.length,1,'there must be no new riff source and no restart at the beat drop');
- assert.equal(c.sources[0].loop,undefined,'the exact uploaded recording plays once');
- assert.deepEqual(c.starts,[[10,0]]);
- assert.ok(Math.abs(c.stops[0][0]-(10+DEPLOYMENT_MUSIC_END))<1e-9,'song fades when gameplay starts');
+test('the supplied verse plays forward through the salute with one voice and no loop',async()=>{
+ const c=context(),player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);player.update(c.ctx,'round:1',0);
+ for(const time of [26.3,28,DEPLOYMENT_MUSIC_END-.1]){c.ctx.currentTime=10+time;player.update(c.ctx,'round:1',0);}
+ assert.equal(c.starts.length,1,'no earlier music is restarted during the walkout or salute');
+ assert.ok(!c.sources[0].loop);assert.equal(c.sources[0].buffer.duration,30);
+ assert.ok(c.stops.some(([time])=>Math.abs(time-(10+DEPLOYMENT_MUSIC_END))<1e-8),'the original song fades and stops at the gameplay handoff');
 });
 
-test('audio source never repeats when the supplied clip is shorter than the cinematic',async()=>{
- const c=context(),player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
- player.update(c.ctx,'short',25);
- assert.deepEqual(c.starts,[[10,25]]);
- assert.deepEqual(c.stops,[],'the short recording ends on its own with no redundant stop');
- c.sources[0].onended();assert.equal(player.update(c.ctx,'short',27),null);
- assert.equal(c.starts.length,1,'the song cannot quietly start over');
-});
-
-test('late recovery in the final fade never restores the full song volume',async()=>{
+test('recovering in the final fade preserves its quiet level and stops at the original deadline',async()=>{
  for(const remaining of [.085,.015,.001]){
-  const c=context(),events=[];c.ctx.decodeAudioData=async()=>({duration:30});
+  const c=context(),events=[];
   c.ctx.createGain=()=>({connect(){},disconnect(){},gain:{value:0,cancelScheduledValues(){},setValueAtTime(value,time){events.push({value,time});},linearRampToValueAtTime(value,time){events.push({value,time});}}});
   const player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
   player.update(c.ctx,'late',DEPLOYMENT_MUSIC_END-remaining);
   const deadline=c.ctx.currentTime+remaining;
-  assert.ok(c.stops.every(([time])=>Math.abs(time-deadline)<1e-8));
-  assert.ok(events.every(e=>e.time<=deadline+1e-8),'no fade ramp can run beyond the handoff');
-  assert.ok(events.every(e=>e.value<=.65*remaining/DEPLOYMENT_AUDIO_FADE_SECONDS+1e-8),'the volume stays quiet on recovery');
+  assert.ok(c.stops.every(([time])=>Math.abs(time-deadline)<1e-8),'recovery cannot extend the song');
+  assert.ok(events.every(e=>e.time<=deadline+1e-8),'all gain ramps fit the remaining fade');
+  assert.ok(events.every(e=>e.value<=.65*remaining/DEPLOYMENT_MUSIC_FADE+1e-8),'a late recovery cannot restore full volume');
  }
 });
 
-test('render completion retains the audio clock until the final output samples become audible',async()=>{
- const c=context();c.ctx.decodeAudioData=async()=>({duration:30});
- const player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
- player.update(c.ctx,'tail',DEPLOYMENT_MUSIC_END-.14);
- c.ctx.currentTime+=.14;
- c.ctx.getOutputTimestamp=()=>({contextTime:c.ctx.currentTime-.12,performanceTime:performance.now()});
- c.sources[0].onended();
- assert.ok(player.time(c.ctx,'tail')<DEPLOYMENT_MUSIC_END);
- assert.ok(player.update(c.ctx,'tail',0)<DEPLOYMENT_MUSIC_END);
- c.ctx.currentTime+=.15;
- assert.equal(player.update(c.ctx,'tail',0),null);
+test('a finished render source retains its clock until the ending reaches the speakers',async()=>{
+ const c=context(),player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
+ const cue=DEPLOYMENT_MUSIC_END-.8;player.update(c.ctx,'tail',cue);
+ c.ctx.currentTime=10+DEPLOYMENT_MUSIC_END-cue;
+ c.ctx.getOutputTimestamp=()=>({contextTime:c.ctx.currentTime-.15,performanceTime:performance.now()});
+ c.sources.at(-1).onended();
+ assert.ok(Math.abs(player.time(c.ctx,'tail')-(DEPLOYMENT_MUSIC_END-.15))<.001,'render completion must not erase the audible ending clock');
+ assert.ok(player.update(c.ctx,'tail',0)<DEPLOYMENT_MUSIC_END);assert.equal(c.starts.length,1);
+ c.ctx.currentTime+=.17;
+ assert.ok(player.update(c.ctx,'tail',0)>=DEPLOYMENT_MUSIC_END);assert.equal(c.starts.length,1);
  assert.equal(player.time(c.ctx,'tail'),null);
-});
-
-test('a late music seek just before fade cannot restore full gain inside the fade',async()=>{
- const events=[],c=context();c.ctx.decodeAudioData=async()=>({duration:30});
- c.ctx.createGain=()=>({connect(){},disconnect(){},gain:{value:0,cancelScheduledValues(){},setValueAtTime(value,time){events.push({kind:'set',value,time});},linearRampToValueAtTime(value,time){events.push({kind:'ramp',value,time});}}});
- const player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
- const offset=DEPLOYMENT_MUSIC_END-DEPLOYMENT_AUDIO_FADE_SECONDS-.02;
- player.update(c.ctx,'near-end',offset);
- const fadeAt=c.ctx.currentTime+.02,stopAt=c.ctx.currentTime+DEPLOYMENT_MUSIC_END-offset;
- const fullGainEvents=events.filter(e=>e.value>=.65-1e-9);
- assert.ok(fullGainEvents.length>0);
- assert.ok(fullGainEvents.every(e=>e.time<=fadeAt+1e-8),'late seek cannot ramp back to full volume after the fade starts');
- assert.ok(events.every(e=>e.time<=stopAt+1e-8));
- assert.ok(events.some(e=>e.value===0&&Math.abs(e.time-stopAt)<1e-8));
 });

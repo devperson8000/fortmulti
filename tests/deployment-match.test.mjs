@@ -50,7 +50,7 @@ test('a player can walk diagonally out of the aisle and interact with a deployme
 test('both connected players auto-deploy to their own destinations only after both pods are ready',()=>{
  const match=new Match(world,['a','b']);match.beginDeployment();
  readyPlayer(match,'a',0,{x:30,z:40});readyPlayer(match,'b',1,{x:-80,z:65});
- tick(match,1.2);
+ tick(match,DEPLOYMENT_TIMELINE.enterSeconds+.1);
  assert.equal(match.deployment.stage,'both_ready');
  assert.ok(match.players.every(p=>p.deploymentState==='both_ready'));
  tick(match,.75);assert.equal(match.deployment.stage,'pod_sealing');
@@ -72,7 +72,7 @@ test('landing picks are reserved distinctly and an invalidated target reopens po
  assert.equal(match.chooseLanding('a',{x:30,z:40}),true);assert.equal(match.chooseLanding('b',{x:30,z:40}),true);
  const a=match.players[0].destination,b=match.players[1].destination;assert.ok(Math.hypot(a.x-b.x,a.z-b.z)>=1.9);
  for(const [index,p] of match.players.entries()){const pod=SHIP_PODS[index];p.shipLocal=[pod.x,0,pod.z+2.2];p.p=match.shipWorld(p.shipLocal);assert.equal(match.enterPod(p.id),true);}
- world.height=()=>Infinity;tick(match,1.2);
+ world.height=()=>Infinity;tick(match,DEPLOYMENT_TIMELINE.enterSeconds+.1);
  assert.equal(match.deployment.stage,'landing_selection');assert.ok(match.players.every(p=>!p.pod&&p.deploymentState==='pod_available'));
  assert.equal(match.podOwners.size,0);
 });
@@ -82,7 +82,7 @@ test('disconnect releases an unused pod and does not block the remaining ready p
  readyPlayer(match,'a',0,{x:20,z:30});readyPlayer(match,'b',1,{x:-30,z:45});
  assert.equal(match.disconnect('c'),true);
  assert.equal(match.enterPod('a'),true);
- tick(match,1.2);tick(match,.8);
+ tick(match,DEPLOYMENT_TIMELINE.enterSeconds+.1);tick(match,.8);
  assert.equal(match.deployment.stage,'pod_sealing');
 });
 
@@ -109,7 +109,7 @@ test('pod exit eases from the landed position rather than jumping on its first f
 });
 
 test('scripted deployment catches up after a stalled host without skipping touchdown or enabling combat early',()=>{
- const match=new Match(world,['a','b']);match.beginDeployment();readyPlayer(match,'a',0,{x:30,z:40});readyPlayer(match,'b',1,{x:-80,z:65});tick(match,1.2);
+ const match=new Match(world,['a','b']);match.beginDeployment();readyPlayer(match,'a',0,{x:30,z:40});readyPlayer(match,'b',1,{x:-80,z:65});tick(match,DEPLOYMENT_TIMELINE.enterSeconds+.1);
  const impact=DEPLOYMENT_TIMELINE.readyBeat+MUSIC_START+DEPLOYMENT_CUES.impact;
  match.tick(impact-.04-match.deployment.elapsed);
  assert.equal(match.deployment.stage,'transition');assert.equal(match.phase,'deployment');
@@ -123,7 +123,7 @@ test('scripted deployment catches up after a stalled host without skipping touch
 });
 
 test('the host follows audible music elapsed while scripted deployment is active',()=>{
- const match=new Match(world,['a','b']);match.beginDeployment();readyPlayer(match,'a',0,{x:30,z:40});readyPlayer(match,'b',1,{x:-80,z:65});tick(match,1.2);
+ const match=new Match(world,['a','b']);match.beginDeployment();readyPlayer(match,'a',0,{x:30,z:40});readyPlayer(match,'b',1,{x:-80,z:65});tick(match,DEPLOYMENT_TIMELINE.enterSeconds+.1);
  const start=match.deployment.elapsed;
  match.tick(2,{deploymentElapsed:start+.02});
  assert.ok(Math.abs(match.deployment.elapsed-start-.02)<1e-8,'music time takes precedence over delayed timer wall time');
@@ -138,7 +138,7 @@ test('the host follows audible music elapsed while scripted deployment is active
 test('Soldier walks outside the pod and salutes before any combat inputs unlock',()=>{
  const match=new Match(world,['a','b']);match.beginDeployment();
  readyPlayer(match,'a',0,{x:12,z:18});readyPlayer(match,'b',1,{x:-22,z:28});
- tick(match,1.2);
+ tick(match,DEPLOYMENT_TIMELINE.enterSeconds+.1);
  const saluteAt=DEPLOYMENT_TIMELINE.readyBeat+DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds+
   DEPLOYMENT_TIMELINE.landedSeconds+DEPLOYMENT_TIMELINE.openingSeconds+DEPLOYMENT_TIMELINE.exitSeconds;
  while(match.deployment.elapsed<saluteAt+.2)match.tick(.05);
@@ -159,8 +159,10 @@ test('exit direction and the Soldier heading both follow the actual pod orientat
  const match=new Match(world,['a','b']);match.beginDeployment();
  readyPlayer(match,'a',0,{x:40,z:12});readyPlayer(match,'b',1,{x:-40,z:12});
  match.players[0].yaw=Math.PI/2;match.input('a',{yaw:Math.PI/2});
- tick(match,1.2);
- assert.ok(Math.abs(match.players[0].podYaw-Math.PI/2)<1e-9);
+ tick(match,DEPLOYMENT_TIMELINE.enterSeconds+.1);
+ assert.equal(match.players[0].podYaw,0,'boarding locks the operator to the ship hatch heading');
+ // A recovered landing may supply a rotated pod; its exit must still follow that orientation.
+ match.players[0].podYaw=Math.PI/2;
  const exitAt=DEPLOYMENT_TIMELINE.readyBeat+DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds+DEPLOYMENT_TIMELINE.landedSeconds+DEPLOYMENT_TIMELINE.openingSeconds;
  while(match.deployment.elapsed<exitAt+.05)match.tick(.025);
  assert.equal(match.deployment.stage,'exiting');
@@ -176,4 +178,17 @@ test('exit direction and the Soldier heading both follow the actual pod orientat
  match.tick(DEPLOYMENT_TIMELINE.saluteSeconds);
  assert.equal(match.phase,'playing');
  assert.ok(Math.hypot(player.p[0]-before[0],player.p[2]-before[2])<.001,'entering combat does not teleport the character');
+});
+
+
+test('one sealed operator waits outside combat until the teammate finishes boarding',()=>{
+ const match=new Match(world,['a','b']);match.beginDeployment();readyPlayer(match,'a',0,{x:30,z:40});
+ tick(match,DEPLOYMENT_TIMELINE.enterSeconds+.1);
+ const a=match.players[0];assert.equal(a.deploymentState,'pod_ready');assert.equal(a.podProgress,1);
+ assert.deepEqual(a.shipLocal,[SHIP_PODS[0].x,0,SHIP_PODS[0].z]);assert.equal(a.animationState,'idle');assert.equal(a.moveSpeed,0);
+ tick(match,2);assert.equal(match.deployment.elapsed,0);assert.equal(match.deployment.stage,'landing_selection');
+ readyPlayer(match,'b',1,{x:-80,z:65});tick(match,DEPLOYMENT_TIMELINE.enterSeconds+.1);
+ match.tick(.05,{deploymentElapsed:DEPLOYMENT_TIMELINE.readyBeat+.75});
+ assert.ok(match.players.every(p=>p.air==='pod'&&p.p[1]<240-3.82),'both complete capsules eject below the ship deck before blackout');
+ assert.equal(match.phase,'deployment');
 });

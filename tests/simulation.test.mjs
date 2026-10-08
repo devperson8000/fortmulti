@@ -2,7 +2,7 @@ import {createLoadout} from '../public/weapon-system.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Match,placement,validBuild,sanitize,ground,createGroundGrid,ISLAND_LIMIT,INPUT_STALE_SECONDS} from '../public/simulation.js';
-import {DEPLOYMENT_SHIP,SHIP_PODS} from '../public/deployment-ship.js';
+import {POD_BOARDING_SECONDS,DEPLOYMENT_SHIP,SHIP_PODS} from '../public/deployment-ship.js';
 
 const world={height:()=>0,obstacles:[]};
 const landAll=match=>{match.phase='playing';for(const p of match.players){p.p[1]=0;p.air='landed';p.vy=0;p.deploymentState='match_active';p.slot=1;p.inventory=[...Object.entries(createLoadout()).map(([type,state])=>({id:type,type,...state})),null];p.shield=100;p.ammo=30;p.materials={wood:150,stone:0};p.material=150;p.animationState='idle';}};
@@ -42,7 +42,7 @@ test('ship character animation is idle at rest and only walks or runs while movi
 test('deployment readiness survives a peer disconnect and releases reserved pods safely',()=>{
  const match=new Match(world,['a','b','c']);match.beginDeployment();match.chooseLanding('a',{x:25,z:30});match.chooseLanding('b',{x:-25,z:35});
  for(const[id,index]of[['a',0],['b',1]]){const pod=SHIP_PODS[index],p=match.players.find(v=>v.id===id);p.shipLocal=[pod.x,0,pod.z+2.2];p.p=match.shipWorld(p.shipLocal);assert.equal(match.enterPod(id),true);}
- assert.equal(match.disconnect('c'),true);tick(match,1.4);assert.ok(['both_ready','pod_sealing'].includes(match.deployment.stage));assert.equal(match.players.find(p=>p.id==='c').hp,0);
+ assert.equal(match.disconnect('c'),true);tick(match,POD_BOARDING_SECONDS+.1);assert.ok(['both_ready','pod_sealing'].includes(match.deployment.stage));assert.equal(match.players.find(p=>p.id==='c').hp,0);
 });
 
 test('multiplayer rounds end only when one connected player remains',()=>{

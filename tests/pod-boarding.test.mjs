@@ -1,74 +1,61 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
-import {Match} from '../public/simulation.js';
-import {SHIP_PODS,DEPLOYMENT_SHIP,DEPLOYMENT_LAUNCH,shipLaunchAt,shipBoardingCamera} from '../public/deployment-ship.js';
-import {MUSIC_START,deploymentCinematic,DEPLOYMENT_CUES,DEPLOYMENT_MUSIC_END} from '../public/deployment-cinematic.js';
-import {DEPLOYMENT_TIMELINE,deploymentStageAt} from '../public/deployment-sequence.js';
+import * as boarding from '../public/deployment-ship.js';
+import {deploymentCinematic,MUSIC_START} from '../public/deployment-cinematic.js';
 
-const tick=(match,seconds)=>{for(let time=0;time<seconds;time+=.04)match.tick(.04);};
-test('press E reserves a pod and starts an exterior boarding shot; the first teammate waits',()=>{
- const match=new Match({height:()=>0,obstacles:[]},['one','two']);
- match.beginDeployment();
- assert.equal(match.chooseLanding('one',{x:26,z:33}),true);
- const pod=SHIP_PODS[0],player=match.players[0];
- player.shipLocal=[pod.x,0,pod.z+2.2];player.p=match.shipWorld(player.shipLocal);
- assert.equal(match.enterPod('one'),true);
- assert.equal(player.deploymentState,'entering_pod');
- const camera=shipBoardingCamera(pod,DEPLOYMENT_SHIP.origin);
- assert.ok(camera,'the pod has a dedicated exterior camera');
- assert.ok(camera.eye[2]>DEPLOYMENT_SHIP.origin[2]+pod.z+3);
- assert.ok(Math.hypot(camera.eye[0]-DEPLOYMENT_SHIP.origin[0]-pod.x,camera.eye[2]-DEPLOYMENT_SHIP.origin[2]-pod.z)>4);
- tick(match,DEPLOYMENT_TIMELINE.enterSeconds+.15);
- assert.equal(player.deploymentState,'pod_ready');
- assert.equal(match.deployment.stage,'landing_selection','the first operator cannot launch without their teammate');
- assert.equal(shipLaunchAt(0).hatchOpen,0);
+test('boarding finishes walking into the capsule before its doors start closing',()=>{
+ assert.equal(typeof boarding.podBoardingPose,'function');
+ const pod=boarding.SHIP_PODS[0],start=[pod.x,0,pod.z+2.35];
+ const walking=boarding.podBoardingPose(pod,start,.35),inside=boarding.podBoardingPose(pod,start,.7),sealed=boarding.podBoardingPose(pod,start,1);
+ assert.equal(walking.doorOpen,1);assert.ok(walking.position[2]>pod.z+.2);
+ assert.deepEqual(inside.position,[pod.x,0,pod.z]);assert.ok(inside.doorOpen>0&&inside.doorOpen<1);
+ assert.deepEqual(sealed.position,[pod.x,0,pod.z]);assert.equal(sealed.doorOpen,0);assert.equal(sealed.moveSpeed,0);
 });
 
-test('hatches open, pods disappear through real deck openings, and then blackout starts',()=>{
- const c=DEPLOYMENT_LAUNCH;
- assert.equal(DEPLOYMENT_TIMELINE.sealSeconds,c.seal);
- assert.equal(shipLaunchAt(c.hatchStart-.001).hatchOpen,0);
- assert.equal(shipLaunchAt(c.dropStart-.001).drop,0);
- assert.ok(shipLaunchAt(c.dropStart).hatchOpen>.99,'deck must be fully open before acceleration');
- assert.ok(shipLaunchAt(c.dropStart+c.dropSeconds*.5).drop>4);
- assert.equal(shipLaunchAt(c.dropStart+c.dropSeconds).drop,c.dropDistance);
- assert.ok(c.dropStart+c.dropSeconds<c.fadeStart,'the launch completes before the screen goes black');
- assert.equal(deploymentCinematic(c.dropStart+c.dropSeconds).black,0);
- assert.equal(deploymentCinematic(MUSIC_START).black,1);
- assert.equal(deploymentStageAt(c.fadeStart),'transition');
+test('launch hatches clear before the capsule accelerates below the entire deck',()=>{
+ assert.equal(typeof boarding.podShipLaunch,'function');
+ const opening=boarding.podShipLaunch(.22),moving=boarding.podShipLaunch(.6),gone=boarding.podShipLaunch(1.1);
+ assert.ok(opening.hatchOpen>.2);assert.equal(opening.drop,0);
+ assert.equal(moving.hatchOpen,1);assert.ok(moving.drop>1.5);
+ assert.ok(gone.drop>5,'the complete 3.82 m capsule has cleared the floor before blackout');
+ assert.equal(deploymentCinematic(1.1).black,0);assert.equal(deploymentCinematic(MUSIC_START).black,1);
 });
 
-test('exterior camera holds on sealed pod and follows a launched pod into its shaft',()=>{
- const pod=SHIP_PODS[2],origin=DEPLOYMENT_SHIP.origin;
- const waiting=shipBoardingCamera(pod,origin),sealed=shipBoardingCamera(pod,origin,DEPLOYMENT_LAUNCH.seal);
- assert.deepEqual(waiting,sealed,'the exterior view must remain unchanged while the second player boards');
- const shot=shipBoardingCamera(pod,origin,DEPLOYMENT_LAUNCH.dropStart+DEPLOYMENT_LAUNCH.dropSeconds*.75);
- assert.ok(shot.target[1]<waiting.target[1]-5,'camera tracks the falling pod instead of staring into an empty hatch');
- assert.ok(shot.eye[1]>shot.target[1],'the departing pod is seen from above');
+test('the ship deck has eight real launch apertures with no intersecting floor geometry',()=>{
+ assert.ok(Array.isArray(boarding.SHIP_DECK_PANELS));
+ for(const pod of boarding.SHIP_PODS)assert.ok(boarding.SHIP_DECK_PANELS.every(p=>Math.abs(pod.x-p.center[0])>=p.size[0]/2||Math.abs(pod.z-p.center[1])>=p.size[1]/2));
+ const area=boarding.SHIP_DECK_PANELS.reduce((sum,p)=>sum+p.size[0]*p.size[1],0);
+ assert.ok(Math.abs(area-(24*36-8*2.44**2))<1e-6,'floor panels cover the deck outside its exact launch holes');
 });
 
-test('outro is an uninterrupted portion of the original track ending at gameplay',()=>{
- assert.ok(DEPLOYMENT_MUSIC_END>DEPLOYMENT_CUES.impact+4);
- assert.ok(DEPLOYMENT_MUSIC_END<30);
- assert.equal(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds,MUSIC_START+DEPLOYMENT_CUES.impact);
- const rendered=deploymentCinematic(MUSIC_START+DEPLOYMENT_MUSIC_END-.8);
- assert.equal(rendered.returnProgress,0,'hold the full camera-facing salute before the final handoff');
+test('exterior boarding camera is stationary outside the capsule during entry and waiting',()=>{
+ assert.equal(typeof boarding.podBoardingCamera,'function');
+ const pod=boarding.SHIP_PODS[0],view=boarding.podBoardingCamera(pod,[0,240,0]);
+ assert.ok(Math.hypot(view.eye[0]-pod.x,view.eye[2]-pod.z)>4.5);
+ assert.ok(view.eye[1]>241.7&&view.eye[1]<243);
+ assert.ok(view.target[1]>241.4&&view.target[1]<242.2);
+ assert.deepEqual(view,boarding.podBoardingCamera(pod,[0,240,0]));
 });
 
-test('ship rendering uses the outside camera, perforated deck and sealed exterior only',async()=>{
- const engine=await readFile(new URL('../public/engine.js',import.meta.url),'utf8');
- assert.match(engine,/shipBoardingCamera\(boardingPod/);
- assert.match(engine,/shipLaunchAt\(sequenceElapsed\)/);
- assert.match(engine,/Segmented deck provides actual launch holes/);
- assert.match(engine,/if\(!boardingView&&\(cinematic/);
- assert.match(engine,/body\.classList\.toggle\('pod-exterior'/);
+test('side boarding routes through the front hatch rather than cutting through capsule armor',()=>{
+ const pod=boarding.SHIP_PODS[0];
+ for(const start of[[pod.x+2.8,0,pod.z+2.35],[pod.x-2.8,0,pod.z+2.35],[pod.x+2.4,0,pod.z+.8]]){
+  for(let n=0;n<=100;n++){
+   const pose=boarding.podBoardingPose(pod,start,n/100),x=Math.abs(pose.position[0]-pod.x),z=pose.position[2]-pod.z;
+   assert.ok(z>1.55||x<.05||x>1.5,'approach stays clear of side armor until aligned with the open hatch');
+   if(z<=1.55&&x<1.5)assert.ok(x<.05,'the operator crosses the front plane through the centre of the hatch');
+  }
+  assert.equal(boarding.podBoardingPose(pod,start,1).yaw,0);
+ }
 });
 
-test('exterior boarding camera cannot read a timeline variable before initialization',async()=>{
- const engine=await readFile(new URL('../public/engine.js',import.meta.url),'utf8');
- const begin=engine.indexOf('const sequenceElapsed=deploymentData?.sequenceElapsed||0;');
- const camera=engine.indexOf('shipBoardingCamera(boardingPod');
- assert.ok(begin>=0&&begin<camera,'shared sequence time must be initialized before the boarding camera');
- assert.doesNotMatch(engine,/const sequence=deploymentData\?\.stage\|\|'',sequenceElapsed=/,'do not redeclare timeline after camera has used it');
+
+test('all eight boarding paths keep body clearance from ship furniture and walls',()=>{
+ for(const pod of boarding.SHIP_PODS)for(const side of[-1,1])for(const z of[.8,1.35,2.35]){
+  const start=[pod.x+side*2.4,0,pod.z+z];
+  for(let n=0;n<=100;n++){
+   const {position:p}=boarding.podBoardingPose(pod,start,n/100);
+   assert.ok(boarding.SHIP_COLLIDERS.every(box=>p[0]<box.min[0]-.42||p[0]>box.max[0]+.42||p[2]<box.min[2]-.42||p[2]>box.max[2]+.42),`${pod.id} route must leave player-width clearance from furniture`);
+  }
+ }
 });

@@ -53,6 +53,21 @@ try{
   if(phase==='salute')assert.ok(result.salute>.99,'native salute is fully raised');
   await page.screenshot({path:artifacts+'/framing-'+phase+'.png'});results.push({name:phase,...result});
  }
+ // Frame the actual skinned salute, including hands and boots, on narrow screens.
+ for(const [name,width,height] of [['desktop',1280,720],['compact',800,600],['ultrawide',2100,900],['portrait',540,960]]){
+  await page.setViewportSize({width,height});
+  await page.evaluate(async()=>{const {DEPLOYMENT_CUES:c,POD_RELEASE:r}=await import('/deployment-cinematic.js');window.__portrait(c.impact+r.hold+r.open+r.exit+r.salute*.5);});
+  await page.waitForFunction(()=>window.Game.deploymentView().saluteFraming===1&&window.Game.deploymentView().localVisible);
+  await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+  const result=await page.evaluate(()=>{
+   const r=window.__renderer,T=window.__THREE,instance=r.instances.get('a');r.scene.updateMatrixWorld(true);
+   const bounds=new T.Box3().setFromObject(instance.model,true),points=[];
+   for(const x of[bounds.min.x,bounds.max.x])for(const y of[bounds.min.y,bounds.max.y])for(const z of[bounds.min.z,bounds.max.z])points.push(new T.Vector3(x,y,z).project(r.camera).toArray());
+   return {view:window.Game.deploymentView(),bounds:{min:bounds.min.toArray(),max:bounds.max.toArray()},points,salute:window.Game.pose().saluteProgress};
+  });
+  assert.ok(result.salute>.99);assert.equal(result.view.returnProgress,0);assert.ok(result.points.every(p=>Math.abs(p[0])<.95&&Math.abs(p[1])<.95),'whole native Soldier and raised salute fit with margin');
+  await page.screenshot({path:artifacts+'/salute-'+name+'.png'});results.push({name:'salute-'+name,...result});
+ }
  // A delayed server snapshot can still say exiting after the local music
  // clock finishes. Keep the open shell anchored until gameplay is confirmed.
  await page.setViewportSize({width:1280,height:720});
