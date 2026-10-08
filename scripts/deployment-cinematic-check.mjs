@@ -55,7 +55,8 @@ try{
  checks.push('Both players pick distinct island landing zones using the visible map');
 
  // Walk through the real ship from the middle aisle toward the accessible
- // pods. The server moves and collides players, not the browser test.
+ // pods. W moves toward negative Z (the forward row of pods).
+ // The server moves and collides players, not the browser test.
  async function walkToPod(page,id,direction){
   await page.evaluate(()=>window.Game.look(0));
   const sideways=direction<0?'a':'d';
@@ -68,11 +69,11 @@ try{
   await page.keyboard.down('w');
   await host.waitForFunction(id=>{
    const p=window.__testMatch.players.find(p=>p.id===id);
-   return p&&p.shipLocal[2]>-2.6;
+   return p&&p.shipLocal[2]<-6.6;
   },id,{timeout:7000});
   await page.keyboard.up('w');
   const position=await host.evaluate(id=>window.__testMatch.players.find(p=>p.id===id).shipLocal.slice(),id);
-  assert.ok(position[0]*direction>5&&position[2]>-2.65,'operator physically walks across ship to a pod');
+  assert.ok(position[0]*direction>5&&position[2]<-6.55,'operator physically walks across ship to a pod');
   return position;
  }
  const hostId=await host.evaluate(()=>window.__testConnection.id);
