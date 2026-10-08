@@ -47,3 +47,31 @@ The High source-material preview loaded without JavaScript errors. Both sampled 
 The Low preview keeps the source colour textures with Lambert shading and renders the same geometry in three batches without JavaScript/WebGL errors. The measured software-render/readback medians were **215.0–253.2 ms**, approximately 39% lower than the respective High views. These measurements still do not establish acceptable real-game FPS; spatial visibility chunks, the decorative perimeter, collisions and real-GPU gameplay would need validation before replacement. [Low ground-level preview](larger-medieval-landscape-low-ground-view.png) · [Low recorded results](medieval-landscape-low-render-check.json).
 
 The pirate fort and castle-on-hills candidates were also inspected. The former has very little playable land; the latter has simpler untextured buildings. Neither is recommended as a larger replacement of comparable detail.
+
+## Larger military/industrial alternative: Platform 23
+
+[Complete source map](https://github.com/UnvanquishedAssets/map-plat23_src.dpkdir), **Platform 23**, © Jack “EmperorJack” Purvis / Unvanquished. It is a futuristic ship-support platform made for FPS matches, with detailed industrial structures, cargo cover, raised decks, side rooms and connecting passages. It is a science-fiction military/industrial setting rather than a modern forest army camp.
+
+The map is **CC BY-SA 3.0**, permitting redistribution and adaptation, including commercial use, with attribution and adaptations distributed under the same licence. See [upstream map attribution and licence](platform23-upstream-license.txt). The PK02 industrial textures are by Philip “Blazeeer” Klevestav, adapted for Unvanquished, under **CC BY 3.0**; see [texture credits](platform23-texture-license.txt) and [texture source](https://github.com/UnvanquishedAssets/tex-pk02_src.dpkdir). Candidate geometry and previews adapted from Platform 23 are offered under CC BY-SA 3.0, with the texture attribution retained.
+
+[Actual converted landing-deck preview](platform23-landing-deck.png) · [Whole converted layout](platform23-whole-layout.png) · [Converted corridor view](platform23-corridor.png)
+
+For comparison, [the author's original Unvanquished screenshot](https://raw.githubusercontent.com/UnvanquishedAssets/map-plat23_src.dpkdir/master/meta/plat23/plat23.webp) shows its original engine's lighting and effects. The screenshots in this repository are independently rendered converted source geometry; they are not generated concept art, an integrated Fortmulti map, or a reproduction of the original engine's baked lighting.
+
+### Measured source conversion
+
+- Source `.map`: **2,123,712 bytes**, **3,546 convex brushes** and **189 quadratic patches**. No external model entities were found.
+- Research conversion reconstructed every convex brush successfully (**zero invalid brushes**), omitting nonvisual common/sky faces. Quadratic patches use four subdivisions per patch segment.
+- Converted preview: **25,489 triangles**, approximately 65% fewer than the dungeon and 99% fewer than the Reactor Facility. This is a count of this specific conversion, not a published triangle count for the original compiled map. Refining curved surfaces or doing a proper BSP compile may change it.
+- At **32 source units per game metre**, actual rendered geometry spans **187 × 113.5 metres** horizontally, including surrounding rock/support structures. Combat paths and rooms occupy less than this bounding rectangle. Final scale and navigation still need validation against the game's player capsule.
+- **46 source-material batches** and **37 diffuse/editor texture images**. The self-contained preliminary GLB is **21,132,032 bytes**, largely uncompressed PNG texture payloads. Production conversion should retain appropriate diffuse/normal maps, reduce texture download size and partition visibility; low triangle count alone does not settle rendering cost.
+
+[Geometry reconstruction results](platform23-geometry-check.json) · [Renderer results](platform23-render-check.json)
+
+### Preliminary renderer checks
+
+The conversion loaded and rendered in the game's bundled Three.js WebGL renderer with no JavaScript errors and no WebGL errors in either sampled view. Lightweight Lambert shading retains source diffuse colour detail. The two sampled views submitted **45–46 draws** and **25,477–25,489 triangles**. Forced render/readback medians were **92.7–123.5 ms** on Chromium SwiftShader. These software-graphics measurements include synchronous pixel readback; they are not hardware FPS or full-game frame-rate results.
+
+The conversion does not reproduce the map compiler's baked illumination, visibility data, animated forcefields, terrain blending or special shader stages. Emissive lights and transparent editor textures are simple approximations for research. The native map's gameplay entities, collision brushes and spawn metadata have not been integrated. The next implementation would need production geometry/material conversion, clear landing pads, collision and traversal validation, building checks and full-game real-GPU profiling before claiming acceptable gameplay performance.
+
+The 340 × 320-metre FALLTIDE/Orbital Complex candidate was inspected and rejected for this request: its actual instanced geometry was approximately 310,000 triangles, and it retained the extensive enclosed-facility complexity the user wanted to avoid. Prop-only military kits and candidates without clear reuse rights were not treated as complete ready-to-integrate maps.

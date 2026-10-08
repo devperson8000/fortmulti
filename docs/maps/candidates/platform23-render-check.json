@@ -1,0 +1,45 @@
+{
+  "quality": "low",
+  "triangles": 25489,
+  "originalDraws": 46,
+  "batches": 46,
+  "size": [
+    187,
+    63.5,
+    113.5
+  ],
+  "center": [
+    0,
+    -15.75,
+    -56.75
+  ],
+  "views": [
+    {
+      "name": "front",
+      "floor": [
+        2.5,
+        15.5,
+        45.25
+      ],
+      "p50": 92.69999998807907,
+      "p95": 166,
+      "calls": 45,
+      "triangles": 25477,
+      "glError": 0
+    },
+    {
+      "name": "side",
+      "floor": [
+        56.5,
+        15.25,
+        3.25
+      ],
+      "p50": 123.5,
+      "p95": 158.10000002384186,
+      "calls": 46,
+      "triangles": 25489,
+      "glError": 0
+    }
+  ],
+  "errors": []
+}

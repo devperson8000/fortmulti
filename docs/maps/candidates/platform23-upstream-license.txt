@@ -1,0 +1,68 @@
+Platform 23
+
+Version: Beta 13
+
+By Emperor Jack
+
+An Atcs inspired map with some twists. For Unvanquished.
+
+______________________________________________________________________________________________
+
+Backstory: A ship platform on one of Humanity's many planets. Provides fuel and resource for incoming ships. Alien infestation spotted and a quarentine put in place. Human team teleported in to exterminate threat. Aliens wish to cut off supplies to ships in numerous areas on the planet and have attacked this platform.
+
+2vs2 or more
+3vs3 and 4vs4 most applicable
+______________________________________________________________________________________________
+
+Textures:
+
+Philip K's Pk02 @ www.philipk.net
+Very big thanks to him
+
+Also the trusty Ingar for the Osirion skybox texture
+
+Forcefield textures made by me
+
+Applications used:
+
+ -Netradiant
+ -Photoshop
+
+______________________________________________________________________________________________
+
+Map/Compile information:
+
+Brush count: 3495
+Entity count: 60
+
+-meta -custinfoparms -keeplights -samplesize 8 : 9 Seconds
+-vis -saveprt : 2 Seconds
+-light -fast -shade -dirty -patchshadows -samples 3 -bouncegrid -bounce 6 -samplesize 8  -lightmapsize 512 -deluxe : 471 Seconds
+______________________________________________________________________________________________
+
+Licensing:
+
+Creative Commons Attribution-Share Alike 3.0 License
+https://creativecommons.org/licenses/by-sa/3.0/
+
+You are free to:
+
+Share — copy and redistribute the material in any medium or format
+Adapt — remix, transform, and build upon the material
+for any purpose, even commercially.
+
+This license is acceptable for Free Cultural Works.
+
+The licensor cannot revoke these freedoms as long as you follow the license terms.
+
+Under the following terms:
+
+Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
+
+ShareAlike — If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
+
+No additional restrictions — You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
+
+______________________________________________________________________________________________
+
+By EmperorJack for Unvanquished
