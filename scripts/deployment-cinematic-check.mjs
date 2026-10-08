@@ -96,8 +96,10 @@ try{
   assert.equal(view.air,'landed');assert.equal(view.cinematic,false);
   assert.ok(Math.hypot(view.view.eye[0]-view.position[0],view.view.eye[2]-view.position[2])<.35,'camera finishes at the player rather than the pod');
  }
- await guest.keyboard.press('1');
- await guest.waitForFunction(()=>window.Game.input().slot===1,{timeout:5000});
+ // A fresh match intentionally starts without a weapon. Build selection
+ // proves the input handler is active without creating test-only inventory.
+ await guest.keyboard.press('z');
+ await guest.waitForFunction(()=>window.Game.input().slot===6,{timeout:5000});
  await guest.keyboard.down('w');
  assert.equal(await guest.evaluate(()=>window.Game.input().z),1,'movement unlocks after the salute');
  await guest.keyboard.up('w');
