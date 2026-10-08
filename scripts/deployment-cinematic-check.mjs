@@ -40,7 +40,7 @@ try{
  // show procedural fallback or hotlink external content.
  await Promise.all([host,guest].map(page=>page.waitForFunction(()=>{
   const stats=window.Game.environmentStats?.();
-  return stats?.readyKinds.includes('wood')&&stats?.readyKinds.includes('stone')&&stats.count>100;
+  return stats?.rendererReady&&stats.readyKinds.includes('wood')&&stats.readyKinds.includes('stone')&&stats.count>100;
  },{timeout:20000})));
  const environment=await Promise.all([host,guest].map(page=>page.evaluate(()=>window.Game.environmentStats())));
  assert.ok(environment.every(stats=>stats.drawBatches>0&&stats.drawBatches<30),'batch imported island models efficiently');
@@ -97,7 +97,7 @@ try{
   const time=DEPLOYMENT_CUES.impact+POD_RELEASE.hold+(phase==='opening'?POD_RELEASE.open*.55:POD_RELEASE.open+(phase==='walkout'?POD_RELEASE.exit*.5:POD_RELEASE.exit+POD_RELEASE.salute*.5));
   await guest.waitForFunction(t=>window.Game.deploymentView().musicTime>=t,time,{timeout:15000});
   const shot=await guest.evaluate(()=>({view:window.Game.deploymentView(),position:window.Game.pose().p.slice(),animation:window.Game.pose().animationState,salute:window.Game.pose().saluteProgress,input:window.Game.input()}));
-  assert.equal(shot.view.localVisible,true);assert.ok(shot.view.operatorOpacity>.99);assert.equal(shot.input.fire,false);assert.equal(shot.input.slot,0);
+  assert.equal(shot.view.localVisible,true,'Operator must render at '+phase+': '+JSON.stringify({shot,renderer:await guest.evaluate(()=>window.Game.environmentStats())}));assert.ok(shot.view.operatorOpacity>.99);assert.equal(shot.input.fire,false);assert.equal(shot.input.slot,0);
   if(phase==='opening'){assert.ok(shot.view.hatchOpen>.35&&shot.view.hatchOpen<=1,'the pod hatch has visibly opened');}
   else assert.ok(Math.hypot(shot.position[0]-shot.view.podPosition[0],shot.position[2]-shot.view.podPosition[2])>1);
   if(phase==='salute'){assert.ok(shot.salute>.99,'native salute is fully raised');assert.ok(shot.view.musicTime<DEPLOYMENT_MUSIC_END-.4);assert.equal(shot.view.saluteFraming,1);assert.equal(shot.view.returnProgress,0);assert.ok(Math.abs(shot.view.eye[0]-shot.position[0])<.01);assert.ok(shot.view.eye[2]>shot.position[2]+2,'camera views the front of the saluting character');}
