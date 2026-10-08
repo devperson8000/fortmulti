@@ -87,7 +87,7 @@ export function safeLandingPoint(destination,world,reserved=[]){
  const candidates=[[0,0]];
  for(let ring=1;ring<=12;ring++){const radius=ring*2.2,steps=Math.max(12,ring*8);for(let i=0;i<steps;i++){const angle=i/steps*Math.PI*2+.31;candidates.push([Math.cos(angle)*radius,Math.sin(angle)*radius]);}}
  for(const [dx,dz] of candidates){const x=requested.x+dx,z=requested.z+dz;if(Math.hypot(x,z)>292)continue;
-  const y=Number(world.height(x,z));if(!Number.isFinite(y))continue;
+  const y=Number(world.height(x,z));if(!Number.isFinite(y)||Number.isFinite(world.minLandingHeight)&&y<world.minLandingHeight)continue;
   // Reserve the full portrait orbit at selection time. A .75m body clearance
   // lets a nearby car or wall force the camera inside the capsule on landing.
   const blocked=obstacles.some(box=>Math.hypot(Math.max(box.min[0]-x,0,x-box.max[0]),Math.max(box.min[2]-z,0,z-box.max[2]))<CINEMATIC_CAMERA_RADIUS+.45&&box.max[1]>y-.15);

@@ -1,3 +1,4 @@
+import {ISLAND_POIS,drawIslandMap,militaryLayout,islandRoadRibbon} from './island-map.js';
 import './engine.js';
 import {Connection,Voice,SocialDirectory,uid} from './network.js';
 import {Match,placement,validBuild} from './simulation.js';
@@ -143,17 +144,17 @@ function leave(reason='Party left. Invite someone online to start another.',quie
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
 function start(){if(!game||!host||match||!everyoneReady())return;const ids=participantIds();if(ids.length<2)return;match=new Match(game.world,ids,$('mode').value);match.beginDeployment();matchId=uid();matchEpoch=Math.max(Date.now(),matchEpoch+1);snapshotFrame=-1;seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;sendSnapshot();updatePresence();status('Deployment ship secured · choose a landing zone and enter a pod.','success');}
 function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;const data={id:matchId,epoch:matchEpoch,frame:snapshotFrame+1,state};conn.send('snapshot',data);apply(data);}
-const LANDING_POIS=[{name:'SUNCREST',x:0,z:0},{name:'HARBOR REACH',x:-202,z:76},{name:'NEON GROVE',x:184,z:82},{name:'CROWN CITADEL',x:126,z:-188},{name:'DUSTY DEPOT',x:-92,z:-178},{name:'PINEWATCH',x:8,z:202}];
+const LANDING_POIS=ISLAND_POIS,LANDING_ROADS=militaryLayout().roads.map(islandRoadRibbon);
 function renderLandingMap(s,me){
  const canvas=$('landing-map'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,pad=30,scaleX=(w-pad*2)/584,scaleZ=(h-pad*2)/584,map=(x,z)=>[w/2+x*scaleX,h/2+z*scaleZ];
  ctx.clearRect(0,0,w,h);const bg=ctx.createLinearGradient(0,0,w,h);bg.addColorStop(0,'#122d43');bg.addColorStop(1,'#081927');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
  ctx.strokeStyle='#8dc0ce16';ctx.lineWidth=1;for(let i=0;i<=10;i++){const x=pad+i*(w-pad*2)/10,y=pad+i*(h-pad*2)/10;ctx.beginPath();ctx.moveTo(x,pad);ctx.lineTo(x,h-pad);ctx.stroke();ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke();}
- ctx.save();ctx.translate(w/2,h/2);ctx.fillStyle='#667e54';ctx.beginPath();ctx.ellipse(0,0,292*scaleX,292*scaleZ*.96,-.12,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#c8bb87';ctx.lineWidth=7;ctx.stroke();ctx.strokeStyle='#a6c98a';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,0,246*scaleX,247*scaleZ*.96,-.12,0,Math.PI*2);ctx.stroke();
- ctx.strokeStyle='#bcbca3';ctx.lineWidth=3;ctx.beginPath();for(const [a,b] of [[[-42,4],[-180,69]],[[45,6],[161,71]],[[28,-37],[113,-165]],[[-21,-39],[-80,-156]],[[7,45],[8,178]]]){ctx.moveTo(a[0]*scaleX,a[1]*scaleZ);ctx.lineTo(b[0]*scaleX,b[1]*scaleZ);}ctx.stroke();ctx.restore();
+ const [mx,my]=map(-320,-320);drawIslandMap(ctx,mx,my,640*scaleX,640*scaleZ);
+ ctx.strokeStyle='#acbba0';ctx.lineWidth=2;ctx.beginPath();for(const points of LANDING_ROADS)for(const [i,p] of points.entries()){const [x,y]=map(p.center[0],p.center[2]);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
  ctx.font='700 10px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
  for(const poi of LANDING_POIS){const [x,y]=map(poi.x,poi.z);ctx.beginPath();ctx.fillStyle='#ffe19a';ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#142b36';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#edf3e0';ctx.shadowColor='#061421';ctx.shadowBlur=4;ctx.fillText(poi.name,x,y-8);}
  const dest=window.Game?.landingChoice?.()||me?.destination;if(dest){const [x,y]=map(dest.x,dest.z);ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fillStyle='#60dafa55';ctx.fill();ctx.strokeStyle='#b8f8ff';ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.moveTo(x-14,y);ctx.lineTo(x+14,y);ctx.moveTo(x,y-14);ctx.lineTo(x,y+14);ctx.stroke();}
- ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='#d9edf0a0';ctx.font='700 9px Arial';ctx.fillText('N',w/2-4,8);ctx.fillText('ISLAND GRID · 1 UNIT / KM',14,h-19);
+ ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='#d9edf0a0';ctx.font='700 9px Arial';ctx.fillText('N',w/2-4,8);ctx.fillText('IRONWOOD ISLAND · DROP GRID',14,h-19);
  const picked=dest&&LANDING_POIS.reduce((best,poi)=>Math.hypot(dest.x-poi.x,dest.z-poi.z)<best.distance?{poi,distance:Math.hypot(dest.x-poi.x,dest.z-poi.z)}:best,{poi:LANDING_POIS[0],distance:Infinity});$('landing-destination').textContent=dest?`${picked.poi.name} · ${Math.round(dest.x)}, ${Math.round(dest.z)}`:'SELECT A DROP ZONE';
  $('landing-roster').textContent=s.players.filter(p=>p.hp>0).map(p=>`${playerName(p.id)} · ${p.deploymentState==='pod_ready'||p.deploymentState==='both_ready'?'POD READY':p.destination?'DESTINATION SET':'CHOOSING'}`).join('   /   ');
 }

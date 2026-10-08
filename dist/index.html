@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#081a31">
 <meta name="description" content="A browser-based multiplayer battle royale with a stationary deployment ship, selectable pod drops, building and voice chat.">
 <title>Horizon · Multiplayer</title>
+<link rel="icon" href="horizon-logo-transparent.webp" type="image/webp">
 <link rel="stylesheet" href="game.css">
 <link rel="stylesheet" href="lobby.css">
 <link rel="stylesheet" href="inventory-menu.css">
@@ -26,7 +27,7 @@
   <div id="compass">W &nbsp; · &nbsp; NW &nbsp; · &nbsp; <strong>N</strong> &nbsp; · &nbsp; NE &nbsp; · &nbsp; E</div>
   <button id="pause" aria-label="Pause game">Ⅱ</button>
 </header>
-<aside id="mapbox"><canvas id="map" width="180" height="180" aria-label="Minimap"></canvas><b>SUNCREST</b><div><span id="time">DEPLOYMENT</span><span id="remaining">1 LEFT</span><span id="score">◎ 0</span></div></aside>
+<aside id="mapbox"><canvas id="map" width="180" height="180" aria-label="Minimap"></canvas><b>COMMAND BASE</b><div><span id="time">DEPLOYMENT</span><span id="remaining">1 LEFT</span><span id="score">◎ 0</span></div></aside>
 <div id="mission" style="display:none"><small>PRIVATE PARTY</small><b>Own the island.</b><span>Drop, build and be the last player standing.</span></div>
 <div id="notice" role="status"></div><div id="crosshair"><i></i><i></i><i></i><i></i></div><div id="hitmarker">×</div><div id="damagevalue"></div><div id="buildhelp"></div><div id="interact-prompt"></div><div id="use-indicator" hidden></div>
 <section id="health"><div><span>▰ SHIELD</span><b id="shieldtext">100</b></div><div class="bar"><i id="shieldbar"></i></div><div><span>✚ HEALTH</span><b id="hptext">100</b></div><div class="bar green"><i id="hpbar"></i></div></section>
@@ -40,7 +41,7 @@
   <div id="landing-picker">
     <div class="deployment-title"><small>DEPLOYMENT CONTROL</small><b>Choose your drop zone</b><span id="landing-destination">SELECT A DROP ZONE</span></div>
     <canvas id="landing-map" width="520" height="340" aria-label="Choose a landing position on the island map"></canvas>
-    <div class="landing-quick-picks"><button data-landing="suncrest">SUNCREST</button><button data-landing="harbor">HARBOR REACH</button><button data-landing="neon">NEON GROVE</button><button data-landing="citadel">CROWN CITADEL</button><button data-landing="depot">DUSTY DEPOT</button><button data-landing="pinewatch">PINEWATCH</button></div>
+    <div class="landing-quick-picks"><button data-landing="suncrest">COMMAND BASE</button><button data-landing="harbor">HARBOR POST</button><button data-landing="neon">EAST GARRISON</button><button data-landing="citadel">RIDGE STATION</button><button data-landing="depot">SUPPLY DEPOT</button><button data-landing="pinewatch">PINEWATCH</button></div>
   </div>
   <div id="pod-status-card"><small>STAGING SHIP · STATIONARY</small><b id="pod-status">CHOOSE YOUR DROP ZONE</b><span id="pod-hint">Move through the ship · Press E at an available pod</span><i id="landing-roster"></i></div>
 </section>
