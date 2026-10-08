@@ -1,0 +1,14 @@
+{
+  "asset": {
+    "extras": {
+      "author": "Pixel (https://sketchfab.com/stefan.lengyel1)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/medieval-fantasy-book-06d5a80a04fc4c5ab552759e9a97d91a",
+      "title": "Medieval Fantasy Book"
+    },
+    "generator": "Sketchfab-12.65.0",
+    "version": "2.0"
+  },
+  "downloadSource": "https://raw.githubusercontent.com/wass08/r3f-3rd-person-controller-final/main/public/models/medieval_fantasy_book.glb",
+  "downloadBytes": 3876804
+}
