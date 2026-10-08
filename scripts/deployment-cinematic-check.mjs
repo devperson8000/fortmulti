@@ -39,17 +39,47 @@ try{
  assert.equal(await host.evaluate(()=>window.Game.input().z),1,'ship movement is enabled without a hidden solo Play click');
  await host.keyboard.up('w');
  checks.push('Multiplayer input activates automatically in the staging ship');
- // The first player must board and wait for a teammate; don't skip this with
- // an immediate two-player scripted launch.
- await host.evaluate(async()=>{
-  const {SHIP_PODS}=await import('/deployment-ship.js'),m=window.__testMatch,p=m.players[0],pod=SHIP_PODS[0];
-  if(!m.chooseLanding(p.id,{x:18,z:68}))throw Error('First landing rejected');
-  p.shipLocal=[pod.x,0,pod.z+pod.entryOffset];p.p=m.shipWorld(p.shipLocal);
- });
- // The keyboard must flow through Game.input -> host Match.input -> Match.tick.
- // A direct Match.enterPod() would hide broken in-game interaction handling.
+ // Both operators choose their destinations with the real on-screen map.
+ // Screen coordinates are derived from the same canvas mapping as app.js.
+ async function pickLanding(page,x,z){
+  const canvas=page.locator('#landing-map'),bounds=await canvas.boundingBox();
+  assert.ok(bounds&&bounds.width>0&&bounds.height>0,'landing map must be visible and interactive');
+  await canvas.click({position:{x:bounds.width*(.058+.884*(x/584+.5)),y:bounds.height*(.088+.824*(z/584+.5))}});
+ }
+ await pickLanding(host,18,68);
+ await host.waitForFunction(()=>Boolean(window.__testMatch.players[0].destination),{timeout:6000});
+ await pickLanding(guest,-85,70);
+ await host.waitForFunction(()=>Boolean(window.__testMatch.players[1].destination),{timeout:7000});
+ const chosen=await host.evaluate(()=>window.__testMatch.players.map(p=>p.destination));
+ assert.ok(Math.hypot(chosen[0].x-chosen[1].x,chosen[0].z-chosen[1].z)>10,'distinct selections must survive network transport');
+ checks.push('Both players pick distinct island landing zones using the visible map');
+
+ // Walk through the real ship from the middle aisle toward the accessible
+ // pods. The server moves and collides players, not the browser test.
+ async function walkToPod(page,id,direction){
+  await page.evaluate(()=>window.Game.look(0));
+  const sideways=direction<0?'a':'d';
+  await page.keyboard.down(sideways);
+  await host.waitForFunction(({id,direction})=>{
+   const p=window.__testMatch.players.find(p=>p.id===id);
+   return p&&p.shipLocal[0]*direction>5.1;
+  },{id,direction},{timeout:7000});
+  await page.keyboard.up(sideways);
+  await page.keyboard.down('w');
+  await host.waitForFunction(id=>{
+   const p=window.__testMatch.players.find(p=>p.id===id);
+   return p&&p.shipLocal[2]>-2.6;
+  },id,{timeout:7000});
+  await page.keyboard.up('w');
+  const position=await host.evaluate(id=>window.__testMatch.players.find(p=>p.id===id).shipLocal.slice(),id);
+  assert.ok(position[0]*direction>5&&position[2]>-2.65,'operator physically walks across ship to a pod');
+  return position;
+ }
+ const hostId=await host.evaluate(()=>window.__testConnection.id);
+ const guestId=await guest.evaluate(()=>window.__testConnection.id);
+ await walkToPod(host,hostId,-1);
  await host.keyboard.down('e');
- await host.waitForFunction(()=>window.__testMatch.players[0].deploymentState==='entering_pod',{timeout:6000});
+ await host.waitForFunction(id=>window.__testMatch.players.find(p=>p.id===id)?.deploymentState==='entering_pod',hostId,{timeout:6000});
  await host.keyboard.up('e');
  await host.waitForFunction(()=>window.Game.pose().deploymentState==='pod_ready',{timeout:10000});
  await host.waitForFunction(()=>document.body.classList.contains('pod-exterior'),{timeout:10000});
@@ -59,16 +89,12 @@ try{
  assert.equal(waiting.cinematic,false,'no cinematic before teammate boards');
  assert.ok(Math.hypot(waiting.camera[0]-waiting.player[0],waiting.camera[2]-waiting.player[2])>3,'camera is outside sealed pod');
  await host.screenshot({path:artifacts+'/00-waiting-pod.png'});
- checks.push('Host presses E to board and waits in sealed pod with exterior camera until teammate arrives');
- await host.evaluate(async()=>{
-  const {SHIP_PODS}=await import('/deployment-ship.js'),m=window.__testMatch,p=m.players[1],pod=SHIP_PODS[1];
-  if(!m.chooseLanding(p.id,{x:-85,z:70}))throw Error('Second landing rejected');
-  p.shipLocal=[pod.x,0,pod.z+pod.entryOffset];p.p=m.shipWorld(p.shipLocal);
- });
- // Here E is sent by the GUEST tab and has to survive the network transport.
+ checks.push('Host walks from middle aisle, presses E and waits in a sealed pod with exterior camera');
+
+ await walkToPod(guest,guestId,1);
  await guest.waitForFunction(()=>window.Game.pose().deploymentState==='pod_available',{timeout:6000});
  await guest.keyboard.down('e');
- await host.waitForFunction(()=>window.__testMatch.players[1].deploymentState==='entering_pod',{timeout:7000});
+ await host.waitForFunction(id=>window.__testMatch.players.find(p=>p.id===id)?.deploymentState==='entering_pod',guestId,{timeout:7000});
  await guest.keyboard.up('e');
  await host.waitForFunction(()=>window.__testMatch.deployment.stage==='launching',{timeout:15000});
  await Promise.all([host,guest].map(p=>p.waitForFunction(()=>document.body.classList.contains('pod-exterior'),{timeout:10000})));
