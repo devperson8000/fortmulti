@@ -171,7 +171,7 @@ test('audio source never repeats when the supplied clip is shorter than the cine
  const c=context(),player=createDeploymentAudio({fetchAudio});await player.load(c.ctx);
  player.update(c.ctx,'short',25);
  assert.deepEqual(c.starts,[[10,25]]);
- assert.deepEqual(c.stops,[[13]],'mock 28-second recording ends at its natural end');
+ assert.deepEqual(c.stops,[],'the short recording ends on its own with no redundant stop');
  c.sources[0].onended();assert.equal(player.update(c.ctx,'short',27),null);
  assert.equal(c.starts.length,1,'the song cannot quietly start over');
 });
