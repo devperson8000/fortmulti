@@ -8,7 +8,7 @@ export function renderFacilityPass(renderer,scene,camera,group,depthMaterials,{d
 // Initialize those resources while the lobby still reports that the map is loading.
 export function warmFacilityResources(renderer,scene,camera,group){
  const uploaded=new Set();
- for(const mesh of group.children)for(const material of [mesh.material,mesh.userData.standardMaterial,mesh.userData.simpleMaterial]){
+ for(const mesh of group.children)for(const material of [mesh.material,mesh.userData.standardMaterial,mesh.userData.simpleMaterial,mesh.userData.mediumMaterial]){
   if(!material)continue;
   for(const value of Object.values(material))if(value?.isTexture&&!uploaded.has(value)){renderer.initTexture(value);uploaded.add(value);}
  }

@@ -67,3 +67,10 @@ for(const model of lodManifest.models)for(const primitives of model.meshes)for(c
  totalMid+=p.lods[0].length;totalFar+=p.lods[1].length;
 }
 lodManifest.lodDistances=[15,40];writeFileSync(output+'/environment.json',JSON.stringify(lodManifest));writeFileSync(output+'/geometry.bin.gz',gzipSync(Buffer.concat(lodChunks),{level:9}));console.log(JSON.stringify({fullTriangles:totalFull/3,midTriangles:totalMid/3,farTriangles:totalFar/3,gzipBytes:readFileSync(output+'/geometry.bin.gz').length}));
+
+// Improve GPU vertex locality without changing the authored surfaces or LODs.
+const {optimizeReactorBuffers}=await import('./optimize-reactor-buffers.mjs');
+console.log(await optimizeReactorBuffers(output));
+
+const {chunkReactorVisibility}=await import('./chunk-reactor-visibility.mjs');
+console.log(await chunkReactorVisibility(output));

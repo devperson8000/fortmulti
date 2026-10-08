@@ -75,7 +75,7 @@ export class MatchCharacterRenderer{
    this.facilityDepthMaterials=[THREE.FrontSide,THREE.BackSide,THREE.DoubleSide].map(side=>new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:true,side,fog:false,toneMapped:false}));
    const camera=new THREE.PerspectiveCamera(75,1,.15,820);camera.position.set(140,12,0);camera.lookAt(0,8,0);
    prepareFacilityDepth(this.facilityEnvironment.group,this.facilityDepthMaterials);this.renderer.resetState();const depthCompiled=this.renderer.compileAsync(this.facilityScene,camera);restoreFacilityColor(this.facilityEnvironment.group);this.restoreRawState();await depthCompiled;this.restoreRawState();
-   for(const quality of ['low','high']){this.facilityEnvironment.setQuality(quality);this.renderer.resetState();const compiled=this.renderer.compileAsync(this.facilityScene,camera);this.restoreRawState();await compiled;this.restoreRawState();}
+   for(const quality of ['low','medium','high']){this.facilityEnvironment.setQuality(quality);this.renderer.resetState();const compiled=this.renderer.compileAsync(this.facilityScene,camera);this.restoreRawState();await compiled;this.restoreRawState();}
    this.facilityEnvironment.setQuality(quality);this.renderer.resetState();try{warmFacilityResources(this.renderer,this.facilityScene,camera,this.facilityEnvironment.group);}finally{this.restoreRawState();}
    return true;
   })().catch(error=>{this.facilityEnvironment?.dispose?.();this.facilityEnvironment=null;this.facilityReflection?.dispose();this.facilityDepthMaterials?.forEach(material=>material.dispose());this.facilityScene=null;this.facilityLoading=null;throw error;});
@@ -301,6 +301,10 @@ export class MatchCharacterRenderer{
  }
  bindRawProgram(program,positionAttribute,colorAttribute){this.rawProgram=program;this.rawPosition=positionAttribute;this.rawColor=colorAttribute;}
  restoreRawState(){
-  if(!this.rawProgram)return;const gl=this.gl;gl.useProgram(this.rawProgram);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.clearColor(.48,.77,.88,1);gl.enableVertexAttribArray(this.rawPosition);gl.enableVertexAttribArray(this.rawColor);
+  if(!this.rawProgram)return;
+  // Raw attribute pointers must never modify the last Three mesh's cached VAO.
+  // resetState detaches it and invalidates Three's texture/program state cache.
+  this.renderer.resetState();
+  const gl=this.gl;gl.useProgram(this.rawProgram);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.clearColor(.48,.77,.88,1);gl.enableVertexAttribArray(this.rawPosition);gl.enableVertexAttribArray(this.rawColor);
  }
 }
