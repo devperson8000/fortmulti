@@ -19,7 +19,7 @@ async function open(){
    return start.apply(this,args);
   };
  });
- await p.goto(url+'/?local=1');await p.waitForFunction(()=>Boolean(window.Game));
+ await p.addInitScript(()=>localStorage.setItem('horizon-callsign',JSON.stringify({name:'Ranger'})));await p.goto(url+'/?local=1');await p.waitForFunction(()=>Boolean(window.Game));
  await p.evaluate(async()=>{
   const [{Connection},{Match}]=await Promise.all([import('/network.js'),import('/simulation.js')]);
   const originalOpen=Connection.prototype.open;Connection.prototype.open=async function(...args){await originalOpen.apply(this,args);window.__testConnection=this;};

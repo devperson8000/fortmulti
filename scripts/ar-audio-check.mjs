@@ -20,7 +20,7 @@ try{
   AudioBufferSourceNode.prototype.start=function(...args){window.__shotContext=this.context;window.__plays.push({duration:this.buffer?.duration,loop:this.loop,buffer:this.buffer,time:this.context.currentTime});this.addEventListener('ended',()=>window.__ends++);return start.apply(this,args);};
   AudioContext.prototype.decodeAudioData=function(...args){window.__decodes++;return decode.apply(this,args);};
  });
- await page.goto(url);await page.waitForFunction(()=>Boolean(window.Game));
+ await page.addInitScript(()=>localStorage.setItem('horizon-callsign',JSON.stringify({name:'Ranger'})));await page.goto(url);await page.waitForFunction(()=>Boolean(window.Game));
  await page.evaluate(async()=>{
   await window.Game.startAudio();const {Match}=await import('/simulation.js');
   const match=new Match({height:()=>0,obstacles:[]},['audio-test','target']);match.phase='playing';

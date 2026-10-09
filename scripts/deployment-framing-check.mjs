@@ -7,7 +7,7 @@ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTA
 const page=await browser.newPage({viewport:{width:1280,height:720}}),errors=[],results=[];
 page.on('pageerror',e=>errors.push(e.message));
 try{
- await page.goto(url);await page.waitForFunction(()=>Boolean(window.Game));
+ await page.addInitScript(()=>localStorage.setItem('horizon-callsign',JSON.stringify({name:'Ranger'})));await page.goto(url);await page.waitForFunction(()=>Boolean(window.Game));
  await page.evaluate(async()=>{
   const [{Match},{MatchCharacterRenderer},{SHIP_PODS},{DEPLOYMENT_CUES,MUSIC_START},{DEPLOYMENT_TIMELINE},THREE]=await Promise.all([import('/simulation.js'),import('/match-character-renderer.js'),import('/deployment-ship.js'),import('/deployment-cinematic.js'),import('/deployment-sequence.js'),import('three')]);
   const render=MatchCharacterRenderer.prototype.render;MatchCharacterRenderer.prototype.render=function(...args){window.__renderer=this;return render.apply(this,args);};

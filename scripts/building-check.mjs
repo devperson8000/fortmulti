@@ -7,7 +7,7 @@ await mkdir(artifacts,{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),args:['--no-sandbox','--enable-unsafe-swiftshader','--disable-background-timer-throttling','--disable-renderer-backgrounding']});
 const context=await browser.newContext({viewport:{width:1280,height:720}}),checks=[],errors=[];
 async function open(){
- const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(url+'/?local=1');await p.waitForFunction(()=>!!window.Game);
+ const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));await p.addInitScript(()=>localStorage.setItem('horizon-callsign',JSON.stringify({name:'Ranger'})));await p.goto(url+'/?local=1');await p.waitForFunction(()=>!!window.Game);
  await p.evaluate(async()=>{const[{Connection},{Match}]=await Promise.all([import('/network.js'),import('/simulation.js')]);const open=Connection.prototype.open;Connection.prototype.open=async function(...args){await open.apply(this,args);window.__testConnection=this;};const round=Match.prototype.startRound;Match.prototype.startRound=function(...args){const result=round.apply(this,args);window.__testMatch=this;return result;};});return p;
 }
 try{

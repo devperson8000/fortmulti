@@ -4,10 +4,17 @@ import './engine.js';
 import {Connection,Voice,SocialDirectory,uid} from './network.js';
 import {Match,placement,validBuild} from './simulation.js';
 import {lobbyTabState,orderPartyProfiles} from './lobby-state.js';
+import {requireNickname,restoreIdentity} from './nickname.js';
+import {createHCS} from './hcs-client.js';
+
+restoreIdentity();
+await requireNickname();
+
 import {networkCadence,accumulateInput,acceptSnapshot} from './network-tuning.js';
 
 const $=id=>document.getElementById(id),game=window.Game;
 let conn=null,peers=new Map(),host=false,ready=false,match=null,snapshot=null,matchId='',seenEvent=0,lastHello=0,lastPing=0,pingCursor=0,lastSnap=0,lastInput=0,pendingInput=null,busy=false,voiceWanted=false,muted=false,showMenu=false,snapshotFrame=-1,matchEpoch=0;
+let officialColors=null;
 let selectedMap='island',startingMatch=false,mapGeneration=0,pendingSnapshot=null,loadingSnapshot=false;
 const validMap=id=>id==='island'||id==='facility';
 const mapName=id=>id==='facility'?'PLATFORM 23':'IRONWOOD ISLAND';
@@ -22,7 +29,7 @@ const cleanName=v=>String(v||'Ranger').trim().replace(/\s+/g,' ').slice(0,20)||'
 const cleanColor=v=>/^[0-9a-f]{6}$/i.test(v||'')?v:'408faf';
 const activePeers=()=>[...peers.values()].filter(p=>Date.now()-p.lastSeen<14000);
 const playerName=id=>id===conn?.id?profile.name:(peers.get(id)?.name||'Player');
-const colors=()=>Object.fromEntries([[conn?.id,profile.color],...activePeers().map(p=>[p.id,p.color])]);
+const colors=()=>window.HorizonHCS?.official&&officialColors?officialColors:Object.fromEntries([[conn?.id,profile.color],...activePeers().map(p=>[p.id,p.color])]);
 const participantIds=()=>{if(!conn)return[];const ids=[conn.id,...activePeers().map(p=>p.id)],leader=conn.host||conn.id;return [leader,...ids.filter(id=>id!==leader).sort()].slice(0,conn.maxPlayers||8);};
 const inMatch=()=>!!(match||snapshot)&&!window.Duel?.lobby;
 const currentActivity=()=>inMatch()?'match':conn?'party':'online';
@@ -105,9 +112,10 @@ function refresh(){
 function focusOnline(){const panel=$('social-panel');panel.classList.add('open','attention');panel.setAttribute('aria-hidden','false');$('social-scrim').hidden=false;setTimeout(()=>panel.classList.remove('attention'),800);}
 function closeOnline(){const panel=$('social-panel');panel.classList.remove('open','attention');panel.setAttribute('aria-hidden','true');$('social-scrim').hidden=true;}
 function selectLobbyTab(tab){
- const state=lobbyTabState(tab),tabs=[['lobby-play-toggle','play'],['profile-toggle','outfit'],['character-preview-toggle','character']];
+ const state=lobbyTabState(tab),tabs=[['lobby-play-toggle','play'],['profile-toggle','outfit'],['character-preview-toggle','character'],['hcs-toggle','hcs']];
  for(const[id,name]of tabs){const button=$(id),active=name===state.activeTab;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));}
  document.body.classList.toggle('profile-open',state.profileOpen);document.body.classList.toggle('character-preview-open',state.characterPreview);
+ document.body.classList.toggle('hcs-open',state.activeTab==='hcs');$('hcs-panel').hidden=state.activeTab!=='hcs';
  $('character-preview-panel').hidden=!state.characterPreview;if(window.Duel)window.Duel.characterPreview=state.characterPreview;
 }
 function toggleProfile(force){const open=force??!document.body.classList.contains('profile-open');selectLobbyTab(open?'outfit':'play');}
@@ -150,7 +158,7 @@ async function respondInvite(inv,accept){
  finally{renderInvites();refresh();}
 }
 
-function resetMatchState(){mapGeneration++;pendingSnapshot=null;startingMatch=false;match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';$('deployment-ui').hidden=true;window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('deployment','dropping','deployment-cinematic');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear({resetInventory:true});document.exitPointerLock?.();}
+function resetMatchState(){officialColors=null;mapGeneration++;pendingSnapshot=null;startingMatch=false;match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';$('deployment-ui').hidden=true;window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('deployment','dropping','deployment-cinematic');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear({resetInventory:true});document.exitPointerLock?.();}
 function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
 async function start(){
@@ -161,6 +169,7 @@ async function start(){
   await game.setMap(mapId);
   if(conn!==connection||generation!==mapGeneration||!host||selectedMap!==mapId||!everyoneReady())return;
   const ids=participantIds();if(ids.length<2)return;
+  if(!conn.local&&await window.HorizonHCS?.startParty(conn.room,mapId,$('mode').value)){ready=false;status('Official qualifying game · preparing deployment.','success');return;}
   match=new Match(game.world,ids,$('mode').value);match.beginDeployment();matchId=uid();matchEpoch=Math.max(Date.now(),matchEpoch+1);snapshotFrame=-1;seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;sendSnapshot();updatePresence();status('Deployment ship secured · choose a landing zone and enter a pod.','success');
  }catch(e){ready=false;hello();status('Map could not load. Please ready up to try again.','error');}
  finally{startingMatch=false;refresh();}
@@ -253,7 +262,7 @@ function receive(m){
  if(m.type==='inventory-ack'&&m.from===conn.host&&!host&&d.matchId===matchId&&d.epoch===matchEpoch){game.ackInventory(d.ack);return;}
  if(m.type==='input'&&host&&match&&d.id===matchId&&match.ids.includes(m.from)){match.input(m.from,d.input);return;}
  if(m.type==='chat'&&peer&&typeof d.text==='string'){say(peer.name,d.text.slice(0,200));return;}
- if(m.type==='leave'){if(m.from===conn.host&&!host){leave('The party leader left, so the party was closed.');return;}removePeer(m.from);return;}
+ if(m.type==='leave'){if(m.from===conn.host&&!host&&!window.HorizonHCS?.official){leave('The party leader left, so the party was closed.');return;}removePeer(m.from);return;}
  if(m.type==='lobby'&&m.from===conn.host&&!host){resetToLobby(false);return;}
  if(m.type==='lobby-request'&&host){resetToLobby(true);return;}
  if(m.type==='mode'&&m.from===conn.host&&!host&&['build','town'].includes(d.mode)){if($('mode').value!==d.mode){$('mode').value=d.mode;ready=false;hello();refresh();status('Party leader changed the match mode · ready up again.');}return;}
@@ -263,7 +272,7 @@ function receive(m){
  if(m.type==='pong'&&Number.isFinite(d.time)){latencies.set(m.from,Math.max(0,Date.now()-d.time));updateNetworkChip();}
 }
 
-window.Duel={moveInventory(operation){if(!conn||!snapshot||snapshot.phase!=='playing')return;if(host&&match){game.ackInventory(match.moveInventory(conn.id,operation));snapshot=match.snapshot();sendSnapshot(snapshot);}else conn.send('inventory-move',{id:matchId,epoch:matchEpoch,operation},conn.host);},active:true,lobby:true,characterPreview:false,round:0,myColor:profile.color,party:partyProfiles(),peerColors:{},menu(){game.clear();if(this.lobby)return;showMenu=true;$('match-actions').hidden=false;$('resume').hidden=false;$('rematch').hidden=snapshot?.phase!=='done';$('back-lobby').hidden=false;document.exitPointerLock?.();},preview(){const p=game.pose(),i=game.input();return placement(p,i,game.world,snapshot?.structures||[]);},valid(s){return !!snapshot&&validBuild(s,snapshot.structures,snapshot.players,game.world);},render(dt){if(snapshot&&conn)game.apply(snapshot,conn.id,colors(),dt);}};
+window.Duel={moveInventory(operation){if(window.HorizonHCS?.active){window.HorizonHCS.moveInventory(operation);return;}if(!conn||!snapshot||snapshot.phase!=='playing')return;if(host&&match){game.ackInventory(match.moveInventory(conn.id,operation));snapshot=match.snapshot();sendSnapshot(snapshot);}else conn.send('inventory-move',{id:matchId,epoch:matchEpoch,operation},conn.host);},active:true,lobby:true,characterPreview:false,round:0,myColor:profile.color,party:partyProfiles(),peerColors:{},menu(){game.clear();if(window.HorizonHCS?.active&&!window.HorizonHCS.official){document.exitPointerLock?.();return;}if(this.lobby)return;showMenu=true;$('match-actions').hidden=false;$('resume').hidden=false;$('rematch').hidden=snapshot?.phase!=='done';$('back-lobby').hidden=false;document.exitPointerLock?.();},preview(){const p=game.pose(),i=game.input();return placement(p,i,game.world,snapshot?.structures||[]);},valid(s){return !!snapshot&&validBuild(s,snapshot.structures,snapshot.players,game.world);},render(dt){if(window.HorizonHCS?.render(dt))return;if(snapshot&&conn)game.apply(snapshot,conn.id,colors(),dt);}};
 
 $('create').onclick=()=>connect(true);
 $('join').onclick=()=>connect(false);
@@ -271,6 +280,7 @@ $('leave').onclick=$('forfeit').onclick=()=>leave();
 $('invite-more').onclick=focusOnline;
 $('open-online').onclick=$('social-toggle').onclick=$('footer-social').onclick=focusOnline;
 $('social-close').onclick=$('social-scrim').onclick=closeOnline;
+$('hcs-toggle').onclick=$('hcs-promo').onclick=()=>selectLobbyTab('hcs');
 $('lobby-play-toggle').onclick=()=>selectLobbyTab('play');$('profile-toggle').onclick=()=>toggleProfile();$('profile-close').onclick=()=>toggleProfile(false);$('character-preview-toggle').onclick=()=>selectLobbyTab('character');
 $('online-refresh').onclick=()=>social?pollSocial():startSocial();
 $('ready').onclick=()=>{if(!conn||match)return;ready=!ready;game?.startAudio({deployment:true});hello();refresh();if(host)start();};
@@ -288,12 +298,12 @@ $('map-choice').onchange=()=>{
  const id=$('map-choice').value;if(!validMap(id))return;selectedMap=id;ready=false;for(const p of peers.values())p.ready=false;
  conn?.send('map',{mapId:selectedMap});hello();refresh();status('Map changed · everyone needs to ready up again.');
 };
-$('name').onchange=$('name').onblur=()=>{profile.name=cleanName($('name').value);$('name').value=profile.name;writeStore('duel-profile',profile);ready=false;hello();refresh();updatePresence();};
-$('outfit').onchange=()=>{profile.color=cleanColor($('outfit').value);writeStore('duel-profile',profile);ready=false;hello();refresh();updatePresence();};
+$('name').onchange=$('name').onblur=()=>{profile.name=cleanName($('name').value);$('name').value=profile.name;writeStore('duel-profile',profile);ready=false;hello();refresh();updatePresence();window.HorizonHCS?.updateProfile();};
+$('outfit').onchange=()=>{profile.color=cleanColor($('outfit').value);writeStore('duel-profile',profile);ready=false;hello();refresh();updatePresence();window.HorizonHCS?.updateProfile();};
 $('mode').onchange=()=>{if(!host&&conn)return;ready=false;for(const p of peers.values())p.ready=false;if(conn)conn.send('mode',{mode:$('mode').value});hello();refresh();status('Match mode changed · everyone needs to ready up again.');};
 $('copy').onclick=async()=>{if(!conn)return;try{await navigator.clipboard.writeText(conn.code);status('Fallback party code copied.');}catch{status(`Fallback code: ${conn.code}`);}};
 $('resume').onclick=()=>{showMenu=false;$('match-actions').hidden=true;game.capture();};
-$('rematch').onclick=$('back-lobby').onclick=()=>{if(host)resetToLobby(true);else conn?.send('lobby-request');};
+$('rematch').onclick=$('back-lobby').onclick=()=>{if(window.HorizonHCS?.active){window.HorizonHCS.stop();return;}if(host)resetToLobby(true);else conn?.send('lobby-request');};
 $('chat-form').onsubmit=e=>{e.preventDefault();const text=$('message').value.trim();if(!text||!conn||peers.size<1)return;conn.send('chat',{text});say(profile.name,text);$('message').value='';};
 function toggleChat(force){const content=$('chat-content'),open=force??content.hidden;content.hidden=!open;$('chat-toggle').textContent=open?'−':'+';$('chat-toggle').setAttribute('aria-expanded',String(open));if(open)$('message').focus();}
 $('chat-toggle').onclick=()=>toggleChat();
@@ -310,14 +320,15 @@ window.addEventListener('beforeunload',()=>{voice.stop();conn?.close();social?.c
 
 let previous=performance.now();
 setInterval(()=>{
- const now=performance.now(),dt=Math.max(0,(now-previous)/1000);previous=now;if(!conn)return;
+ const now=performance.now(),dt=Math.max(0,(now-previous)/1000);previous=now;if(window.HorizonHCS?.active&&!window.HorizonHCS.official)return;if(!conn)return;
  const cadence=networkCadence(partyProfiles().length);
  if(now-lastHello>=cadence.helloMs){hello();lastHello=now;}
  if(host&&now-lastPing>=cadence.pingMs){const live=activePeers();if(live.length){const peer=live[pingCursor++%live.length];conn.send('ping',{time:Date.now()},peer.id);}lastPing=now;}
- for(const p of [...peers.values()])if(Date.now()-p.lastSeen>19000){if(p.id===conn.host&&!host){leave('The party leader disconnected.');return;}removePeer(p.id,'disconnected');}
+ for(const p of [...peers.values()])if(Date.now()-p.lastSeen>19000){if(p.id===conn.host&&!host&&!window.HorizonHCS?.official){leave('The party leader disconnected.');return;}removePeer(p.id,'disconnected');}
+ if(window.HorizonHCS?.active)return;
  if(match&&host){match.input(conn.id,showMenu?{}:game.input());match.tick(dt,{deploymentElapsed:match.phase==='deployment'?game.audioDeploymentElapsed(match.deployment.sequenceId):null});snapshot=match.snapshot();if(now-lastSnap>=cadence.snapshotMs){sendSnapshot(snapshot);lastSnap=now;}}
  else if(snapshot&&!host){pendingInput=accumulateInput(pendingInput,showMenu?{}:game.input());if(now-lastInput>=cadence.inputMs){conn.send('input',{id:matchId,input:pendingInput},conn.host);pendingInput=null;lastInput=now;}}
 },33);
 
-renderVoice();refresh();startSocial();
+renderVoice();refresh();startSocial().finally(()=>{window.HorizonHCS=createHCS({config,session:()=>social?.session||conn?.session,profile:()=>profile,leaveParty:()=>leave('',true),returnLobby:()=>resetToLobby(false),applyOfficial:data=>{officialColors=Object.fromEntries((data.profiles||[]).map(p=>[p.id,p.color]));apply(data);}});});
 if(!game){const warning=document.createElement('div');warning.id='graphics-warning';warning.textContent='3D graphics are unavailable. Enable graphics acceleration in Chrome and restart it. Lobby, invites and chat are still available.';document.body.append(warning);}

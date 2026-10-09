@@ -201,3 +201,7 @@ Run `npm run test:platform23-browser` (also available as `test:facility-browser`
 The 9 October 2026 pass reviewed both maps, all eight weapons, native hand/finger grips, crouch/slide posture, combat bounds, inventory, chest opening, sampled audio, the military lobby, outfits, compass/scope range, and both deployment sequences. It also fixes quick interaction taps, releases cloned weapon skeleton textures, and skips animation work for operators hidden inside sealed pods. [Audit and measured limits](docs/polish/full-game-polish.md) · [Actual screenshots and browser results](screenshots/full-polish).
 
 Run `npm run test:pickup-browser` against the running app to verify exact displayed pickups for all eight guns on both maps, including touch interaction. Host validation checks the requested instance, native model bounds, eye origin, range and map/build/terrain line of sight. If weapon assets or their floor scale change, regenerate the shared bounds with `node scripts/pickup-bounds.mjs`.
+
+## Horizon Championship Series
+
+HCS adds nickname onboarding, official qualification, three-week Sydney finals and a delayed spectator broadcast. See [HCS rules and deployment](docs/HCS.md) for service setup and verification. Live rankings require the separately hosted referee and Supabase migration.

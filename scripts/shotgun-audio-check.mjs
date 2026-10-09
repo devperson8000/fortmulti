@@ -7,7 +7,7 @@ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTA
 try{
  const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{window.__sounds=[];const start=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...args){window.__sounds.push({source:this,buffer:this.buffer,args,rate:this.playbackRate.value,ended:false});this.addEventListener('ended',()=>window.__sounds.find(v=>v.source===this).ended=true);return start.apply(this,args);};});
- await page.goto(url);await page.waitForFunction(()=>Boolean(window.Game));
+ await page.addInitScript(()=>localStorage.setItem('horizon-callsign',JSON.stringify({name:'Ranger'})));await page.goto(url);await page.waitForFunction(()=>Boolean(window.Game));
  const blast=await page.evaluate(async()=>{
   await window.Game.startAudio();const {Match}=await import('/simulation.js');const match=new Match({height:()=>0,obstacles:[]},['me','peer']);match.phase='playing';match.players.forEach((p,i)=>{p.air='landed';p.p=i?[200,0,200]:[0,0,0];p.vy=0;p.hp=100;p.slot=1;p.inventory=[{id:'sg',type:'shotgun',ammo:5},null,null,null,null];p.equip=0;});
   window.__sgMatch=match;match.input('me',{slot:1,fire:true});match.tick(.02);const event=match.events.find(e=>e.type==='shot');window.Game.effect(event,'me');return {pellets:event.traces.length,sounds:window.__sounds.length,duration:window.__sounds[0]?.buffer.duration};

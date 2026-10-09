@@ -10,7 +10,7 @@ const page=await browser.newPage({viewport:{width:800,height:600}}),errors=[];
 page.on('pageerror',error=>errors.push(error.message));
 try{
  await page.route('**/inventory-polish-lab',route=>route.fulfill({contentType:'text/html',body:`<link rel="stylesheet" href="/game.css"><link rel="stylesheet" href="/inventory-menu.css">${dialog}`}));
- await page.goto(url+'/inventory-polish-lab');
+ await page.addInitScript(()=>localStorage.setItem('horizon-callsign',JSON.stringify({name:'Ranger'})));await page.goto(url+'/inventory-polish-lab');
  await page.evaluate(async()=>{
   const {createInventoryMenu}=await import('/inventory-menu.js');
   const state={alive:true,phase:'playing',slot:1,inventory:[{id:'a',type:'ar',ammo:17},{id:'b',type:'shotgun',ammo:3},{id:'c',type:'smg',ammo:23},{id:'d',type:'sniper',ammo:2},null]};

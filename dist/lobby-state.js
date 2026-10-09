@@ -3,6 +3,6 @@ export function orderPartyProfiles(profiles){
 }
 
 export function lobbyTabState(tab){
- const activeTab=['play','outfit','character'].includes(tab)?tab:'play';
+ const activeTab=['play','outfit','character','hcs'].includes(tab)?tab:'play';
  return {activeTab,characterPreview:activeTab==='character',profileOpen:activeTab==='outfit'};
 }

@@ -6,7 +6,7 @@ const url=process.env.GAME_TEST_URL||'http://127.0.0.1:4174',output=(process.env
 await mkdir(output,{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),headless:true,args:['--no-sandbox','--disable-gpu']});
 try{
- const page=await browser.newPage();await page.goto(url);
+ const page=await browser.newPage();await page.addInitScript(()=>localStorage.setItem('horizon-callsign',JSON.stringify({name:'Ranger'})));await page.goto(url);
  const results=[];
  for(const sampleRate of[44100,48000])for(const offset of[0,27.2,29.75,29.82,29.834]){
   const result=await page.evaluate(async({sampleRate,offset})=>{
