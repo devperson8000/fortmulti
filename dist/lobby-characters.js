@@ -4,9 +4,10 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkinned} from 'three/addons/utils/SkeletonUtils.js';
 import {resolveLobbyRig,sampleRightHandFingerPose} from './lobby-rig.js';
 import {firstPersonCalibration} from './first-person-calibration.js';
-import {poseWeaponHand,supportHandPose} from './soldier-arms.js';
+import {poseLobbyRifle} from './lobby-rifle.js';
 import {poseNativeSalute} from './match-character-renderer.js';
 
+export const lobbyDiagnostics={snapshot:()=>[]};
 const canvas=document.getElementById('lobby-characters');
 if(canvas){
  const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,powerPreference:'high-performance'});
@@ -23,7 +24,7 @@ if(canvas){
  const rim=new THREE.DirectionalLight(0x70d9ff,1.8);rim.position.set(5,4,-4);scene.add(rim);
  const fill=new THREE.DirectionalLight(0x9bbdff,1.25);fill.position.set(-5,2,1);scene.add(fill);
 
- const regularSpots=[[0,.1,2.15],[-2.8,.03,.45],[2.8,.03,.45],[-5.05,-.02,-.95],[5.05,-.02,-.95],[-7,-.06,-2.15],[7,-.06,-2.15],[0,-.06,-2.5]];
+ const regularSpots=[[0,.1,1.5],[-1.65,.03,.5],[1.65,.03,.5],[-3.05,0,-1.1],[3.05,0,-1.1],[-1.25,0,-2.4],[1.25,0,-2.4],[0,0,-3.7]];
  const instances=new Map(),clock=new THREE.Clock();
  let template=null,idleClip=null,walkClip=null,saluteFingerPose=[],rifleTemplate=null,started=false,rigWarningShown=false;
  const rifleCalibration=firstPersonCalibration('ar');
@@ -33,16 +34,17 @@ if(canvas){
  const hash=value=>{let h=2166136261;for(const char of String(value)){h^=char.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;};
  const rand01=instance=>{let x=instance.randomState||1;x^=x<<13;x^=x>>>17;x^=x<<5;instance.randomState=x>>>0;return instance.randomState/4294967296;};
 
- function setCamera(preview,width,height){
+ function setCamera(preview,width,height,count=1){
   camera.aspect=width/Math.max(1,height);
-  if(preview){camera.fov=.54*180/Math.PI;camera.position.set(.62,2.08,6.25);camera.lookAt(.62,1.16,0);}
+  if(preview){camera.fov=.60*180/Math.PI;camera.position.set(.62,2.5,8);camera.lookAt(.62,1.65,0);}
   else{camera.fov=.66*180/Math.PI;camera.position.set(0,3.45,9.4);camera.lookAt(0,1.28,.8);}
+  if(!preview){const compact=width<1100,distance=9.4+Math.max(0,count-3)*.28+(compact?2.5:0);camera.position.set(0,count>3?4.4:3.45,distance);camera.lookAt(0,1.4,.1);if(width<=760){camera.position.z=22+Math.max(0,count-3)*.28;camera.lookAt(0,1.4,.1);camera.setViewOffset(width,height,0,height*.30,width,height);}else if(compact)camera.setViewOffset(width,height,-width*.1,0,width,height);else camera.clearViewOffset();}else camera.clearViewOffset();
   camera.updateProjectionMatrix();
  }
  function findRig(model){
   return resolveLobbyRig(model);
  }
- function disposeInstance(instance){instance.mixer.stopAllAction();scene.remove(instance.holder);instance.contactShadow.material.dispose();const skeletons=new Set();instance.model.traverse(object=>{if(object.isSkinnedMesh)skeletons.add(object.skeleton);});for(const skeleton of skeletons)skeleton.dispose();}
+ function disposeInstance(instance){instance.mixer.stopAllAction();scene.remove(instance.holder);instance.contactShadow.material.dispose();const skeletons=new Set();instance.holder.traverse(object=>{if(object.isSkinnedMesh)skeletons.add(object.skeleton);});for(const skeleton of skeletons)skeleton.dispose();}
  const normBone=name=>String(name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
  function createRifleMount(instance){
   if(!rifleTemplate||instance.rifleMount)return;
@@ -54,30 +56,11 @@ if(canvas){
   mount.traverse(object=>{if(object.isMesh){object.castShadow=false;object.receiveShadow=false;}});
   instance.holder.add(mount);instance.rifleMount=mount;
  }
- function poseRifle(instance){
-  const mount=instance.rifleMount;if(!mount)return;
-  const c=mount.userData.calibration;
-  instance.holder.updateMatrixWorld(true);
-  const shoulders=['right','left'].map(side=>instance.holder.worldToLocal(instance.bones.get(`mixamorig${side}arm`).getWorldPosition(new THREE.Vector3()))),center=shoulders[0].add(shoulders[1]).multiplyScalar(.5);
-  mount.position.set(center.x+.16,center.y-.28,center.z-.16);mount.rotation.set(0,0,.42);instance.holder.updateMatrixWorld(true);
-  const grip=new THREE.Vector3(...c.grip),point=value=>mount.localToWorld(new THREE.Vector3(...value).sub(grip).multiplyScalar(c.scale));
-  const right=point(c.rightPalm),node=mount.userData.nodes.get(c.supportNode);
-  let left=node?node.getWorldPosition(new THREE.Vector3()).add(mount.userData.supportOffset.clone().multiplyScalar(c.scale).applyQuaternion(mount.getWorldQuaternion(new THREE.Quaternion()))):point(c.support);
-  const localSupport=mount.worldToLocal(left);localSupport.z=Math.max(-.09,localSupport.z);left=mount.localToWorld(localSupport);
-  const rotation=mount.getWorldQuaternion(new THREE.Quaternion()),rest=instance.fingerRest;
-  for(const [side,palm,spec,sign] of [
-   ['right',right,{rotation:c.rightRotation,fingers:c.rightFingers,splay:c.rightSplay,thumbOpposition:c.rightThumbOpposition},1],
-   ['left',left,supportHandPose(c),-1]
-  ]){
-   const orientation=new THREE.Quaternion().setFromEuler(new THREE.Euler(...spec.rotation,'XYZ')).premultiply(rotation),pole=instance.holder.localToWorld(new THREE.Vector3(sign*.5,1.05,.1));
-   poseWeaponHand(instance.model,instance.bones,side,palm,orientation,{...spec,rest},pole);
-  }
- }
  function createInstance(member,index){
   const model=cloneSkinned(template),holder=new THREE.Group(),rig=findRig(model);
   const bones=new Map();
   model.traverse(object=>{if(object.isBone)bones.set(normBone(object.name),object);});
-  const fingerRest=new Map(saluteFingerPose.map(({name,quaternion})=>[bones.get(normBone(name)),quaternion.clone()]).filter(([bone])=>bone));
+  const fingerRest=new Map([...bones].filter(([name])=>/hand.*[1234]$/.test(name)).map(([,bone])=>[bone,bone.quaternion.clone()]));for(const {name,quaternion}of saluteFingerPose){const bone=bones.get(normBone(name));if(bone)fingerRest.set(bone,quaternion.clone());}
   if(!rigWarningShown){
    const missing=['rightShoulder','rightArm','rightForeArm','rightHand',...['Thumb','Index','Middle','Ring','Pinky'].flatMap(digit=>[1,2,3,4].map(joint=>`right${digit}${joint}`))].filter(name=>!rig[name]);
    if(missing.length){console.error('Horizon lobby Soldier rig is missing runtime bones:',missing);rigWarningShown=true;}
@@ -94,7 +77,7 @@ if(canvas){
   const instance={
    id:member.id,holder,model,contactShadow,mixer,idleAction,walkAction,animatedPose:new Map([...bones.values()].map(bone=>[bone,bone.quaternion.clone()])),bones,fingerRest,rig,phase,slot:index,
    randomState:hash(`${member.id||index}:horizon-lobby`)||1,
-   saluteActive:false,saluteStarted:0,nextSaluteAt:now+.85+index*.16
+   saluteActive:false,saluteStarted:0,nextSaluteAt:now+10+index*2.1
   };
   createRifleMount(instance);
   return instance;
@@ -160,7 +143,7 @@ if(canvas){
    applyIdleLayers(instance,time,salute);
    // Keep the calibrated AR in both hands; the native deployment salute then
    // releases the trigger hand while the support hand stays on the rifle.
-   poseRifle(instance);
+   poseLobbyRifle(instance);
    if(salute.amount>.001)poseNativeSalute(instance,salute.amount);
   }
  }
@@ -176,12 +159,13 @@ if(canvas){
   if(document.hidden||!window.Duel?.lobby)return;
   const party=Array.isArray(window.Duel?.party)?window.Duel.party:[];
   ensureInstances(party);
-  const preview=Boolean(window.Duel?.characterPreview),[width,height]=resize();setCamera(preview,width,height);
+  const preview=Boolean(window.Duel?.characterPreview),[width,height]=resize();setCamera(preview,width,height,party.length);
   const time=performance.now()/1000;
   for(const instance of instances.values()){for(const [bone,q] of instance.animatedPose)bone.quaternion.copy(q);instance.mixer.update(dt);for(const [bone,q] of instance.animatedPose)q.copy(bone.quaternion);}
   poseInstances(party,preview,time);
   renderer.render(scene,camera);
  }
+ lobbyDiagnostics.snapshot=()=>[...instances.values()].map(i=>{i.holder.updateMatrixWorld(true);const point=name=>i.bones.get('mixamorig'+name).getWorldPosition(new THREE.Vector3()).project(camera).toArray();return {id:i.id,visible:i.holder.visible,rifle:Boolean(i.rifleMount),saluting:i.saluteActive,head:point('head'),leftFoot:point('leftfoot'),rightFoot:point('rightfoot')};});
  const loader=new GLTFLoader();
  loader.load(
   '/models/Soldier.glb',

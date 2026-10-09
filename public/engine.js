@@ -525,7 +525,7 @@ function drawLobby(){
  const data=dynamicData.copy(geo);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);draw(dynamicBuffer,dynamicData.length/6);gl.clearColor(.48,.77,.88,1);
 }
 function drawCharacterShowcase(w,h){
- const target=[.62,1.16,0],eye=[.62,2.08,6.25];gl.clearColor(.018,.047,.083,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(um,false,matrix(eye,target,w/h,.54));gl.uniform3fv(ue,eye);geo.length=0;
+ const target=[.62,1.65,0],eye=[.62,2.5,8];gl.clearColor(.018,.047,.083,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(um,false,matrix(eye,target,w/h,.60));gl.uniform3fv(ue,eye);geo.length=0;
  box([.6,-.34,-.8],[20,.18,17],color('10283d'));box([.6,3.65,-5.45],[15,8,.3],color('10243a'));
  cone([.78,-.16,0],1.42,1.42,.22,color('16364d'),64);cone([.78,-.025,0],1.28,1.28,.055,color('5bc9dd'),64);cone([.78,.015,0],1.08,1.08,.05,color('20536b'),64);
  // The CHARACTER tab uses the same animated Soldier.glb overlay as the main lobby.

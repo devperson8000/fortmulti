@@ -444,3 +444,34 @@ body.in-lobby #vignette{background:radial-gradient(ellipse at 51% 43%,transparen
   .social-panel{border-radius:17px}
 }
 @media(prefers-reduced-motion:reduce){body.in-lobby #game{filter:none}}
+
+/* Final field-operations polish: quiet steel panels and a clear squad stage. */
+#lobby{background:radial-gradient(ellipse at 58% 45%,#34453b66,transparent 58%),linear-gradient(120deg,#101713,#1b2420 55%,#101713)}
+#lobby:before{opacity:.3}
+#lobby:after{opacity:.17}
+#lobby nav .horizon-logo-lobby{width:105px;height:105px;filter:drop-shadow(0 3px 8px #0008)}
+.mode-card{border-radius:8px;background:linear-gradient(145deg,#253027ee,#151e19f2);border:1px solid #7e8d6c66;box-shadow:0 18px 45px #0006,inset 0 1px #e3e1bc12}
+.mode-card h1{font-style:normal;font-size:30px;letter-spacing:-.8px;line-height:1.02}
+#lobby .primary{border-radius:5px;background:linear-gradient(#d1cf96,#a9af72);box-shadow:0 3px 0 #626c43;color:#1b2418;letter-spacing:1.1px}
+#lobby select,#lobby input{border-radius:5px;background:#121c16;border-color:#697b5f80}
+#lobby select:focus-visible,#lobby input:focus-visible,#lobby button:focus-visible{outline-color:#dad9a4}
+#lobby .lobby-tabs button:disabled{display:none}
+#hero-label{top:15%}
+.party-card{border-radius:5px;background:#1b271edb;border-color:#78896a66}
+.party-card.empty{opacity:.48;background:#131c1588}
+#party-summary{color:#a8b49e}
+#lobby-characters{filter:none}
+@media(max-width:1100px){#hero-label{left:60%}.mode-card h1{font-size:25px}}
+@media(max-width:760px){#lobby nav .horizon-logo-lobby{width:78px;height:78px}.left-panel{width:225px}.mode-card{padding:13px}.mode-card h1{font-size:23px}}
+
+#lobby #room-code{border-radius:5px;background:#1b281d;border-color:#78896a80;color:#d9ddbd}
+#lobby .party-buttons button{background:#2b382a;border-color:#78896a80;border-radius:5px;color:#e1e5d3}
+@media(min-width:761px) and (max-width:1100px){.party-panel{left:310px;right:24px;bottom:15px}#party-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+@media(min-width:761px) and (max-width:1100px){body.in-lobby #chatbox{bottom:128px;right:24px;width:240px}}
+@media(max-width:760px){#hero-label{left:auto;right:14px;top:85px;transform:none}body.in-lobby #chatbox{width:130px;right:14px;bottom:16px}body.in-lobby #chatbox .chat-title{font-size:7px}}
+
+@media(max-width:760px){.left-panel{position:absolute;top:auto;bottom:18px;left:14px;width:calc(100vw - 28px);margin-top:0;padding-bottom:0}body.in-lobby #chatbox{top:290px;bottom:auto;right:14px}.lobby-footer{display:none}body.character-preview-open #chatbox{display:none}}
+
+@media(max-width:760px){#hero-label{top:275px}}
+@media(max-width:760px) and (max-height:780px){#hero-label{display:none}}
