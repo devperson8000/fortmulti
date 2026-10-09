@@ -1,3 +1,4 @@
+import {WEAPON_FILES} from '../public/weapon-assets.js';
 import {triggerSurfaceContact,weaponPartTriangles} from './helpers/weapon-contacts.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,7 +14,7 @@ async function load(file){const b=await readFile(new URL('../public/models/'+fil
 const r=Object.create(MatchCharacterRenderer.prototype);
 Object.assign(r,{scene:new THREE.Scene(),firstPersonScene:new THREE.Scene(),firstPersonCamera:new THREE.PerspectiveCamera(62,16/9,.15,820),clips:new Map(),weaponTemplates:new Map(),firstPersonInstances:new Map(),canvas:{width:1280,height:720},renderer:{setSize(){},resetState(){},render(){}},restoreRawState(){}});
 r._loaded(await load('Soldier.glb'));
-for(const [id,file] of Object.entries({ar:'Rifle_Assault_East',shotgun:'Shotgun_Pump_East',smg:'SMG_Compact_East',sniper:'Sniper_Rifle_East'}))r.weaponTemplates.set(id,(await load('weapons/'+file+'.glb')).scene);
+for(const [id,file] of Object.entries(WEAPON_FILES))r.weaponTemplates.set(id,(await load('weapons/'+file)).scene);
 const palm=side=>{const hand=r.arms.bones.get('mixamorig'+side+'hand');return hand.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,.09*r.modelScale,0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion())));};
 for(const id of Object.keys(FIRST_PERSON_CALIBRATION)){
  test(`${id}: real Soldier palms stay locked through movement, recoil, ADS and reload`,()=>{
@@ -64,7 +65,7 @@ test('weapon switches reuse meshes and keep a damped, finite grip-pivot trajecto
   const profile=WEAPON_PROFILES[id];stepViewModel(state,{weapon:profile,equipRemaining:Math.max(0,profile.equipDuration-frame/60)},1/60);r.renderFirstPersonWeapon(id,profile,state,parts);
   if(previous)assert.ok(Math.hypot(...state.position.map((v,i)=>v-previous[i]))<.16);previous=state.position.slice();
   assert.ok(state.rotation.every(Number.isFinite));assert.equal([...r.firstPersonInstances.values()].filter(v=>v.root.visible).length,1);
- }assert.equal(r.firstPersonInstances.size,4);
+ }assert.equal(r.firstPersonInstances.size,Object.keys(WEAPON_FILES).length);
 });
 
 test('first-person posing preserves upper-arm attachment translations to avoid torn sleeve skin',()=>{

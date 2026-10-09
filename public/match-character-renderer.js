@@ -59,7 +59,7 @@ export class MatchCharacterRenderer{
   this.renderer.autoClear=false;this.renderer.setPixelRatio(1);this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.05;this.renderer.setClearColor(0x000000,0);
   this.loader=new GLTFLoader();
   this.loader.load(modelUrl,gltf=>this._loaded(gltf),undefined,error=>{this.failed=true;console.error('Horizon match character model could not load.',error);});
-  for(const [id,file] of Object.entries(WEAPON_FILES))this.loader.load(`${weaponBase}${file}`,gltf=>{this.weaponTemplates.set(id,gltf.scene);const warm=()=>{this.getWeaponThumbnail(id);if(this.weaponThumbnails.size===4&&this.thumbnailRenderer){this.thumbnailRenderer.dispose();this.thumbnailRenderer=null;}};if(globalThis.requestIdleCallback)requestIdleCallback(warm);else setTimeout(warm,0);},undefined,error=>console.warn(`Horizon ${id} third-person weapon could not load.`,error));
+  for(const [id,file] of Object.entries(WEAPON_FILES))this.loader.load(`${weaponBase}${file}`,gltf=>{this.weaponTemplates.set(id,gltf.scene);const warm=()=>{this.getWeaponThumbnail(id);if(this.weaponThumbnails.size===Object.keys(WEAPON_FILES).length&&this.thumbnailRenderer){this.thumbnailRenderer.dispose();this.thumbnailRenderer=null;}};if(globalThis.requestIdleCallback)requestIdleCallback(warm);else setTimeout(warm,0);},undefined,error=>console.warn(`Horizon ${id} third-person weapon could not load.`,error));
  }
  async loadFacilityEnvironment(quality='medium'){
   if(this.facilityLoading)return this.facilityLoading;

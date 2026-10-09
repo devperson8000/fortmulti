@@ -16,7 +16,8 @@
     "test:platform23-browser": "node scripts/platform23-browser-check.mjs",
     "test:lobby-browser": "node scripts/lobby-polish-check.mjs",
     "test:outfit-browser": "node scripts/outfit-browser-check.mjs",
-    "test:aim-hud-browser": "node scripts/aim-hud-browser-check.mjs"
+    "test:aim-hud-browser": "node scripts/aim-hud-browser-check.mjs",
+    "test:weapon-variants-browser": "node scripts/weapon-variants-browser-check.mjs"
   },
   "engines": {
     "node": ">=20"

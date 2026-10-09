@@ -1,0 +1,30 @@
+{
+  "source": "User-uploaded download (2).mp4",
+  "sha256": "165ae5f723bb5ae9bd48a17732ef5f9f1243c70f7eb195ec8b26114d24b3d681",
+  "samples": [
+    {
+      "file": "sentinel-shot.wav",
+      "sourceStart": 4.415,
+      "sourceSeconds": 0.1,
+      "fadeSeconds": 0.035,
+      "outputSeconds": 0.1,
+      "peak": 0.72
+    },
+    {
+      "file": "viper-shot.wav",
+      "sourceStart": 8.035,
+      "sourceSeconds": 0.1,
+      "fadeSeconds": 0.035,
+      "outputSeconds": 0.1,
+      "peak": 0.72
+    },
+    {
+      "file": "longbow-shot.wav",
+      "sourceStart": 1.35,
+      "sourceSeconds": 0.62,
+      "fadeSeconds": 0.2,
+      "outputSeconds": 0.62,
+      "peak": 0.72
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "source": "https://github.com/petroulacl/fps-asset-kit",
+  "revision": "a19b7458a593598211c95ec46ef4eb4b6d1f94d7",
+  "license": "CC0",
+  "models": [
+    {
+      "file": "Rifle_Assault_West.glb",
+      "triangles": 4353,
+      "bytes": 457644,
+      "sha256": "0d80dd2118c884172a856455968be14eadc97f041d27d52bfa75fedb708fa486"
+    },
+    {
+      "file": "Shotgun_Auto_West.glb",
+      "triangles": 1540,
+      "bytes": 169364,
+      "sha256": "74f3c88add8079acd744ae2851f215a4c2d05a7ac60c53e84f116131a7d8d67a"
+    },
+    {
+      "file": "SMG_Full_West.glb",
+      "triangles": 2030,
+      "bytes": 217848,
+      "sha256": "844bcd58125cd874951fb9c79b759fbd39282ab56a25a8c0598c4f9f25dd1ad8"
+    },
+    {
+      "file": "Sniper_Rifle_West.glb",
+      "triangles": 3208,
+      "bytes": 330160,
+      "sha256": "c757564169f2d72e9fb4677be425f617d575fd76808ec32d9730d769548fb0d5"
+    }
+  ]
+}

@@ -49,8 +49,8 @@ const handEase=t=>{const x=clamp(t,0,1);return x*x*(3-2*x);};
 const plus=(a,b)=>a.map((value,index)=>value+b[index]);
 
 export function createFirstPersonHandPose(profile,parts){
- const weapon=WEAPON_MODELS[profile.id],pieces=weapon?.parts||[],part=id=>pieces.find(piece=>piece.id===id)?.position||[0,0,0];
- const grip=part('grip'),foreEnd=part(profile.id==='shotgun'?'fore-end':'handguard'),magazine=part('magazine');
+ const weapon=WEAPON_MODELS[profile.family||profile.id],pieces=weapon?.parts||[],part=id=>pieces.find(piece=>piece.id===id)?.position||[0,0,0];
+ const grip=part('grip'),foreEnd=part((profile.family||profile.id)==='shotgun'?'fore-end':'handguard'),magazine=part('magazine');
  const shootingPalm=plus(grip,[.035,-.015,0]),supportRest=[foreEnd[0],foreEnd[1]-.075,foreEnd[2]],magazineReach=[magazine[0],magazine[1]-.1,magazine[2]];
  const progress=clamp(Number(parts?.progress??1),0,1);
  let reach=0;

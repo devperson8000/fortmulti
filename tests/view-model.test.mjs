@@ -88,7 +88,7 @@ test('reload hand releases, retrieves and seats a fresh magazine in clear stages
 
 test('first-person gloves anchor to each weapon grip and fore-end',()=>{
  for(const profile of Object.values(WEAPON_PROFILES)){
-  const parts=createWeaponPartState(),pose=createFirstPersonHandPose(profile,parts),model=WEAPON_MODELS[profile.id].parts;
+  const parts=createWeaponPartState(),pose=createFirstPersonHandPose(profile,parts),model=WEAPON_MODELS[profile.family||profile.id].parts;
   const grip=model.find(part=>part.id==='grip').position;
   const foreEnd=model.find(part=>part.id==='handguard'||part.id==='fore-end').position;
   assert.ok(distance(pose.shooting.palm,grip)<.13,`${profile.id} firing hand should wrap its grip`);

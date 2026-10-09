@@ -40,7 +40,9 @@ The same rigged model and animation set is used for remote players during ship s
 
 ## First-person combat system v8
 
-The combat pass adds four independent weapon classes: **Striker AR, Thunder Shotgun, Burst SMG and Eagle-Eye Sniper**. Each profile defines damage, cadence, hip/ADS/movement spread, recoil, reload time, magazine size, range, pellet count, automatic mode, equip time and FOV. Magazines persist independently when swapping slots. Damage is reduced in both gamemodes (AR 21, SMG 13, shotgun 9 per pellet, sniper 60) to extend fights. Tap Ctrl to toggle crouch; while sprinting with Shift, tap Ctrl to start a slide. Shift only runs. Releasing Shift does not cancel a slide; Ctrl cancels it when there is room to stand.
+The combat system has four weapon families: **Striker AR, Thunder Shotgun, Raptor SMG and Eagle-Eye Sniper**. Each profile defines damage, cadence, hip/ADS/movement spread, recoil, reload time, magazine size, range, pellet count, automatic mode, equip time and FOV. Magazines persist independently when swapping slots. Damage is reduced in both gamemodes (AR 21, SMG 13, shotgun 9 per pellet, sniper 60) to extend fights. Tap Ctrl to toggle crouch; while sprinting with Shift, tap Ctrl to start a slide. Shift only runs. Releasing Shift does not cancel a slide; Ctrl cancels it when there is room to stand.
+
+Four additional CC0 Flat Guns West models join those families: **Sentinel AR (24 damage), Breacher Auto Shotgun (7 × 7 pellets), Viper SMG (11 damage), and Longbow Sniper (70 damage)**. All eight guns enter chest loot and retain independent magazines in the same five freely arranged slots. New shot samples use isolated, faded single shots from the supplied battle video; the Breacher retains the supplied shotgun shot/reload audio. [Models, tuning, audio and verification](docs/weapons/variants.md).
 
 - Right mouse smoothly blends the first-person camera from a 75° field of view into each weapon's ADS FOV.
 - The sniper blends to 15°, removes the local model from the sight picture and opens a dedicated precision optic with a circular vignette and fine reticle.

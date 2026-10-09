@@ -5,36 +5,46 @@ const presentation=({anchor,adsAnchor,scale,recoil,sway,bob,sprint,model})=>Obje
  recoil:Object.freeze(recoil),sway,bob,sprint:Object.freeze(sprint),model
 });
 
-export const WEAPON_PROFILES=Object.freeze({
+const BASE_PROFILES=Object.freeze({
  ar:Object.freeze({
-  id:'ar',slot:1,name:'STRIKER AR',shortName:'AR',rarity:'rare',color:'#4c9df0',icon:'⌁',
+  id:'ar',slot:1,name:'STRIKER AR',shortName:'STRIKER',rarity:'rare',color:'#4c9df0',icon:'⌁',
   damage:21,fireInterval:.118,recoil:[.017,.007],spread:{hip:.024,ads:.0065,move:.014,max:.052},
   reloadDuration:1.85,magazineCapacity:30,pellets:1,range:180,automatic:true,
   adsFov:45,scope:false,equipDuration:.34,projectile:null,
   presentation:presentation({anchor:[.34,-.34,-.78],adsAnchor:[0,-.255,-.58],scale:1,recoil:[-.085,.035,.018],sway:.018,bob:.014,sprint:[.32,-.22,.5],model:'ar'})
  }),
  shotgun:Object.freeze({
-  id:'shotgun',slot:2,name:'THUNDER SHOTGUN',shortName:'SHOTGUN',rarity:'epic',color:'#a970f5',icon:'═',
+  id:'shotgun',slot:2,name:'THUNDER SHOTGUN',shortName:'THUNDER',rarity:'epic',color:'#a970f5',icon:'═',
   damage:9,fireInterval:.82,recoil:[.054,.014],spread:{hip:.082,ads:.047,move:.026,max:.12},
   reloadDuration:2.7,magazineCapacity:6,pellets:8,range:52,automatic:false,
   adsFov:52,scope:false,equipDuration:.42,projectile:null,
   presentation:presentation({anchor:[.36,-.38,-.86],adsAnchor:[0,-.28,-.68],scale:1.08,recoil:[-.15,.065,.025],sway:.015,bob:.013,sprint:[.34,-.25,.58],model:'shotgun'})
  }),
  smg:Object.freeze({
-  id:'smg',slot:3,name:'BURST SMG',shortName:'SMG',rarity:'uncommon',color:'#63cf70',icon:'≋',
+  id:'smg',slot:3,name:'RAPTOR SMG',shortName:'RAPTOR',rarity:'uncommon',color:'#63cf70',icon:'≋',
   damage:13,fireInterval:.072,recoil:[.012,.011],spread:{hip:.034,ads:.013,move:.02,max:.072},
   reloadDuration:1.55,magazineCapacity:32,pellets:1,range:110,automatic:true,
   adsFov:48,scope:false,equipDuration:.28,projectile:null,
   presentation:presentation({anchor:[.32,-.32,-.68],adsAnchor:[0,-.245,-.52],scale:.94,recoil:[-.065,.025,.024],sway:.021,bob:.016,sprint:[.3,-.2,.44],model:'smg'})
  }),
  sniper:Object.freeze({
-  id:'sniper',slot:4,name:'EAGLE-EYE SNIPER',shortName:'SNIPER',rarity:'legendary',color:'#efad43',icon:'—',
+  id:'sniper',slot:4,name:'EAGLE-EYE SNIPER',shortName:'EAGLE-EYE',rarity:'legendary',color:'#efad43',icon:'—',
   damage:60,fireInterval:1.32,recoil:[.075,.008],spread:{hip:.075,ads:.00045,move:.032,max:.1},
   reloadDuration:2.75,magazineCapacity:4,pellets:1,range:360,automatic:false,
   adsFov:15,scope:true,equipDuration:.48,projectile:Object.freeze({speed:180,gravity:18,maxAge:3}),
   presentation:presentation({anchor:[.38,-.39,-1],adsAnchor:[0,-.22,-.7],scale:1.05,recoil:[-.18,.08,.016],sway:.012,bob:.01,sprint:[.38,-.28,.65],model:'sniper'})
  })
 });
+
+const variant=(family,id,name,shortName,changes)=>Object.freeze({...BASE_PROFILES[family],family,id,name,shortName,...changes});
+export const WEAPON_PROFILES=Object.freeze({...BASE_PROFILES,
+ ar_sentinel:variant('ar','ar_sentinel','SENTINEL AR','SENTINEL',{damage:24,fireInterval:.15,magazineCapacity:24,reloadDuration:2.05,range:210,recoil:[.022,.009]}),
+ shotgun_breacher:variant('shotgun','shotgun_breacher','BREACHER AUTO SHOTGUN','BREACHER',{damage:7,pellets:7,fireInterval:.55,magazineCapacity:8,automatic:true,range:44,recoil:[.042,.012]}),
+ smg_viper:variant('smg','smg_viper','VIPER SMG','VIPER',{damage:11,fireInterval:.06,magazineCapacity:36,reloadDuration:1.75,range:95,recoil:[.009,.012]}),
+ sniper_longbow:variant('sniper','sniper_longbow','LONGBOW SNIPER','LONGBOW',{damage:70,fireInterval:1.65,magazineCapacity:3,reloadDuration:3.05,recoil:[.082,.01]})
+});
+export const WEAPON_TYPES=Object.freeze(Object.keys(WEAPON_PROFILES));
+export const weaponFamily=id=>WEAPON_PROFILES[id]?.family||id;
 
 export const BUILD_SLOTS=Object.freeze({6:2,10:3});
 export const isWeaponSlot=slot=>Number.isInteger(slot)&&slot>=1&&slot<=5;

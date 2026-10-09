@@ -1,3 +1,4 @@
+import {weaponFamily} from './weapon-system.js';
 // Fetch and decode away from the shot path. Each bullet gets its own voice;
 // overlapping decay tails share this buffer and never restart an earlier shot.
 export function remoteGunshotGain(origin,listener){
@@ -5,8 +6,9 @@ export function remoteGunshotGain(origin,listener){
  const distance=Math.hypot(origin[0]-listener[0],origin[1]-listener[1],origin[2]-listener[2]);
  return distance>=120?0:.7*(1-distance/120)**2/(1+(distance/18)**2);
 }
+export const WEAPON_AUDIO_SAMPLES=[{key:'ar:shot',file:'ar-shot.wav',gain:.32},{key:'shotgun:shot',file:'shotgun-shot.wav',gain:.42},{key:'shotgun:reload',file:'shotgun-reload.wav',gain:.7},{key:'ar_sentinel:shot',file:'sentinel-shot.wav',gain:.36},{key:'smg_viper:shot',file:'viper-shot.wav',gain:.29},{key:'sniper_longbow:shot',file:'longbow-shot.wav',gain:.42}];
 export function createWeaponAudio(){
- const samples=[{key:'ar:shot',file:'ar-shot.wav',gain:.32},{key:'shotgun:shot',file:'shotgun-shot.wav',gain:.42},{key:'shotgun:reload',file:'shotgun-reload.wav',gain:.7}],contexts=new WeakMap();
+ const samples=WEAPON_AUDIO_SAMPLES,contexts=new WeakMap();
  const encoded=samples.map(sample=>fetch(new URL('./audio/'+sample.file,import.meta.url)).then(response=>{
   if(!response.ok)throw new Error('Weapon audio unavailable');return response.arrayBuffer();
  }).catch(()=>null));
@@ -39,11 +41,11 @@ export function createWeaponAudio(){
   },
   play(context,weapon,volume=1){
    if(!Number.isFinite(volume)||volume<=0)return false;
-   return Boolean(voice(context,weapon+':shot',undefined,0,Math.min(1,volume)));
+   return Boolean(voice(context,samples.some(s=>s.key===weapon+':shot')?weapon+':shot':weaponFamily(weapon)+':shot',undefined,0,Math.min(1,volume)));
   },
   playReload(context,weapon,duration,elapsed=0){
    if(!(duration>0)||!Number.isFinite(duration)||!Number.isFinite(elapsed))return false;
-   stopReload(context);const active=voice(context,weapon+':reload',duration,elapsed);
+   stopReload(context);const active=voice(context,weaponFamily(weapon)+':reload',duration,elapsed);
    if(!active)return false;contexts.get(context).reload=active;return true;
   },
   stopReload

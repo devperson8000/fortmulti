@@ -5,6 +5,7 @@ import {readFile} from 'node:fs/promises';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {createSoldierArms,poseSoldierArms} from '../public/soldier-arms.js';
+import {WEAPON_FILES} from '../public/weapon-assets.js';
 import {WEAPON_PROFILES} from '../public/weapon-system.js';
 import {createFirstPersonHandPose,createWeaponPartState,stepWeaponParts} from '../public/view-model.js';
 // Texture decoding requires a browser; skeleton/vertex/animation data is loaded
@@ -96,8 +97,8 @@ test('remote rendering resolves arbitrary slot five from the instance inventory'
 test('remote firearms face forward and both real palms follow model contacts through animation',async()=>{
  const {MatchCharacterRenderer}=await import('../public/match-character-renderer.js');const {firstPersonCalibration}=await import('../public/first-person-calibration.js');
  const r=Object.create(MatchCharacterRenderer.prototype);Object.assign(r,{scene:new THREE.Scene(),firstPersonScene:new THREE.Scene(),instances:new Map(),weaponTemplates:new Map(),clips:new Map()});r._loaded(asset);
- const files={ar:'Rifle_Assault_East',shotgun:'Shotgun_Pump_East',smg:'SMG_Compact_East',sniper:'Sniper_Rifle_East'};
- for(const [type,file]of Object.entries(files)){const b=await readFile(new URL('../public/models/weapons/'+file+'.glb',import.meta.url));r.weaponTemplates.set(type,(await loader.parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'')).scene);}
+ const files=WEAPON_FILES;
+ for(const [type,file]of Object.entries(files)){const b=await readFile(new URL('../public/models/weapons/'+file,import.meta.url));r.weaponTemplates.set(type,(await loader.parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'')).scene);}
  for(const type of Object.keys(files))for(const mode of ['idle','run','aim','crouch','reload','up','down','slide','jump','fall']){
   const p={id:'peer',p:[3,0,2],yaw:.4,pitch:mode==='down'?-.8:mode==='up'?.6:0,hp:100,slot:1,inventory:[{id:'w',type,ammo:5},null,null,null,null],air:'landed',deploymentState:'match_active',grounded:!['jump','fall'].includes(mode),vy:mode==='jump'?8:mode==='fall'?-8:0,sliding:mode==='slide',moveSpeed:mode==='slide'?10.2:mode==='run'?6:0,aim:mode==='aim',crouching:mode==='crouch'||mode==='slide',reload:mode==='reload'?1:0};
   for(let n=0;n<30;n++)r.update([p],{dt:1/60});const instance=r.instances.get('peer'),mount=instance.weaponMount,c=firstPersonCalibration(type);

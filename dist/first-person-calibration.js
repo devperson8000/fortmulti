@@ -3,7 +3,7 @@
 // calibrated per hand: the support thumb follows the fore-end instead of rising
 // vertically, and trigger fingers stay within a natural flexion range.
 const define=data=>Object.freeze(data);
-export const FIRST_PERSON_CALIBRATION=Object.freeze({
+const BASE_CALIBRATION=Object.freeze({
  ar:define({
   fov:68,
   adsViewFov:50,
@@ -132,6 +132,15 @@ export const FIRST_PERSON_CALIBRATION=Object.freeze({
   reloadSplay:{"thumb":[0.03512,0,0]},
   reloadThumbOpposition:-0.00791,
  }),
+});
+
+// West pack anchors measured from the native trigger, rail and muzzle surfaces.
+const west=(data)=>define({...structuredClone(BASE_CALIBRATION.ar),...data});
+export const FIRST_PERSON_CALIBRATION=Object.freeze({...BASE_CALIBRATION,
+ ar_sentinel:west({"support":[-0.005,-0.013,-0.1573],"sight":[0,0.0529,0.01138],"muzzle":[0,0.01573,-0.30357],"scale":1.35,"rightPalm":[0.0187,-0.06192,0.1644],"grip":[0,-0.08402,0.09708],"reloadPalmOffset":[-0.024,-0.065,0.01],"rightFingers":{"index":[0,0,0.34626],"middle":[0.035,1.54,1.15],"ring":[0,1.24691,1.03029],"pinky":[0.80916,0.48481,0.55],"thumb":[-1.095,0.9,0.65]},"leftFingers":{"index":[0.82193,1.30946,0.74614],"middle":[0.90255,1.26841,0.73772],"ring":[0.91372,1.19041,0.54939],"pinky":[1.55,0,0.6],"thumb":[0.45985,-1.31147,0]}}),
+ shotgun_breacher:west({"support":[-0.005,-0.031,-0.1573],"sight":[0,0.0849,0.04317],"muzzle":[0,0.01151,-0.3474],"scale":1.3,"rightPalm":[0.0187,-0.06656,0.21977],"grip":[0,-0.08866,0.15245],"reloadPalmOffset":[-0.024,-0.065,0.01],"rightFingers":{"index":[0,0,0.34626],"middle":[0.35308,1.48,1.15],"ring":[0.05947,1.36191,0.88029],"pinky":[1.00916,0.13481,0.55],"thumb":[-1.05,1.05,0.775]},"leftFingers":{"index":[0.82193,1.30946,0.74614],"middle":[0.76255,1.41841,0.52772],"ring":[0.76372,1.04041,0.67439],"pinky":[1.37021,0.10896,0.6],"thumb":[0.24985,-1.31147,0]}}),
+ smg_viper:west({"support":[-0.005,-0.008,-0.11359],"sight":[0,0.0468,0.01138],"muzzle":[0,0.01749,-0.19035],"scale":1.35,"rightPalm":[0.0187,-0.05406,0.14491],"grip":[0,-0.07616,0.07759],"reloadPalmOffset":[-0.024,-0.065,0.01],"rightFingers":{"index":[0,0,0.34626],"middle":[0,1.55,1.15],"ring":[0,1.35191,1.15],"pinky":[0.84916,0.08981,0.55],"thumb":[-1.36,1.375,0.835]},"leftFingers":{"index":[0.82193,1.30946,0.74614],"middle":[0.90255,1.41841,0.59772],"ring":[0.92372,1.19041,0.43439],"pinky":[1.55,0,0.6],"thumb":[0.23985,-1.31147,0]}}),
+ sniper_longbow:west({"support":[-0.005,-0.02,-0.33386],"sight":[0,0.058,0.01138],"muzzle":[0,0.01545,-0.49974],"scale":1.2,"rightPalm":[0.0187,-0.06989,0.2206],"grip":[0,-0.09199,0.15328],"reloadPalmOffset":[-0.024,-0.065,0.01],"rightFingers":{"index":[0,0,0.34626],"middle":[0,1.49,1.15],"ring":[0,1.41691,1.03029],"pinky":[0.79916,0.19481,0.55],"thumb":[-1.13,1.55,1.15]},"leftFingers":{"index":[0.82193,1.30946,0.74614],"middle":[0.91255,1.26841,0.57272],"ring":[0.90372,1.04041,0.43439],"pinky":[1.445,0.035,0.6],"thumb":[0.22485,0,0]}}),
 });
 export function firstPersonCalibration(id){return FIRST_PERSON_CALIBRATION[id]||FIRST_PERSON_CALIBRATION.ar;}
 export function adsGripPosition(c){return [(c.grip[0]-c.sight[0])*c.scale,(c.grip[1]-c.sight[1])*c.scale,c.adsDepth];}
