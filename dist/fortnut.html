@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="theme-color" content="#152436">
+<meta name="description" content="Fortnut: a wonderfully questionable third-person battle game.">
+<title>Fortnut · Bad Island Royale</title>
+<link rel="stylesheet" href="fortnut.css">
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js"}}</script>
+</head>
+<body class="fortnut-page">
+<section id="fortnut-lobby" aria-label="Fortnut game">
+  <canvas id="fortnut-world" aria-label="Third person Fortnut island"></canvas>
+  <header class="fn-top"><b class="fn-mark">FORTNUT <i>🌰</i></b><span id="fn-status">LOBBY · VERY ONLINE-ISH</span><button id="fortnut-back" type="button">EXIT TO HORIZON</button></header>
+  <div id="fn-menu" class="fn-menu">
+    <div class="fn-logo">FORT<span>NUT</span><i>🌰</i></div>
+    <h1>THE ISLAND OF QUESTIONABLE QUALITY</h1>
+    <p>Battle bus. Chests. Shield. A guy made of cylinders.</p>
+    <div class="fn-party"><label>Party code <input id="fn-code" maxlength="8" placeholder="AUTO"></label><button id="fn-party">CREATE / JOIN PARTY</button></div>
+    <button id="fn-start">PLAY THE BAD GAME</button>
+    <small>Up to 8 tabs in this browser · code: <b id="fn-room">—</b></small>
+  </div>
+  <div id="fn-hud" hidden><div class="fn-stats"><b>♥ <span id="fn-health">100</span></b><b>▰ <span id="fn-shield">0</span></b><b>🌰 <span id="fn-nuts">0</span></b><b>ELIMS <span id="fn-elims">0</span></b></div><div id="fn-objective">WAITING FOR THE BUS TO REMEMBER HOW TO FLY</div><div id="fn-roster"></div><div class="fn-controls">WASD walk · mouse drag look · SPACE hop · E chest · click bonk · 1/2 swap weapon · Esc menu</div></div>
+  <div id="fn-toast" aria-live="polite"></div>
+</section>
+<script type="module" src="fortnut.js"></script>
+</body>
+</html>
