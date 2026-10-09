@@ -55,6 +55,16 @@ jobs:
           GAME_TEST_URL: http://127.0.0.1:4174
           GAME_TEST_GRAPHICS: low
           GAME_ARTIFACTS: /tmp/horizon-deployment/platform23
+      - name: Verify exact crosshair pickups on both maps
+        run: npm run test:pickup-browser
+        env:
+          GAME_TEST_URL: http://127.0.0.1:4174
+          GAME_ARTIFACTS: /tmp/horizon-deployment/pickups
+      - name: Verify all weapon variants, sampled audio and quick drops
+        run: npm run test:weapon-variants-browser
+        env:
+          GAME_TEST_URL: http://127.0.0.1:4174
+          GAME_ARTIFACTS: /tmp/horizon-deployment/variants
       - name: Upload browser diagnostics if a test fails
         if: failure()
         uses: actions/upload-artifact@v4

@@ -1,3 +1,4 @@
+import {characterHitBounds} from './character-hitbox.js';
 import {rayCollider} from './collision-shapes.js';
 import {gridBounds,rayRamp} from './build-grid.js';
 const directions=['N','NE','E','SE','S','SW','W','NW'];
@@ -17,8 +18,7 @@ export function scopeRange(origin,direction,{obstacles=[],structures=[],players=
  for(const s of structures)nearest=Math.min(nearest,s.type===2?rayCollider(origin,d,gridBounds(s)):rayRamp(origin,d,s));
  for(const p of players){
   if(String(p.id)===String(localId)||p.hp<=0||!p.p)continue;
-  const height=p.sliding?.95:p.crouching?1.25:1.78;
-  nearest=Math.min(nearest,rayCollider(origin,d,{min:[p.p[0]-.43,p.p[1],p.p[2]-.43],max:[p.p[0]+.43,p.p[1]+height,p.p[2]+.43]}));
+  nearest=Math.min(nearest,rayCollider(origin,d,characterHitBounds(p)));
  }
  // Cheap bounded sampling, followed by refinement, uses the map's shot terrain.
  if(terrainHeight){

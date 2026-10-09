@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "Real connected host and guest display two independently rigged soldiers",
+    "4 real connected members fit the viewport with independent rifle poses",
+    "8 real connected members fit the viewport with independent rifle poses",
+    "Character tab shows only the local operator and party shrink removes old instances"
+  ],
+  "errors": []
+}

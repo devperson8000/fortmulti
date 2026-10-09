@@ -1,12 +1,12 @@
 export {segmentColliderTime} from './collision-shapes.js';
 const finite=(value,fallback=0)=>Number.isFinite(value)?value:fallback;
 
-export function createProjectile({id,owner,origin,direction,speed,gravity=0,range,damage,spawnTick=0,maxAge=3}){
+export function createProjectile({id,owner,weapon='sniper',origin,direction,speed,gravity=0,range,damage,spawnTick=0,maxAge=3}){
  const dx=finite(direction?.[0]),dy=finite(direction?.[1]),dz=finite(direction?.[2],-1);
  const length=Math.hypot(dx,dy,dz)||1,velocitySpeed=Math.max(0,finite(speed));
  const position=[finite(origin?.[0]),finite(origin?.[1]),finite(origin?.[2])];
  return {
-  id:String(id),owner,position,previous:position.slice(),
+  id:String(id),owner,weapon,position,previous:position.slice(),
   velocity:[dx/length*velocitySpeed,dy/length*velocitySpeed,dz/length*velocitySpeed],
   gravity:Math.max(0,finite(gravity)),range:Math.max(0,finite(range)),damage:Math.max(0,finite(damage)),
   spawnTick:finite(spawnTick),maxAge:Math.max(.05,finite(maxAge,3)),distance:0,age:0,expired:false

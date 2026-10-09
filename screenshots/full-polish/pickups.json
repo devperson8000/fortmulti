@@ -1,0 +1,21 @@
+{
+  "checks": [
+    "island: STRIKER AR displays above its native model and quick E collects only that exact instance",
+    "island: THUNDER SHOTGUN displays above its native model and quick E collects only that exact instance",
+    "island: RAPTOR SMG displays above its native model and quick E collects only that exact instance",
+    "island: EAGLE-EYE SNIPER displays above its native model and quick E collects only that exact instance",
+    "island: SENTINEL AR displays above its native model and quick E collects only that exact instance",
+    "island: BREACHER AUTO SHOTGUN displays above its native model and quick E collects only that exact instance",
+    "island: VIPER SMG displays above its native model and touch interaction collects only that exact instance",
+    "island: LONGBOW SNIPER displays above its native model and quick E collects only that exact instance",
+    "facility: STRIKER AR displays above its native model and quick E collects only that exact instance",
+    "facility: THUNDER SHOTGUN displays above its native model and quick E collects only that exact instance",
+    "facility: RAPTOR SMG displays above its native model and quick E collects only that exact instance",
+    "facility: EAGLE-EYE SNIPER displays above its native model and quick E collects only that exact instance",
+    "facility: SENTINEL AR displays above its native model and quick E collects only that exact instance",
+    "facility: BREACHER AUTO SHOTGUN displays above its native model and quick E collects only that exact instance",
+    "facility: VIPER SMG displays above its native model and touch interaction collects only that exact instance",
+    "facility: LONGBOW SNIPER displays above its native model and quick E collects only that exact instance"
+  ],
+  "errors": []
+}

@@ -1,5 +1,5 @@
-# Next full-polish pass — prepared, not performed
+# Full polish status
 
-After review of these weapon additions, the next pass should inspect lobby squad framing and all uniforms, deployment/music/exit/salute timing, both maps and their traversable floors, chest placement, movement and remote knee-slide transitions, combat feedback, audio balance, inventory accessibility and hardware performance.
+The previously prepared pass was performed on 9 October 2026 after the user's explicit full-game polish request. See [the completed audit](../polish/full-game-polish.md) for the fixes, 422-test result, browser checks, actual grip/deployment/lobby screenshots and measured software-rendering limits.
 
-Use the existing lobby, outfit, deployment, map, aim-HUD and weapon browser scripts as regression fixtures. Capture real gameplay with two and eight players; profile frame time, draw calls, GPU memory and network cadence on hardware before changing graphics budgets. Listen to gunshots under sustained automatic fire and with simultaneous nearby players. Review every new gun's hip, ADS, reload, ground and remote silhouette. No full-game redesign or unrelated polish changes were made in this weapon integration.
+The original weapon integration remains documented in [variants.md](variants.md). Hardware GPU performance and production Supabase WAN play require device/environment verification; the local browser results do not establish universal frame rates or internet latency.

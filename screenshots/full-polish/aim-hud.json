@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "Rendered camera heading follows all four cardinal turns and both sides of north",
+    "Compass retains nine DOM markers while turning",
+    "Scoped known wall reads 20m and updates to 40m when the wall moves",
+    "Aiming at sky clears range; leaving scope clears stale distance"
+  ],
+  "errors": []
+}

@@ -105,7 +105,7 @@ test('a disconnect while still in the lobby shrinks the required roster',()=>{co
 // Remote weapon pitch must survive the authoritative snapshot, with input bounds intact.
 test('snapshots carry sanitized vertical weapon aim for other players',()=>{
  const match=new Match(world,['a','b']);landAll(match);
- for(const [pitch,expected] of [[.4,.4],[10,.7],[-10,-.9],[NaN,0]]){
+ for(const [pitch,expected] of [[.4,.4],[10,1.25],[-10,-1.35],[NaN,0]]){
   match.input('a',{slot:1,pitch});match.tick(.016);
   assert.equal(match.snapshot().players.find(p=>p.id==='a').pitch,expected);
  }
