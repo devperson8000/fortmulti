@@ -91,7 +91,6 @@ body.character-preview-open #chatbox{display:none!important}
 #character-preview-panel p{margin:0 0 17px;color:#c5d7e2;font-size:11px;font-weight:750;letter-spacing:.3px}
 #character-preview-panel>span{display:flex;align-items:center;gap:7px;color:#96afc0;font-size:7px;font-weight:950;letter-spacing:1.1px;white-space:nowrap}
 #character-preview-panel>span i{width:4px;height:4px;border-radius:50%;background:#dbf477;box-shadow:0 0 9px #dbf477}
-body.character-preview-open .lobby-tabs button:not(:disabled){display:inline-flex}
 @media(max-width:760px){
  #lobby nav{gap:5px}.lobby-tabs{gap:0}.lobby-tabs button{padding:0 6px;font-size:7px;letter-spacing:.55px}
  #character-preview-panel{left:14px;top:auto;bottom:18px;transform:none;width:min(190px,calc(48vw - 14px));padding:12px;border-radius:15px}
