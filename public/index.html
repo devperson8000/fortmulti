@@ -52,12 +52,11 @@
     <img class="horizon-logo horizon-logo-lobby" src="horizon-logo-transparent.webp" alt="Horizon">
     <div class="lobby-tabs"><button id="lobby-play-toggle" class="active" type="button" aria-pressed="true">PLAY</button><button id="profile-toggle" type="button" aria-pressed="false">OUTFIT</button><button id="character-preview-toggle" type="button" aria-pressed="false">CHARACTER</button><button type="button" disabled>QUESTS</button><button type="button" disabled>CAREER</button></div>
     <button id="social-toggle" type="button"><span>PEOPLE ONLINE</span><b id="online-count">0</b></button>
-    <button id="settings" type="button" aria-label="Open multiplayer setup">⚙</button>
   </nav>
 
   <div class="left-panel">
     <div id="identity-card">
-      <div><small>PLAYER PROFILE</small><button id="profile-close" type="button" aria-label="Close outfit settings">×</button></div>
+      <div><small>PLAYER PROFILE</small><button id="profile-close" type="button" aria-label="Close outfit profile">×</button></div>
       <label>Display name<input id="name" maxlength="20" value="Ranger" autocomplete="off"></label>
       <label>Outfit<select id="outfit"><option value="408faf">Azure Ranger</option><option value="dc8255">Ember Scout</option><option value="8668bb">Violet Vanguard</option><option value="557959">Forest Sentinel</option><option value="d7b65c">Solar Striker</option><option value="5eb2a8">Tide Runner</option></select></label>
     </div>
@@ -129,15 +128,6 @@
   <label>Scope sensitivity<input id="scope-sensitivity" type="range" min="0.35" max="1.25" value="0.7" step="0.05"><output id="scope-sensitivity-value">0.70×</output></label>
   <small>Auto quality adjusts resolution and cosmetic detail only. Simulation and network timing stay unchanged.</small>
 </aside>
-
-<dialog id="setup">
-  <h2>Online multiplayer setup</h2>
-  <p>Horizon uses Supabase for presence, party invites and private Realtime rooms. Add these public values in Vercel, or save them here for this browser.</p>
-  <label>Supabase project URL<input id="service-url" placeholder="https://your-project.supabase.co"></label>
-  <label>Publishable key<input id="service-key" placeholder="sb_publishable_…"></label>
-  <div class="setup-note"><b>Required once per Supabase project</b><span>Run the latest <code>supabase.sql</code> and enable Anonymous Sign-Ins in Authentication settings. Never use a service-role or secret key in the browser.</span></div>
-  <button class="primary" id="save-setup">SAVE & CONNECT</button><button id="close-setup">CLOSE</button>
-</dialog>
 
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
 <script src="config.js"></script>

@@ -29,7 +29,13 @@ const currentActivity=()=>inMatch()?'match':conn?'party':'online';
 const validOnlineConfig=()=>/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test((config.url||'').replace(/\/$/,''))&&!!config.key;
 
 function status(text,tone='normal'){
- const el=$('connection');el.textContent=text;el.dataset.tone=tone;lastStatusAt=Date.now();
+ const el=$('connection');el.textContent=publicOnlineError(text);el.dataset.tone=tone;lastStatusAt=Date.now();
+}
+function publicOnlineError(value){
+ const message=String(value?.message||value||'');
+ return /supabase|publishable|service[- ]role|anonymous.*sign.?in|authentication settings|schema|\brpc\b|realtime|invalid jwt|api.?key|project url|room authorization/i.test(message)
+  ?'Online services are unavailable right now. Please try again later.'
+  :message;
 }
 function say(name,text,system=false){
  const row=document.createElement('p'),b=document.createElement('b');b.textContent=name+(system?' · ':': ');row.append(b,document.createTextNode(text));if(system)row.className='system-message';$('messages').append(row);while($('messages').children.length>80)$('messages').firstChild.remove();$('messages').scrollTop=$('messages').scrollHeight;
@@ -68,9 +74,9 @@ function drawPartyCards(){
 }
 function renderOnlinePlayers(){
  const list=$('online-list');list.textContent='';$('online-count').textContent=String(onlinePlayers.filter(p=>p&&p.id).length);
- if(socialError){list.innerHTML='<div class="empty-online"><b>Party finder unavailable</b><span></span><button id="open-setup-inline">OPEN SETUP</button></div>';list.querySelector('span').textContent=socialError;$('open-setup-inline').onclick=openSetup;return;}
+ if(socialError){list.innerHTML='<div class="empty-online"><b>Online players unavailable</b><span></span></div>';list.querySelector('span').textContent=publicOnlineError(socialError);return;}
  if($('local').checked&&social&&!onlinePlayers.length){list.innerHTML='<div class="empty-online"><b>Waiting for another tab…</b><span>Open this game in another tab with Same-browser test enabled.</span></div>';return;}
- if(!$('local').checked&&!validOnlineConfig()){list.innerHTML='<div class="empty-online"><b>Online play needs setup</b><span>Add your Supabase URL and publishable key, then run the latest supabase.sql.</span><button id="open-setup-inline">OPEN SETUP</button></div>';$('open-setup-inline').onclick=openSetup;return;}
+ if(!$('local').checked&&!validOnlineConfig()){list.innerHTML='<div class="empty-online"><b>Online play is unavailable right now</b><span>Please try again later.</span></div>';return;}
  const partyIds=new Set([conn?.id,...activePeers().map(p=>p.id)].filter(Boolean));
  const visible=onlinePlayers.filter(p=>p&&p.id);
  if(!visible.length){list.innerHTML='<div class="empty-online"><b>No other players online</b><span>Players appear here automatically while they have the lobby open.</span></div>';return;}
@@ -117,13 +123,13 @@ async function pollSocial(){
 }
 async function startSocial(){
  clearInterval(socialTimer);social?.close();social=null;socialError='';onlinePlayers=[];incomingInvites=[];renderOnlinePlayers();renderInvites();
- const local=$('local').checked;if(!local&&!validOnlineConfig()){status('Online play is not configured yet. Open Setup to connect Supabase.');updateNetworkChip();return;}
+ const local=$('local').checked;if(!local&&!validOnlineConfig()){status('Online services are unavailable right now. Please try again later.','error');updateNetworkChip();return;}
  try{social=new SocialDirectory(()=>{});await social.open(config,local);await updatePresence();await pollSocial();socialTimer=setInterval(pollSocial,3500);status(local?'Local party finder ready · open another tab to test invites':'Online · choose a player to invite');}
- catch(e){social?.close();social=null;socialError=e.message;status(e.message,'error');renderOnlinePlayers();updateNetworkChip();}
+ catch(e){social?.close();social=null;socialError=publicOnlineError(e);status(e.message,'error');renderOnlinePlayers();updateNetworkChip();}
 }
 
 async function connect(create,codeOverride=''){
- if(busy||conn)return false;busy=true;$('create').disabled=true;$('join').disabled=true;const candidate=new Connection(receive,status);
+ if(busy||conn)return false;busy=true;$('create').disabled=true;$('join').disabled=true;const candidate=new Connection(receive,text=>status(publicOnlineError(text)));
  try{
   profile.name=cleanName($('name').value);profile.color=cleanColor($('outfit').value);writeStore('duel-profile',profile);
   const raw=String(codeOverride||$('code').value||'').trim();const parsed=raw.includes('#')?raw.split('#').pop():raw;const code=parsed.toUpperCase();if(!create&&!/^[A-Z0-9]{8,12}$/.test(code))throw Error('That fallback party code is invalid.');
@@ -133,7 +139,7 @@ async function connect(create,codeOverride=''){
  finally{busy=false;$('create').disabled=false;$('join').disabled=false;refresh();}
 }
 async function invitePlayer(id,name){
- if(busy||inMatch())return;if(!social){status('Party finder is offline. Open Setup or enable Same-browser test.','error');return;}
+ if(busy||inMatch())return;if(!social){status('Online players are unavailable right now. Please try again later.','error');return;}
  try{if(!conn){const ok=await connect(true);if(!ok)return;}if(partyProfiles().length>=(conn.maxPlayers||8)){status('Your party is already full.','error');return;}await social.invite(id,conn.code,profile.name,profile.color);status(`Invite sent to ${name}.`,'success');}
  catch(e){status(e.message,'error');}
 }
@@ -294,9 +300,7 @@ $('chat-toggle').onclick=()=>toggleChat();
 $('footer-chat').onclick=()=>toggleChat();
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('social-panel').classList.contains('open')){closeOnline();e.stopPropagation();}else if(e.key==='Escape'&&document.body.classList.contains('profile-open'))toggleProfile(false);},{capture:true});
 $('voice').onclick=async()=>{if(!conn||peers.size<1){status('Invite at least one player before enabling voice.');toggleChat(true);return;}if(voiceWanted){muted=voice.mute(!muted);conn.send('voice',{enabled:true,muted});return;}try{renderVoice({message:'Requesting microphone permission…',tone:'connecting'});await voice.enable(conn.id,voicePeerIds());voiceWanted=true;muted=false;conn.send('voice',{enabled:true,muted:false});hello();syncVoice();toggleChat(true);}catch(e){renderVoice({message:'Microphone unavailable: '+e.message,tone:'warning',enabled:false});toggleChat(true);}};
-function openSetup(){$('service-url').value=config.url||'';$('service-key').value=config.key||'';$('setup').showModal();}
-$('settings').onclick=openSetup;$('close-setup').onclick=()=>$('setup').close();
-$('save-setup').onclick=async()=>{const url=$('service-url').value.trim().replace(/\/$/,''),key=$('service-key').value.trim();if(key.startsWith('sb_secret_')){status('Only a publishable key is allowed.','error');return;}if(key.startsWith('eyJ')){try{if(JSON.parse(atob(key.split('.')[1])).role==='service_role'){status('Do not use a service-role key.','error');return;}}catch{}}config={url,key};writeStore('duel-config',config);$('setup').close();status('Online settings saved. Connecting party finder…');await startSocial();};
+
 $('local').onchange=()=>{if(conn){$('local').checked=!$('local').checked;return;}startSocial();};
 
 const ping=document.createElement('span');ping.id='net-ping';ping.textContent='OFFLINE';document.querySelector('header').append(ping);
