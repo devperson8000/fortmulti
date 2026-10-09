@@ -41,7 +41,7 @@ export async function checkBuilding(host,guest,guestId,artifacts,checks){
  await guest.mouse.down();await host.waitForFunction(()=>window.__testMatch.structures.length===1);await guest.mouse.up();
  const firstRamp=await host.evaluate(()=>window.__testMatch.structures[0]);
  // Stop early enough to remain supported while the release travels to the host.
- await guest.keyboard.down('w');await host.waitForFunction(({id,origin})=>window.__testMatch.players.find(p=>p.id===id).p[1]>origin[1]+2,{id:guestId,origin:buildOrigin});await guest.keyboard.up('w');
+ await guest.keyboard.down('w');await host.waitForFunction(({id,origin})=>window.__testMatch.players.find(p=>p.id===id).p[1]>origin[1]+2,{id:guestId,origin:buildOrigin},{polling:20});await guest.keyboard.up('w');
  await host.waitForFunction(id=>{const p=window.__testMatch.players.find(p=>p.id===id);return p.input.z===0&&p.moveSpeed<.01;},guestId);
  assert.equal(await host.evaluate(id=>window.__testMatch.players.find(p=>p.id===id).grounded,guestId),true,'the operator remains supported while building the next ramp');
  const rampPosition=await host.evaluate(id=>window.__testMatch.players.find(p=>p.id===id).p.slice(),guestId);
@@ -52,7 +52,7 @@ export async function checkBuilding(host,guest,guestId,artifacts,checks){
  const upper=await host.evaluate(()=>window.__testMatch.structures[1]);
  for(const key of['x','y','z','angle','type','material'])assert.equal(upper[key],upperPreview[key],'upper ramp preview matches authoritative placement: '+key);
  await guest.screenshot({path:artifacts+'/building-ramp-chain.png'});
- await guest.keyboard.down('w');await host.waitForFunction(({id,origin})=>window.__testMatch.players.find(p=>p.id===id).p[1]>origin[1]+5.4,{id:guestId,origin:buildOrigin});await guest.keyboard.up('w');
+ await guest.keyboard.down('w');await host.waitForFunction(({id,origin})=>window.__testMatch.players.find(p=>p.id===id).p[1]>origin[1]+5.4,{id:guestId,origin:buildOrigin},{polling:20});await guest.keyboard.up('w');
  assert.equal(await host.evaluate(id=>window.__testMatch.players.find(p=>p.id===id).materials.wood,guestId),70);
  checks.push('Real V input builds connected ramps, preview matches upper-level authority, and walking climbs both levels');
 }
