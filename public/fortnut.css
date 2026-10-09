@@ -1,0 +1,24 @@
+#fortnut-launch{position:fixed;z-index:30;right:24px;bottom:26px;padding:12px 18px;border:3px solid #fff;border-radius:4px;background:#e946d2;color:#fff;font-weight:1000;letter-spacing:.8px;text-transform:uppercase;box-shadow:5px 6px 0 #592589;transform:rotate(2deg);cursor:pointer}
+#fortnut-launch:hover{transform:rotate(-3deg) scale(1.08)}
+#fortnut-lobby[hidden]{display:none}
+#fortnut-lobby{position:fixed;z-index:50;inset:0;display:grid;place-items:center;overflow:hidden;background:repeating-linear-gradient(125deg,#ff00b8 0 28px,#a4ff00 28px 54px,#05dcff 54px 82px);font-family:Impact,"Comic Sans MS",sans-serif;color:#17316d;text-align:center}
+.fortnut-card{position:relative;width:min(600px,calc(100vw - 32px));padding:28px 24px 22px;border:9px ridge #ffb600;background:#fff8a9;box-shadow:14px 16px 0 #5728aa;transform:rotate(-1deg)}
+.fortnut-card h1{margin:10px 0 0;color:#f05b14;font-size:clamp(27px,6vw,48px);text-shadow:3px 3px #fff,6px 6px #7c31b3;transform:rotate(1deg)}
+.fortnut-card p{font-family:"Comic Sans MS",cursive;font-weight:bold}.fortnut-card>small{display:block;margin-top:12px;color:#777}
+#fortnut-back{position:absolute;left:8px;top:8px;border:2px outset #ccc;background:#ddd;color:#444;font-size:10px}
+.fortnut-logo{font-size:clamp(64px,14vw,112px);font-weight:1000;line-height:.9;color:#ff9b00;-webkit-text-stroke:4px #512b91;text-shadow:6px 7px #fff,10px 11px #d732a7;transform:rotate(-4deg)}
+.fortnut-logo span{color:#c52be8}.fortnut-logo i{font-style:normal;font-size:.45em;vertical-align:top;-webkit-text-stroke:0}
+.fortnut-subtitle{color:#ff1682;letter-spacing:2px;font-size:13px}
+.fortnut-avatar{width:110px;height:126px;margin:14px auto 0;border:5px dotted #17becc;border-radius:25% 50% 40% 20%;background:linear-gradient(135deg,#62ed34,#ffdc00);transform:rotate(8deg);box-shadow:9px 7px #9b38cd}
+.fortnut-head{margin-top:2px;color:#ef519d;font-size:43px}.fortnut-body{font-size:49px;color:#2566ea}.fortnut-legs{font-size:32px;font-weight:1000;color:#d73594}
+#fortnut-play{margin-top:12px;padding:16px 20px;border:5px outset #ffff46;background:linear-gradient(90deg,#ff278a,#ff8b00,#e2ed00);color:#fff;font-size:clamp(16px,4vw,24px);font-weight:1000;text-shadow:2px 2px #7e238d;box-shadow:5px 6px #6b29ac;cursor:pointer;animation:fortnut-wobble .6s infinite alternate}
+.fortnut-sticker{position:absolute;right:8%;top:12%;padding:14px;border:4px dashed white;background:#f33;color:#fff;font-weight:1000;transform:rotate(12deg)}
+.fortnut-confetti{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:space-around;font-size:42px;color:#fff;opacity:.8;pointer-events:none}
+@keyframes fortnut-wobble{to{transform:rotate(2deg) scale(1.04)}}
+body.fortnut-mode #fortnut-launch{display:none}
+body.fortnut-mode #lobby{filter:hue-rotate(70deg) saturate(2.3) contrast(1.25)}
+body.fortnut-mode #game{filter:hue-rotate(95deg) saturate(2.5) contrast(1.25) blur(.25px)}
+body.fortnut-mode #health,body.fortnut-mode #inventory,body.fortnut-mode #mapbox{filter:hue-rotate(100deg) saturate(2.6) contrast(1.3);border-radius:0!important}
+body.fortnut-mode #deployment-ui::before{content:"🚌 BATTLE BUS-ISH — NOW WITH EXTRA BAD VIBES 🚌";position:fixed;z-index:100;left:50%;top:12px;transform:translateX(-50%) rotate(-2deg);padding:8px 12px;background:#ff18ba;color:#fffa00;border:4px dashed white;font:1000 15px Impact,sans-serif;pointer-events:none}
+body.fortnut-mode #round-banner{color:#ff32bb;text-shadow:3px 3px #dfff00,6px 6px #08e8ff!important}
+@media(max-width:600px){.fortnut-sticker{right:2%;top:4%;font-size:10px}.fortnut-card{padding:34px 12px 16px}}
