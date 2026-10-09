@@ -75,3 +75,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 #use-indicator{border-radius:12px!important;box-shadow:0 8px 25px #071d3b66;letter-spacing:.7px}
 #round-banner{font-size:clamp(18px,3vw,30px);font-weight:950;letter-spacing:1.2px;text-shadow:0 3px 4px #071c31,0 0 24px #061a3277}
 @media(prefers-reduced-motion:reduce){#hpbar,#shieldbar,.weapon-slots button,#notice{transition:none}.weapon-slots button.selected{transform:none}}
+
+.gunfight-map [data-slot="0"],.gunfight-map [data-slot="6"],.gunfight-map [data-slot="10"],.gunfight-map [data-slot="9"],.gunfight-map #buildhelp,.gunfight-map [data-inventory-materials],.gunfight-map .materials{display:none!important}
+.gunfight-map .wood {display:none!important}
+.gunfight-map .construction-controls{display:none!important}

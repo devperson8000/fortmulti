@@ -5,7 +5,7 @@ import {firstPersonCalibration,PICKAXE_GRIP} from './first-person-calibration.js
 import {createContactShadow} from './character-lighting.js';
 import {SALUTE_FINGER_CURLS} from './lobby-rig.js';
 import {createMotionPresentation,stepMotionPresentation} from './visual-presentation.js';
-import {createSoldierArms,poseSoldierArms,poseWeaponHand,supportHandPose,poseArmChain} from './soldier-arms.js';
+import {createSoldierArms,poseSoldierArms,poseWeaponHand,supportHandPose,poseArmChain,poseLegChain} from './soldier-arms.js';
 import {createHeldItem} from './held-items.js';
 import {handAttachmentScale} from './view-model.js';
 import * as THREE from 'three';
@@ -212,7 +212,7 @@ export class MatchCharacterRenderer{
    const opacity=Number.isFinite(p.cinematicOpacity)?clamp(p.cinematicOpacity,0,1):1;if(instance.cinematicOpacity!==opacity){for(const material of instance.bodyMaterials){const base=material.userData.cinematicBase;material.opacity=base.opacity*opacity;material.transparent=base.transparent||opacity<.999;material.depthWrite=base.depthWrite&&opacity>.99;}instance.cinematicOpacity=opacity;}
    const animation=characterLocomotion(p),motion=stepMotionPresentation(instance.motion,p,dt);instance.model.rotation.x=motion.lean;instance.model.rotation.z=-motion.strafe-motion.turn;
    const altitude=Math.max(0,p.p[1]-(p.groundY??p.p[1]));instance.contactShadow.visible=p.showShadow!==false&&instance.holder.visible&&p.air==='landed';instance.contactShadow.position.set(p.p[0],(p.groundY??p.p[1])+.025,p.p[2]);instance.contactShadow.material.opacity=.72/(1+altitude*.65);instance.contactShadow.scale.set(1.8+Math.min(altitude,4)*.18,1.3+Math.min(altitude,4)*.12,1);
-   const blendState=animation.state==='slide'?'crouch':animation.state==='crouch'&&animation.speed<.18?'idle':animation.state;
+   const blendState=animation.state==='slide'?'idle':animation.state==='crouch'&&animation.speed<.18?'idle':animation.state;
    instance.blend=stepAnimationBlend(instance.blend,{state:blendState,supported:this.supportedClips},dt);
    for(const [state,action] of instance.actions){action.setEffectiveWeight(instance.blend.weights[state]||0);if(state==='walk'||state==='run')action.setEffectiveTimeScale(clamp((p.moveSpeed||animation.speed)/(state==='run'?6.8:3.2),.65,1.4));}
    // Restore the last mixer pose before applying it again. Constant animation
@@ -231,7 +231,7 @@ export class MatchCharacterRenderer{
    if(instance.leftArm&&armed){instance.leftArm.rotation.x-=aim+.7;instance.leftArm.rotation.z+=.24;}
    if(instance.leftForeArm&&armed)instance.leftForeArm.rotation.x+=.26;
    if(airborne){if(instance.rightArm)instance.rightArm.rotation.x-=.23;if(instance.leftArm)instance.leftArm.rotation.x-=.2;for(const side of ['left','right']){const thigh=instance.bones.get(`mixamorig${side}upleg`),leg=instance.bones.get(`mixamorig${side}leg`);if(thigh)thigh.rotation.x-=p.vy>0?.24:.12;if(leg)leg.rotation.x+=p.vy>0?.38:.2;}}
-   const utilityId=activeMatch&&!armed&&!p.building?(p.slot===7?'shield':p.slot===8?'health':p.slot===9?'shockwave':'pickaxe'):null;
+   const utilityId=activeMatch&&!armed&&!p.building?(p.slot===7?'shield':p.slot===8?'health':p.slot===9?'shockwave':p.allowPickaxe===false?null:'pickaxe'):null;
    if(instance.utilityId!==utilityId){
     if(instance.utility)instance.utility.visible=false;
     instance.utility=utilityId?instance.utilityCache.get(utilityId):null;instance.utilityId=utilityId;
@@ -247,11 +247,19 @@ export class MatchCharacterRenderer{
    if(motion.landing>.001){for(const side of ['left','right']){const thigh=instance.bones.get(`mixamorig${side}upleg`),leg=instance.bones.get(`mixamorig${side}leg`);if(thigh)thigh.rotation.x-=motion.landing*.18;if(leg)leg.rotation.x+=motion.landing*.36;}instance.model.position.y=-motion.landing*.07;}else instance.model.position.y=0;
    const spine=instance.bones.get('mixamorigspine');if(spine)spine.rotation.y+=motion.turn*1.5;
    const crouch=instance.crouchBlend,slide=instance.slideBlend,crouchStep=Math.sin((Number(p.walk)||0)*2.15)*Math.min(1,(Number(p.moveSpeed)||0)/3.5)*crouch;
-   instance.holder.position.y-=crouch*.16+slide*.27;instance.model.rotation.x+=slide*.12;
+   instance.holder.position.y-=crouch*.16+slide*.42;instance.model.rotation.x+=slide*.12;
    const leftThigh=instance.bones.get('mixamorigleftupleg'),rightThigh=instance.bones.get('mixamorigrightupleg'),leftLeg=instance.bones.get('mixamorigleftleg'),rightLeg=instance.bones.get('mixamorigrightleg');
-   if(leftThigh)leftThigh.rotation.x-=crouch*.36+crouchStep*.17+slide*.72;if(rightThigh)rightThigh.rotation.x-=crouch*.36-crouchStep*.17+slide*.72;
-   if(leftLeg)leftLeg.rotation.x+=crouch*.68-crouchStep*.14+slide*1.12;if(rightLeg)rightLeg.rotation.x+=crouch*.68+crouchStep*.14+slide*1.12;
+   if(leftThigh)leftThigh.rotation.x-=crouch*.36+crouchStep*.17;if(rightThigh)rightThigh.rotation.x-=crouch*.36-crouchStep*.17;
+   if(leftLeg)leftLeg.rotation.x+=crouch*.68-crouchStep*.14;if(rightLeg)rightLeg.rotation.x+=crouch*.68+crouchStep*.14;
    const hips=instance.bones.get('mixamorighips'),slideSpine=instance.bones.get('mixamorigspine');if(hips)hips.rotation.x+=slide*.09;if(slideSpine)slideSpine.rotation.x+=slide*.16;
+   // Solve the native legs against ground contacts rather than assuming bone axes.
+   if(slide>.001){for(const [side,x,z,kneeZ] of [['left',-.13,-.58,-.6],['right',.13,.48,-.25]]){
+    const thigh=instance.bones.get('mixamorig'+side+'upleg'),leg=instance.bones.get('mixamorig'+side+'leg'),foot=instance.bones.get('mixamorig'+side+'foot');if(!thigh||!leg||!foot)continue;
+    instance.holder.updateMatrixWorld(true);const footOrientation=foot.getWorldQuaternion(new THREE.Quaternion()),base=[thigh,leg,foot].map(b=>b.quaternion.clone()),target=new THREE.Vector3(x,.13,z).applyAxisAngle(new THREE.Vector3(0,1,0),instance.holder.rotation.y).add(new THREE.Vector3(...p.p)),pole=new THREE.Vector3(x,side==='left'?.65:.08,kneeZ).applyAxisAngle(new THREE.Vector3(0,1,0),instance.holder.rotation.y).add(new THREE.Vector3(...p.p));
+    poseLegChain(instance.model,instance.bones,side,target,pole);
+    foot.quaternion.copy(foot.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(footOrientation));
+    for(const [n,bone]of [thigh,leg,foot].entries())bone.quaternion.copy(base[n].slerp(bone.quaternion.clone(),slide));
+   }}
    // Cinematic exit salute uses the native Soldier arm/finger rig. Apply
    // after mixer.update() so Idle cannot overwrite the gesture.
    const salute=clamp(Number(p.saluteProgress)||0,0,1);

@@ -1,25 +1,27 @@
-# Platform 23 integration verification
+# Platform 23 gunfight verification
 
-Verified 2026-10-09 with `npm run check`: 358 tests pass and the production build succeeds.
+Verified 2026-10-09: `npm run check` passes 367 tests and builds the production app. The connected two-player Platform 23 browser harness passes 24 checks with no JavaScript or WebGL errors.
 
-`GAME_TEST_URL=http://127.0.0.1:4186 GAME_TEST_GRAPHICS=low PLATFORM23_FRAME_SAMPLES=12 npm run test:platform23-browser` passes 22 connected-player checks. Coverage includes synchronized map choice, keyboard boarding, sealed waiting/ejection, song/logo/impact timing, walkout/salute/handoff, full-health gameplay with hidden damage overlays, native movement, wall/ramp building and climbing, floor loot collection, and local/remote gunshot audio. Both client handoffs render; no JavaScript or WebGL errors are recorded.
+The importer now reads rectangular Bezier patch controls in source column order and preserves outward winding. This fixes distorted curved architecture and its collision. A textured low-detail apron connects the courtyard gaps and corridor approaches. Four visible perimeter panels replace invisible containment. Runtime collision excludes hidden player clips and sky boundaries, retains exact visible convex walls and curved surfaces, and deduplicates spatial collision queries. Native support queries avoid repeating broad-phase box support checks.
 
-The geometry tests check triangle winding/material references and visible support beneath every landing region, chest and supply crate. Collision tests cover exact angled convex brushes, two-sided curved patches, native head clearance, shots/cameras, building and full eight-player pod reservations/exit paths.
+Platform 23 starts with an AR. The server and UI disable construction, harvesting, pickaxes and shockwaves; the Island retains those features. Both gamemodes use lower gun damage. Chests sit on flat support, open after a continuous 0.7-second hold without a timer, and animate around their rear hinge. Ctrl toggles crouch; Shift only runs; Ctrl while running starts a slide that continues after releasing Shift. A second Ctrl tap ends it, preserving crouch when a low ceiling prevents standing. Native leg-chain solving keeps the feet above the ground and one knee planted, with smooth entrance/exit blends and the weapon grip preserved.
 
-[Overview](overview.png), [courtyard](courtyard.png) and [corridor](corridor.png) show the actual production game renderer at High graphics, with the HUD hidden. [Salute](salute.png) and [gameplay corridor](gameplay-corridor.png) come from the connected-player Low-graphics run. No artist mockups are used.
+Geometry tests cover actual rectangular patch interpolation, triangle winding, visible support under every landing/chest, gap support, twenty-metre walking routes in both courtyards, exact convex collision, native head clearance and eight-player pod reservations. Rig tests load the actual Soldier skeleton and firearm meshes to verify ground contacts, constant leg lengths, smooth slide exit, salute and all weapon palm contacts.
 
-## Performance measurements
+[Overview](overview.png), [repaired courtyard](courtyard.png), [corridor](corridor.png), [knee-slide](knee-slide.png) and [upright open chest](open-chest.png) are actual production-engine High-graphics captures with controlled poses and the HUD hidden. [Salute](salute.png) and [gameplay corridor](gameplay-corridor.png) are from the full connected-player Low-graphics run. These are rendered screenshots, not concept art.
 
-The connected-player harness profiles one rendering peer after pausing the guest renderer. Chromium uses ANGLE SwiftShader, a software GPU, at a 960×540 viewport with Low graphics. Twelve frames per view give the following limited sample:
+## Performance and practical limits
 
-| View | Median frame interval | 95th percentile | Submitted map triangles | Material draw calls |
+Map geometry is 292 KB compressed, textures total 3.66 MB, and the whole map contains 32,338 triangles. An eight-player movement microbenchmark measured a 1.09 ms median and 2.51 ms 95th percentile across 450 warmed ticks. This excludes rendering, networking and startup; raw results are in [movement-performance.json](movement-performance.json).
+
+The browser profiles one peer at 960×540 Low graphics after pausing guest rendering. Chromium uses ANGLE SwiftShader, a software GPU; twelve frames per view provide the following small sample:
+
+| View | Median interval | 95th percentile | Submitted triangles | Draw calls |
 | --- | ---: | ---: | ---: | ---: |
-| Whole map | 33.4 ms | 50.1 ms | 27,952 | 46 |
-| Landing deck | 83.4 ms | 100.1 ms | 9,286 | 41 |
-| Native room | 66.7 ms | 83.3 ms | 14,665 | 45 |
+| whole-map | 50.0 ms | 83.3 ms | 32,338 | 46 |
+| deck | 99.9 ms | 100.0 ms | 10,629 | 41 |
+| room | 83.3 ms | 100.0 ms | 6,755 | 39 |
 
-These are software-rendering results, not desktop GPU benchmarks or a guarantee of 60 FPS. The earlier two-peer cinematic run also contains background-tab frame gaps; raw timings and GPU identity are preserved in [browser-results.json](browser-results.json). Ground-level rendering remains slower on this software GPU. High-graphics captures also complete without JavaScript errors.
+Software rendering remains slow. These measurements do not establish hardware GPU frame rates or guarantee zero lag. The background cinematic client had a frame gap longer than its 550 ms camera handoff; the foreground client captured the return. The test records that limitation rather than claiming both handoffs rendered. Both clients retain synchronized audio/impact checks, reach gameplay correctly, and render their characters without runtime errors. Full timings, GPU identity and results are in [browser-results.json](browser-results.json).
 
-Map geometry is about 302 KB compressed and textures total 3.66 MB. Source material batches and spatial chunks are culled without a second depth pass. Camera/bullet broad-phase rays avoid per-obstacle plane allocations: the same local 40-frame/18,630-collider benchmark improved from about 108 ms to 19 ms after warmup. This microbenchmark does not measure full-game frame rate.
-
-Converted art and source credit: [ATTRIBUTION.md](../../../public/maps/platform23/ATTRIBUTION.md).
+Converted art and adaptation credits: [ATTRIBUTION.md](../../../public/maps/platform23/ATTRIBUTION.md).

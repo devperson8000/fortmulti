@@ -26,7 +26,7 @@ export function createInventoryMenu({root,getState,onMove,onSelect,onOpen,onClos
  };
  function update(){
   if(!opened)return;const state=getState();if(!state.alive||state.phase!=='playing'){close();return;}
-  const next=JSON.stringify([state.inventory,state.slot,state.utilities,state.materials,state.inventory.map(w=>w?Boolean(getThumbnail(w.type)):false)]);
+  const next=JSON.stringify([state.inventory,state.slot,state.utilities,state.materials,state.rules,state.inventory.map(w=>w?Boolean(getThumbnail(w.type)):false)]);
   if(next===signature)return;signature=next;
   for(const [i,b]of buttons.entries()){
    const item=state.inventory[i],profile=WEAPON_PROFILES[item?.type],art=b.querySelector('.inventory-card-art'),image=profile&&getThumbnail(item.type),equipped=Boolean(item&&state.slot===i+1);
@@ -38,7 +38,7 @@ export function createInventoryMenu({root,getState,onMove,onSelect,onOpen,onClos
    b.querySelector('.inventory-card-action').textContent=item?'DRAG TO MOVE':'AVAILABLE';
   }
   const count=root.querySelector('[data-inventory-count]');if(count)count.textContent=`${state.inventory.filter(Boolean).length} / 5 WEAPONS`;
-  root.querySelector('[data-inventory-utilities]').textContent=`0  PICKAXE   ·   Z  WALL   ·   V  RAMP   ·   7  SHIELD ${state.utilities?.shield||0}   ·   8  MED KIT ${state.utilities?.health||0}   ·   9  SHOCKWAVE ${state.utilities?.shockwave||0}`;
+  root.querySelector('[data-inventory-utilities]').textContent=state.rules?.building===false?`7  SHIELD ${state.utilities?.shield||0}   ·   8  MED KIT ${state.utilities?.health||0}`:`0  PICKAXE   ·   Z  WALL   ·   V  RAMP   ·   7  SHIELD ${state.utilities?.shield||0}   ·   8  MED KIT ${state.utilities?.health||0}   ·   9  SHOCKWAVE ${state.utilities?.shockwave||0}`;
   root.querySelector('[data-inventory-materials]').textContent=`WOOD ${state.materials?.wood||0}   /   STONE ${state.materials?.stone||0}`;
  }
  function open(){

@@ -58,3 +58,9 @@ test('Every landing region, chest and supply crate has a visible source floor at
   assert.equal(visible,true,point.name||point.id);
  }
 });
+
+test('rectangular 9 by 3 source patches retain their smooth longitudinal surface',()=>{
+ const p=collision.patches.find(p=>p.source===17),expected=[68.890625,9.890625,26.25];
+ assert.ok(p);let found=false;for(let i=0;i<p.positions.length;i+=3)if(expected.every((v,k)=>Math.abs(v-p.positions[i+k])<1e-6))found=true;
+ assert.equal(found,true,'Bezier midpoint uses the authored 9 outer columns and 3 inner rows');
+});

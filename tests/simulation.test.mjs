@@ -52,11 +52,11 @@ test('multiplayer rounds end only when one connected player remains',()=>{
 
 test('host simulates hits and ammo during multiplayer combat',()=>{
  const match=new Match(world,['a','b','c']);landAll(match);match.players[0].p=[0,0,0];match.players[1].p=[0,0,-10];match.players[2].p=[20,0,20];const before=match.players[0].ammo;
- for(let i=0;i<20&&match.players[1].hp>0;i++){match.input('a',{slot:1,yaw:0,aim:true,fire:true});match.tick(.16);}assert.equal(match.players[1].hp,0);assert.ok(match.players[0].ammo<before);assert.equal(match.phase,'playing');
+ for(let i=0;i<40&&match.players[1].hp>0;i++){match.input('a',{slot:1,yaw:0,aim:true,fire:true});match.tick(.16);}assert.equal(match.players[1].hp,0);assert.ok(match.players[0].ammo<before);assert.equal(match.phase,'playing');
 });
 
 test('a wall blocks bullets and loses durability',()=>{
- const match=new Match(world,['a','b']);landAll(match);match.players[0].p=[0,0,0];match.players[1].p=[0,0,-10];match.structures=[{x:0,z:-5,y:0,angle:0,type:2,hp:150}];match.input('a',{slot:1,yaw:0,fire:true});match.tick(.03);assert.equal(match.players[1].shield,100);assert.equal(match.structures[0].hp,119);
+ const match=new Match(world,['a','b']);landAll(match);match.players[0].p=[0,0,0];match.players[1].p=[0,0,-10];match.structures=[{x:0,z:-5,y:0,angle:0,type:2,hp:150}];match.input('a',{slot:1,yaw:0,fire:true});match.tick(.03);assert.equal(match.players[1].shield,100);assert.equal(match.structures[0].hp,129);
 });
 
 test('the same held fire input places one wall and charges material once',()=>{

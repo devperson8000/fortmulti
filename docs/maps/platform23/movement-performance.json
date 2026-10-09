@@ -1,0 +1,8 @@
+{
+  "players": 8,
+  "samples": 450,
+  "medianTickMs": 1.0871150000000398,
+  "p95TickMs": 2.50902300000007,
+  "maxTickMs": 14.598248000000012,
+  "scope": "Authoritative movement tick only; excludes rendering/network and startup"
+}

@@ -67,7 +67,7 @@ for body in re.findall(r'\{([^{}]+)\}',text):
     ground_uv=poly[:,[0,1]]/256*np.array(texture_meta[ground_material]['size'])
     triangle(ground_material,poly[ids],ground_uv[ids],normals[i]);recovered_ground_triangles+=1
 for body in re.findall(r'patchDef2\s*\{([^{}]+)\}',text):
- lines=body.strip().splitlines();mat=lines[0].strip();w,h=map(int,re.findall(r'\d+',lines[1])[:2]);vals=[list(map(float,v.split())) for v in re.findall(r'\(\s*([-\d.eE+]+\s+[-\d.eE+]+\s+[-\d.eE+]+\s+[-\d.eE+]+\s+[-\d.eE+]+)\s*\)', '\n'.join(lines[2:]))];assert len(vals)==w*h;cp=np.array(vals).reshape(h,w,5);patch_count+=1;patch_triangles=[]
+ lines=body.strip().splitlines();mat=lines[0].strip();w,h=map(int,re.findall(r'\d+',lines[1])[:2]);vals=[list(map(float,v.split())) for v in re.findall(r'\(\s*([-\d.eE+]+\s+[-\d.eE+]+\s+[-\d.eE+]+\s+[-\d.eE+]+\s+[-\d.eE+]+)\s*\)', '\n'.join(lines[2:]))];assert len(vals)==w*h;cp=np.array(vals).reshape(w,h,5).transpose(1,0,2);patch_count+=1;patch_triangles=[]
  for y in range(0,h-2,2):
   for x in range(0,w-2,2):
    grid=[];controls=cp[y:y+3,x:x+3]
@@ -80,11 +80,46 @@ for body in re.findall(r'patchDef2\s*\{([^{}]+)\}',text):
    for j in range(SUBDIVISIONS):
     for i in range(SUBDIVISIONS):
      for ids in [[(j,i),(j+1,i),(j,i+1)],[(j,i+1),(j+1,i),(j+1,i+1)]]:
-      ps=np.array([g[a,b] for a,b in ids]);triangle(mat,ps[:,:3],ps[:,3:]*np.array(texture_meta.get(mat,{'size':[512,512]})['size']),collide=not nonsolid(mat))
+      ps=np.array([g[a,b] for a,b in reversed(ids)]);triangle(mat,ps[:,:3],ps[:,3:]*np.array(texture_meta.get(mat,{'size':[512,512]})['size']),collide=not nonsolid(mat))
       if not nonsolid(mat) and np.linalg.norm(np.cross(ps[1,:3]-ps[0,:3],ps[2,:3]-ps[0,:3]))>1e-9:patch_triangles.append(cv(ps[:,:3]).reshape(-1))
  if patch_triangles:
   a=np.array(patch_triangles);pts=a.reshape(-1,3);patches.append({'source':patch_count,'flags':[mat],'min':rounded(pts.min(0)),'max':rounded(pts.max(0)),'positions':rounded(a.reshape(-1))})
 assert invalid==0, f'{invalid} invalid brushes'
+
+# Continuous low-poly apron connects the authored disconnected courtyard islands.
+# It stays just below native room floors, and slopes from the courtyards to the
+# southern corridor. Render and authoritative support share these exact triangles.
+foundation=[]
+def apron_height(x,z):
+ base=-.51
+ weight=max(0,min(1,(46-abs(x))/3))
+ blend=max(0,min(1,(z+6)/11.75)) if z<5.75 else 1 if z<=24 else max(0,min(1,(44-z)/20))
+ if abs(x)<=14 and z<=5.75:return -.13 if -20<=z else base
+ return base+1.99*weight*blend
+xs=[-94,-46,-43,-16,-14,0,14,16,43,46,94]
+zs=[-59,-24,-20,-6,5.75,8,24,26,40,44,57]
+for x0,x1 in zip(xs,xs[1:]):
+ for z0,z1 in zip(zs,zs[1:]):
+  points=np.array([[x0,apron_height(x0,z0),z0],[x0,apron_height(x0,z1),z1],[x1,apron_height(x1,z1),z1],[x1,apron_height(x1,z0),z0]])
+  for ids in [[0,1,2],[0,2,3]]:
+   world=points[ids];normal=np.cross(world[1]-world[0],world[2]-world[0]);normal/=np.linalg.norm(normal)
+   uv=world[:,[0,2]]/8*np.array(texture_meta['shared_pk02/sand01']['size'])
+   render['shared_pk02/sand01'].append((world,uv,normal));foundation.append(world.reshape(-1))
+
+
+# Visible perimeter panels bound the supported apron; no invisible sky/player clips.
+foundation_rails=[]
+for center,extent in [([-93.8,.99,-1],[.4,3,116]),([93.8,.99,-1],[.4,3,116]),([0,.99,-58.8],[188,3,.4]),([0,.99,56.8],[188,3,.4])]:
+ center=np.array(center);extent=np.array(extent);lo=center-extent/2;hi=center+extent/2
+ planes=[[1,0,0,hi[0]],[-1,0,0,-lo[0]],[0,1,0,hi[1]],[0,-1,0,-lo[1]],[0,0,1,hi[2]],[0,0,-1,-lo[2]]]
+ foundation_rails.append({'type':'solid','supportOnlyNative':True,'blocksShots':True,'flags':['adapted/perimeter'],'min':rounded(lo),'max':rounded(hi),'planes':rounded(np.array(planes))})
+ corners=np.array([[x,y,z]for x in[lo[0],hi[0]]for y in[lo[1],hi[1]]for z in[lo[2],hi[2]]])
+ for axis in range(3):
+  for sign,edge in [(-1,lo[axis]),(1,hi[axis])]:
+   pts=corners[np.abs(corners[:,axis]-edge)<1e-8];normal=np.zeros(3);normal[axis]=sign;other=[k for k in range(3)if k!=axis];middle=pts.mean(0);angles=np.arctan2(pts[:,other[1]]-middle[other[1]],pts[:,other[0]]-middle[other[0]]);pts=pts[np.argsort(angles)]
+   if np.dot(np.cross(pts[1]-pts[0],pts[2]-pts[0]),normal)<0:pts=pts[::-1]
+   uv=pts[:,other]/8*np.array(texture_meta['shared_pk02/wall_big02b']['size'])
+   for ids in [[0,1,2],[0,2,3]]:render['shared_pk02/wall_big02b'].append((pts[ids],uv[ids],normal))
 
 # Pin sources once; record image hashes so future rebuilds reject changed inputs.
 provenance_path=source/'image-provenance.json';provenance=json.loads(provenance_path.read_text()) if provenance_path.exists() else {}
@@ -166,7 +201,7 @@ for mat,triangles in sorted(render.items()):
 bounds=np.concatenate([a for ts in render.values() for a,u,n in ts]);manifest={'name':'Platform 23','spatialChunks':True,'chunkSize':CHUNK,'materials':materials,'models':[{'name':'Platform 23 authored brush and patch geometry','meshes':[primitives]}],'bounds':{'min':rounded(bounds.min(0)),'max':rounded(bounds.max(0))},'sourceTransform':{'scale':SCALE,'offset':OFFSET.tolist(),'axes':['x','z','-y']},'license':'CC BY-SA 3.0; textures CC BY 3.0'}
 (out/'environment.json').write_text(json.dumps(manifest,separators=(',',':'))+'\n');(out/'geometry.bin.gz').write_bytes(gzip.compress(blob,compresslevel=9,mtime=0))
 collision_bounds={'min':rounded(np.min(np.array([b['min'] for b in brushes]+[b['min'] for b in patches]),axis=0)),'max':rounded(np.max(np.array([b['max'] for b in brushes]+[b['max'] for b in patches]),axis=0))}
-collision={'version':1,'scale':SCALE,'offset':OFFSET.tolist(),'bounds':collision_bounds,'brushes':brushes,'patches':patches,'walkable':{'positions':rounded(np.array(walkable).reshape(-1))}}
+collision={'version':1,'scale':SCALE,'offset':OFFSET.tolist(),'bounds':collision_bounds,'brushes':brushes,'patches':patches,'foundationRails':foundation_rails,'foundation':{'positions':rounded(np.array(foundation).reshape(-1)),'min':[-94,-.51,-59],'max':[94,1.48,57]},'walkable':{'positions':rounded(np.array(walkable).reshape(-1))}}
 (out/'collision-data.js').write_text('// Generated from original Platform 23 map. CC BY-SA 3.0; see ATTRIBUTION.md.\n// Convex interior: dot(plane.xyz, point) <= plane.w; min/max only broad phase.\nexport const PLATFORM_COLLISION='+json.dumps(collision,separators=(',',':'))+';\n')
 metrics={'sourceBrushes':source_brushes,'invalidBrushes':invalid,'solidBrushes':len(brushes),'sourcePatches':patch_count,'collisionPatches':len(patches),'walkableTriangles':len(walkable),'renderTriangles':triangle_count,'sourceRenderTriangles':sum(map(len,render.values()))-recovered_ground_triangles,'recoveredGroundTriangles':recovered_ground_triangles,'materials':len(materials),'spatialPrimitives':len(primitives),'geometryBytes':len(blob),'geometryGzipBytes':(out/'geometry.bin.gz').stat().st_size,'textureFiles':len(list((out/'textures').glob('*.webp'))),'textureBytes':sum(x.stat().st_size for x in (out/'textures').glob('*.webp')),'normalMapMaterials':sum('normalMap' in x for x in materials.values()),'bounds':manifest['bounds'],'sourceSha256':hashlib.sha256(text.encode()).hexdigest()}
 (out/'asset-validation.json').write_text(json.dumps(metrics,indent=2)+'\n');print(json.dumps(metrics,indent=2))

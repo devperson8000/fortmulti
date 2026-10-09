@@ -113,3 +113,8 @@ test('remote firearms face forward and both real palms follow model contacts thr
   assert.equal(mount.userData.calibration,c);
  }
 });
+
+test('native knee slide plants the feet and one knee without stretching the leg bones',async()=>{
+ const {MatchCharacterRenderer}=await import('../public/match-character-renderer.js');const r=Object.create(MatchCharacterRenderer.prototype);Object.assign(r,{scene:new THREE.Scene(),firstPersonScene:new THREE.Scene(),instances:new Map(),weaponTemplates:new Map(),clips:new Map()});r._loaded(asset);
+ for(const yaw of [0,.8,2.6]){const p={id:'slide',p:[18,4,68],yaw,hp:100,air:'landed',deploymentState:'match_active',grounded:true,sliding:true,crouching:true,moveSpeed:10.2,animationState:'slide',locomotionState:'slide'};for(let n=0;n<100;n++)r.update([p],{dt:1/60});const a=r.instances.get('slide');a.holder.updateMatrixWorld(true);const position=name=>a.bones.get('mixamorig'+name).getWorldPosition(new THREE.Vector3());for(const side of ['left','right'])assert.ok(Math.abs(position(side+'foot').y-4.13)<.002);assert.ok(position('rightleg').y>4.02&&position('rightleg').y<4.12);assert.ok(position('leftleg').y>4.35);const lengths=['leftleg','rightleg','leftfoot','rightfoot'].map(name=>a.bones.get('mixamorig'+name).position.length());p.sliding=false;p.crouching=false;p.moveSpeed=0;p.animationState=p.locomotionState='idle';r.update([p],{dt:1/60});assert.ok(a.slideBlend>.7&&a.slideBlend<1,'exit must blend');for(let n=0;n<100;n++)r.update([p],{dt:1/60});assert.ok(a.slideBlend<.001);for(const [n,name] of ['leftleg','rightleg','leftfoot','rightfoot'].entries())assert.ok(Math.abs(a.bones.get('mixamorig'+name).position.length()-lengths[n])<.0001);}
+});

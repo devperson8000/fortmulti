@@ -40,5 +40,5 @@ test('first-person rendering can draw a cached GLB after the raw arm viewmodel p
 
 test('remote crouch and slide presentation uses smooth pose blends and alternating crouch steps',async()=>{
  const renderer=await readFile(new URL('../public/match-character-renderer.js',import.meta.url),'utf8');
- assert.match(renderer,/slideBlend/);assert.match(renderer,/crouchBlend/);assert.match(renderer,/crouchStep/);assert.match(renderer,/slide\*1\.12/);
+ assert.match(renderer,/slideBlend/);assert.match(renderer,/crouchBlend/);assert.match(renderer,/crouchStep/);assert.match(renderer,/poseLegChain/);
 });
