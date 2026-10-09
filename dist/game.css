@@ -79,3 +79,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .gunfight-map [data-slot="0"],.gunfight-map [data-slot="6"],.gunfight-map [data-slot="10"],.gunfight-map [data-slot="9"],.gunfight-map #buildhelp,.gunfight-map [data-inventory-materials],.gunfight-map .materials{display:none!important}
 .gunfight-map .wood {display:none!important}
 .gunfight-map .construction-controls{display:none!important}
+
+/* The compass follows the camera each frame; no easing or north-wrap animation. */
+#compass{position:absolute;left:50%;top:0;transform:translateX(-50%);width:min(300px,36vw);height:53px;overflow:hidden;text-align:center;letter-spacing:1px;contain:layout paint}
+.compass-tape{position:absolute;left:50%;top:7px;width:0;height:24px}
+.compass-mark{position:absolute;left:-24px;top:0;width:48px;font-size:13px;line-height:22px;white-space:nowrap}
+.compass-mark::after{content:'';display:block;width:1px;height:4px;margin:1px auto;background:#e1eff0b3}
+.compass-pointer{position:absolute;left:calc(50% - 5px);top:-7px;font-size:17px;color:#e9f7ad;line-height:18px}
+.compass-bearing{position:absolute;left:0;right:0;top:34px;font-size:10px;letter-spacing:1px;font-variant-numeric:tabular-nums;color:#eff5df}
+.scope-range{font-variant-numeric:tabular-nums;font-size:10px;color:#e4faff}

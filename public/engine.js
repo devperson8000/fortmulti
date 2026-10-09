@@ -1,3 +1,4 @@
+import {createAimHud} from './aim-hud.js';
 import {chestPose} from './chest-presentation.js';
 import {rayCollider} from './collision-shapes.js';
 import {createDeploymentAudio} from './deployment-audio.js';
@@ -33,7 +34,7 @@ import {platformHeight as reactorHeight,platformLayout as reactorLayout,PLATFORM
 (()=>{
 let activeMap='island';
 const height=(x,z)=>activeMap==='facility'?reactorHeight(x,z):islandHeight(x,z);
-const $=id=>document.getElementById(id),canvas=$('game');const contextOptions=graphicsContextOptions(),gl=canvas.getContext('webgl2',contextOptions)||canvas.getContext('webgl',contextOptions);
+const $=id=>document.getElementById(id),canvas=$('game');const aimHud=createAimHud(document);const contextOptions=graphicsContextOptions(),gl=canvas.getContext('webgl2',contextOptions)||canvas.getContext('webgl',contextOptions);
 if(!gl){$('heading').textContent='WebGL is unavailable';$('intro').textContent='Enable hardware acceleration in your browser, then reopen the game.';$('play').style.display='none';return;}
 document.body.classList.add('menu');
 const readSetting=(key,fallback)=>{try{return localStorage.getItem(key)??fallback;}catch{return fallback;}},writeSetting=(key,value)=>{try{localStorage.setItem(key,String(value));}catch{}},clampSetting=(value,min,max,fallback)=>{const number=Number(value);return Number.isFinite(number)?Math.max(min,Math.min(max,number)):fallback;};
@@ -471,6 +472,7 @@ else if(player.air==='ship'||player.air==='pod'){
  const thirdTarget=add(thirdEye,forward),firstEye=[player.p[0],player.p[1]+1.72-cameraCrouch+motionFeel.cameraY*(1-adsBlend*.9),player.p[2]],firstTarget=add(firstEye,forward),view=blendCameraViews(thirdEye,thirdTarget,firstEye,firstTarget,cameraPresentation,cameraBlendOutput);
  eye=view.eye;cameraTarget=view.target;
 }
+aimHud.update({direction:norm(sub(cameraTarget,eye)),eye,scoped,now,world:window.Game.world,structures,players:bots,localId:player.id});
 const sequence=deploymentData?.stage||'',sequenceElapsed=deploymentData?.sequenceElapsed||0,launchFov=cinematicLock&&['pod_sealing','launching','transition'].includes(sequence)?deploymentPresentation(sequence,sequenceElapsed).launchProgress*10:0,baseFov=portrait?mix(mix(cinematicFov(width/h,window.Game.world.cinematicRadius),54*Math.PI/180,cinematicFrame.saluteFraming),75*Math.PI/180,cinematicFrame.returnProgress)+(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?0:cinematicFrame.impact*4*Math.PI/180):boarding?boardingFov:player.air==='ship'?(73+launchFov+Math.sin(time*2)*.35)*Math.PI/180:player.air==='pod'&&['pod_sealing','launching','transition'].includes(sequence)?(71+Math.sin(sequenceElapsed*5)*1.2)*Math.PI/180:(75+(player.sprinting?clamp(motionFeel.speed/10,0,1)*2.5:0))*Math.PI/180,targetFov=adsTarget&&player.air==='landed'?profile.adsFov*Math.PI/180:baseFov;cameraFov=mix(cameraFov,targetFov,1-Math.exp(-dt*(adsTarget?13:7.5)));gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);drawSky(eye,cameraTarget,width/h,cameraFov);gl.uniformMatrix4fv(um,false,matrix(eye,cameraTarget,width/h,cameraFov));gl.uniform3fv(ue,eye);updateFrustum(worldFrustum,matrix(eye,cameraTarget,width/h,cameraFov));gl.bindBuffer(gl.ARRAY_BUFFER,staticBuffer);gl.vertexAttribPointer(ap,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(ac,3,gl.FLOAT,false,24,12);for(const chunk of worldChunks)if(chunkVisible(chunk,worldFrustum))gl.drawArrays(gl.TRIANGLES,chunk.start,chunk.count);gl.bindBuffer(gl.ARRAY_BUFFER,resourceBuffer);gl.vertexAttribPointer(ap,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(ac,3,gl.FLOAT,false,24,12);if(activeMap==='island')drawVisibleResources(resourceRanges,resourceHP,eye,currentQuality.remoteDetail>.7?190:135,drawResourceSpan);geo.length=0;
 const deploymentOperatorOpacity=actor=>{
  if(portrait)return cinematicFrame.operatorOpacity;
@@ -508,7 +510,7 @@ if(firstPersonVisible){
  geo.length=0;drawFirstPersonViewModel(profile,useFirstPersonGLB);const viewData=dynamicData.copy(geo);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,viewData,gl.DYNAMIC_DRAW);gl.clear(gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(um,false,matrix([0,0,0],[0,0,-1],width/h,62*Math.PI/180));gl.uniform3f(ue,0,0,0);draw(dynamicBuffer,dynamicData.length/6);
  if(useFirstPersonGLB)matchCharacterRenderer.renderFirstPersonWeapon(profile.id,profile,viewModelState,weaponPartState,{flash,width,height:h,dt});else if(!isBuildSlot(slot)&&!isWeaponSlot(slot))matchCharacterRenderer?.renderFirstPersonItem(ITEM_SLOTS[slot]||'pickaxe',viewModelState,player,{width,height:h,dt});
 }
-mapTimer+=dt;if(mapTimer>.1){minimap();mapTimer=0;const angle=(((-yaw*180/Math.PI)%360)+360)%360,dirs=['N','NE','E','SE','S','SW','W','NW'];$('compass').innerHTML=`${dirs[(Math.round(angle/45)+7)%8]} &nbsp; · &nbsp; <strong>${dirs[Math.round(angle/45)%8]}</strong> &nbsp; · &nbsp; ${dirs[(Math.round(angle/45)+1)%8]} <small style="font-size:10px;letter-spacing:1px">${Math.round(angle)}°</small>`;}}
+mapTimer+=dt;if(mapTimer>.1){minimap();mapTimer=0;}}
 function drawLobby(){
  const w=Math.round(innerWidth*Math.min(devicePixelRatio,1.5)),h=Math.round(innerHeight*Math.min(devicePixelRatio,1.5));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}
  if(window.Duel.characterPreview){drawCharacterShowcase(w,h);return;}
