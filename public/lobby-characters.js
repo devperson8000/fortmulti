@@ -59,7 +59,7 @@ if(canvas){
   const c=mount.userData.calibration;
   instance.holder.updateMatrixWorld(true);
   const shoulders=['right','left'].map(side=>instance.holder.worldToLocal(instance.bones.get(`mixamorig${side}arm`).getWorldPosition(new THREE.Vector3()))),center=shoulders[0].add(shoulders[1]).multiplyScalar(.5);
-  mount.position.set(center.x+.16,center.y-.28,center.z-.16);mount.rotation.set(0,0,.42);instance.holder.updateMatrixWorld(true);
+  mount.position.set(center.x+.16,center.y-.28,center.z-.16);mount.rotation.set(0,0,1.5);instance.holder.updateMatrixWorld(true);
   const grip=new THREE.Vector3(...c.grip),point=value=>mount.localToWorld(new THREE.Vector3(...value).sub(grip).multiplyScalar(c.scale));
   const right=point(c.rightPalm),node=mount.userData.nodes.get(c.supportNode);
   let left=node?node.getWorldPosition(new THREE.Vector3()).add(mount.userData.supportOffset.clone().multiplyScalar(c.scale).applyQuaternion(mount.getWorldQuaternion(new THREE.Quaternion()))):point(c.support);
