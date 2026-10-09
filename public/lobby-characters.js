@@ -1,3 +1,4 @@
+import {createCharacterOutfit,applyCharacterOutfit} from './character-outfit.js';
 import {createContactShadow} from './character-lighting.js';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
@@ -44,7 +45,7 @@ if(canvas){
  function findRig(model){
   return resolveLobbyRig(model);
  }
- function disposeInstance(instance){instance.mixer.stopAllAction();scene.remove(instance.holder);instance.contactShadow.material.dispose();const skeletons=new Set();instance.holder.traverse(object=>{if(object.isSkinnedMesh)skeletons.add(object.skeleton);});for(const skeleton of skeletons)skeleton.dispose();}
+ function disposeInstance(instance){instance.mixer.stopAllAction();for(const material of instance.outfit.materials)material.dispose();scene.remove(instance.holder);instance.contactShadow.material.dispose();const skeletons=new Set();instance.holder.traverse(object=>{if(object.isSkinnedMesh)skeletons.add(object.skeleton);});for(const skeleton of skeletons)skeleton.dispose();}
  const normBone=name=>String(name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
  function createRifleMount(instance){
   if(!rifleTemplate||instance.rifleMount)return;
@@ -79,6 +80,7 @@ if(canvas){
    randomState:hash(`${member.id||index}:horizon-lobby`)||1,
    saluteActive:false,saluteStarted:0,nextSaluteAt:now+10+index*2.1
   };
+  instance.outfit=createCharacterOutfit(model);applyCharacterOutfit(instance.outfit,member.color);
   createRifleMount(instance);
   return instance;
  }
@@ -89,7 +91,7 @@ if(canvas){
    const id=String(member.id||('slot-'+index));active.add(id);
    let instance=instances.get(id);
    if(!instance){instance=createInstance({...member,id},index);instances.set(id,instance);}
-   instance.slot=index;
+   applyCharacterOutfit(instance.outfit,member.color);instance.slot=index;
   });
   for(const [id,instance] of instances)if(!active.has(id)){disposeInstance(instance);instances.delete(id);}
  }
@@ -165,7 +167,7 @@ if(canvas){
   poseInstances(party,preview,time);
   renderer.render(scene,camera);
  }
- lobbyDiagnostics.snapshot=()=>[...instances.values()].map(i=>{i.holder.updateMatrixWorld(true);const point=name=>i.bones.get('mixamorig'+name).getWorldPosition(new THREE.Vector3()).project(camera).toArray();return {id:i.id,visible:i.holder.visible,rifle:Boolean(i.rifleMount),saluting:i.saluteActive,head:point('head'),leftFoot:point('leftfoot'),rightFoot:point('rightfoot')};});
+ lobbyDiagnostics.snapshot=()=>[...instances.values()].map(i=>{i.holder.updateMatrixWorld(true);const point=name=>i.bones.get('mixamorig'+name).getWorldPosition(new THREE.Vector3()).project(camera).toArray();return {id:i.id,outfit:i.outfit.color,uniformColor:i.outfit.uniform[0]?.material.color.getHexString(),visible:i.holder.visible,rifle:Boolean(i.rifleMount),saluting:i.saluteActive,head:point('head'),leftFoot:point('leftfoot'),rightFoot:point('rightfoot')};});
  const loader=new GLTFLoader();
  loader.load(
   '/models/Soldier.glb',

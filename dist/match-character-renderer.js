@@ -1,3 +1,4 @@
+import {createCharacterOutfit,applyCharacterOutfit} from './character-outfit.js';
 import {WEAPON_PROFILES} from './weapon-system.js';
 import {inventoryWeapon} from './weapon-inventory.js';
 import {WEAPON_FILES,createGroundWeapon,groundWeaponPose} from './weapon-assets.js';
@@ -89,7 +90,7 @@ export class MatchCharacterRenderer{
   for(const clip of gltf.animations){const state=clipState(clip.name);if(['idle','walk','run','jump','fall','crouch'].includes(state))this.clips.set(state,clip);}
   if(!this.clips.has('idle')&&gltf.animations[0])this.clips.set('idle',gltf.animations[0]);
   if(!this.clips.has('walk')&&this.clips.has('run'))this.clips.set('walk',this.clips.get('run'));
-  this.arms=createSoldierArms(this.template,this.modelScale);this.firstPersonScene.add(this.arms.model);this.utilities=new Map();this.supportedClips=new Set(this.clips.keys());this.ready=this.clips.has('idle');
+  this.arms=createSoldierArms(this.template,this.modelScale);this.arms.outfit=createCharacterOutfit(this.arms.model);this.firstPersonScene.add(this.arms.model);this.utilities=new Map();this.supportedClips=new Set(this.clips.keys());this.ready=this.clips.has('idle');
  }
  _weaponFor(instance,weaponId){
   if(instance.weaponId===weaponId&&(!weaponId||instance.weaponMount||!this.weaponTemplates.has(weaponId)))return;
@@ -197,16 +198,17 @@ export class MatchCharacterRenderer{
   this._tint(instance,instance.color);return instance;
  }
  _tint(instance,value){
-  const tint=new THREE.Color(value||'#6f8470');instance.bodyMaterials=[];
-  instance.model.traverse(object=>{if(!object.isMesh)return;const source=object.material,colorMat=sourceMaterial=>{const material=sourceMaterial.clone();material.userData.cinematicBase={opacity:material.opacity,transparent:material.transparent,depthWrite:material.depthWrite};instance.bodyMaterials.push(material);if(material.color)material.color.lerp(tint,.055);if('roughness' in material)material.roughness=Math.max(.65,material.roughness);return material;};object.material=Array.isArray(source)?source.map(colorMat):colorMat(source);});
+  instance.outfit??=createCharacterOutfit(instance.model);instance.bodyMaterials=instance.outfit.materials;applyCharacterOutfit(instance.outfit,value);instance.color=instance.outfit.color;
  }
  update(players=[],{localId='',hideId='',phase='playing',dt=.016}={}){
   if(!this.ready)return;
+  if(this.arms)applyCharacterOutfit(this.arms.outfit,players.find(p=>String(p.id)===String(localId))?.color);
   const active=new Set();
   for(const p of players){
    if(!p?.id||p.hp<=0)continue;
    const id=String(p.id);active.add(id);let instance=this.instances.get(id);
    if(!instance){instance=this._create(id,p);this.instances.set(id,instance);}
+   this._tint(instance,p.color);
    instance.holder.visible=id!==String(hideId);instance.holder.position.set(p.p?.[0]||0,p.p?.[1]||0,p.p?.[2]||0);instance.holder.rotation.y=Number.isFinite(p.yaw)?p.yaw:0;
    if(!instance.holder.visible){instance.contactShadow.visible=false;continue;}
    const opacity=Number.isFinite(p.cinematicOpacity)?clamp(p.cinematicOpacity,0,1):1;if(instance.cinematicOpacity!==opacity){for(const material of instance.bodyMaterials){const base=material.userData.cinematicBase;material.opacity=base.opacity*opacity;material.transparent=base.transparent||opacity<.999;material.depthWrite=base.depthWrite&&opacity>.99;}instance.cinematicOpacity=opacity;}
