@@ -2,7 +2,10 @@ import {createContactShadow} from './character-lighting.js';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkinned} from 'three/addons/utils/SkeletonUtils.js';
-import {buildForeheadSaluteProbes,resolveLobbyRig,SALUTE_FINGER_CURLS,sampleRightHandFingerPose} from './lobby-rig.js';
+import {resolveLobbyRig,sampleRightHandFingerPose} from './lobby-rig.js';
+import {firstPersonCalibration} from './first-person-calibration.js';
+import {poseWeaponHand,supportHandPose} from './soldier-arms.js';
+import {poseNativeSalute} from './match-character-renderer.js';
 
 const canvas=document.getElementById('lobby-characters');
 if(canvas){
@@ -22,14 +25,11 @@ if(canvas){
 
  const regularSpots=[[0,.1,2.15],[-2.8,.03,.45],[2.8,.03,.45],[-5.05,-.02,-.95],[5.05,-.02,-.95],[-7,-.06,-2.15],[7,-.06,-2.15],[0,-.06,-2.5]];
  const instances=new Map(),clock=new THREE.Clock();
- const vA=new THREE.Vector3(),vB=new THREE.Vector3(),vC=new THREE.Vector3(),vD=new THREE.Vector3(),targetElbow=new THREE.Vector3(),targetHand=new THREE.Vector3();
- const qA=new THREE.Quaternion(),qB=new THREE.Quaternion(),qC=new THREE.Quaternion();
- const saluteRaycaster=new THREE.Raycaster(),saluteCurlByName=new Map(SALUTE_FINGER_CURLS.map(curl=>[curl.name,curl]));
- let template=null,idleClip=null,walkClip=null,saluteFingerPose=[],started=false,rigWarningShown=false;
+ let template=null,idleClip=null,walkClip=null,saluteFingerPose=[],rifleTemplate=null,started=false,rigWarningShown=false;
+ const rifleCalibration=firstPersonCalibration('ar');
 
  const clamp01=value=>Math.max(0,Math.min(1,value));
  const smooth=value=>{value=clamp01(value);return value*value*(3-2*value);};
- const easeOut=value=>1-Math.pow(1-clamp01(value),3);
  const hash=value=>{let h=2166136261;for(const char of String(value)){h^=char.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;};
  const rand01=instance=>{let x=instance.randomState||1;x^=x<<13;x^=x>>>17;x^=x<<5;instance.randomState=x>>>0;return instance.randomState/4294967296;};
 
@@ -43,19 +43,41 @@ if(canvas){
   return resolveLobbyRig(model);
  }
  function disposeInstance(instance){instance.mixer.stopAllAction();scene.remove(instance.holder);instance.contactShadow.material.dispose();const skeletons=new Set();instance.model.traverse(object=>{if(object.isSkinnedMesh)skeletons.add(object.skeleton);});for(const skeleton of skeletons)skeleton.dispose();}
+ const normBone=name=>String(name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+ function createRifleMount(instance){
+  if(!rifleTemplate||instance.rifleMount)return;
+  const model=cloneSkinned(rifleTemplate),mount=new THREE.Group(),nodes=new Map();
+  model.traverse(object=>nodes.set(normBone(object.name),object));model.updateMatrixWorld(true);
+  const supportOffset=new THREE.Vector3(...rifleCalibration.support).sub(nodes.get(rifleCalibration.supportNode)?.getWorldPosition(new THREE.Vector3())||new THREE.Vector3(...rifleCalibration.support));
+  model.position.copy(new THREE.Vector3(...rifleCalibration.grip).multiplyScalar(-rifleCalibration.scale));model.scale.setScalar(rifleCalibration.scale);mount.add(model);
+  Object.assign(mount.userData,{calibration:rifleCalibration,nodes,supportOffset});
+  mount.traverse(object=>{if(object.isMesh){object.castShadow=false;object.receiveShadow=false;}});
+  instance.holder.add(mount);instance.rifleMount=mount;
+ }
+ function poseRifle(instance){
+  const mount=instance.rifleMount;if(!mount)return;
+  const c=mount.userData.calibration;
+  instance.holder.updateMatrixWorld(true);
+  const shoulders=['right','left'].map(side=>instance.holder.worldToLocal(instance.bones.get(`mixamorig${side}arm`).getWorldPosition(new THREE.Vector3()))),center=shoulders[0].add(shoulders[1]).multiplyScalar(.5);
+  mount.position.set(center.x+.16,center.y-.28,center.z-.16);mount.rotation.set(0,0,.42);instance.holder.updateMatrixWorld(true);
+  const grip=new THREE.Vector3(...c.grip),point=value=>mount.localToWorld(new THREE.Vector3(...value).sub(grip).multiplyScalar(c.scale));
+  const right=point(c.rightPalm),node=mount.userData.nodes.get(c.supportNode);
+  let left=node?node.getWorldPosition(new THREE.Vector3()).add(mount.userData.supportOffset.clone().multiplyScalar(c.scale).applyQuaternion(mount.getWorldQuaternion(new THREE.Quaternion()))):point(c.support);
+  const localSupport=mount.worldToLocal(left);localSupport.z=Math.max(-.09,localSupport.z);left=mount.localToWorld(localSupport);
+  const rotation=mount.getWorldQuaternion(new THREE.Quaternion()),rest=instance.fingerRest;
+  for(const [side,palm,spec,sign] of [
+   ['right',right,{rotation:c.rightRotation,fingers:c.rightFingers,splay:c.rightSplay,thumbOpposition:c.rightThumbOpposition},1],
+   ['left',left,supportHandPose(c),-1]
+  ]){
+   const orientation=new THREE.Quaternion().setFromEuler(new THREE.Euler(...spec.rotation,'XYZ')).premultiply(rotation),pole=instance.holder.localToWorld(new THREE.Vector3(sign*.5,1.05,.1));
+   poseWeaponHand(instance.model,instance.bones,side,palm,orientation,{...spec,rest},pole);
+  }
+ }
  function createInstance(member,index){
   const model=cloneSkinned(template),holder=new THREE.Group(),rig=findRig(model);
-  const sampledFingerPose=new Map(saluteFingerPose.map(({name,quaternion})=>[name,quaternion]));
-  const fingerTargets=[];
-  for(const digit of ['Thumb','Index','Middle','Ring','Pinky'])for(let joint=1;joint<=4;joint++){
-   const bone=rig[`right${digit}${joint}`];
-   if(!bone)continue;
-   const curl=saluteCurlByName.get(bone.name)||null;
-   fingerTargets.push({name:bone.name,bone,quaternion:(sampledFingerPose.get(bone.name)||bone.quaternion).clone(),curl});
-  }
-  const saluteBones=[rig.rightShoulder,rig.rightArm,rig.rightForeArm,rig.rightHand,...fingerTargets.map(target=>target.bone)].filter(Boolean);
-  const foreheadMeshes=[];
-  model.traverse(object=>{if(object.isSkinnedMesh&&object.skeleton.bones.some(bone=>bone.name==='mixamorigHead'))foreheadMeshes.push(object);});
+  const bones=new Map();
+  model.traverse(object=>{if(object.isBone)bones.set(normBone(object.name),object);});
+  const fingerRest=new Map(saluteFingerPose.map(({name,quaternion})=>[bones.get(normBone(name)),quaternion.clone()]).filter(([bone])=>bone));
   if(!rigWarningShown){
    const missing=['rightShoulder','rightArm','rightForeArm','rightHand',...['Thumb','Index','Middle','Ring','Pinky'].flatMap(digit=>[1,2,3,4].map(joint=>`right${digit}${joint}`))].filter(name=>!rig[name]);
    if(missing.length){console.error('Horizon lobby Soldier rig is missing runtime bones:',missing);rigWarningShown=true;}
@@ -69,11 +91,13 @@ if(canvas){
   const phase=(index*.91+(String(member.id||'').length*.37))%(idleClip.duration||1),now=performance.now()/1000;
   idleAction.time=phase;
   if(walkAction)walkAction.time=(phase*1.73)%(walkClip.duration||1);
-  return {
-   id:member.id,holder,model,contactShadow,mixer,idleAction,walkAction,animatedPose:new Map(Object.values(rig).filter(bone=>bone?.quaternion).map(bone=>[bone,bone.quaternion.clone()])),fingerTargets,saluteBones,foreheadMeshes,salutePose:null,rig,phase,slot:index,
+  const instance={
+   id:member.id,holder,model,contactShadow,mixer,idleAction,walkAction,animatedPose:new Map([...bones.values()].map(bone=>[bone,bone.quaternion.clone()])),bones,fingerRest,rig,phase,slot:index,
    randomState:hash(`${member.id||index}:horizon-lobby`)||1,
    saluteActive:false,saluteStarted:0,nextSaluteAt:now+.85+index*.16
   };
+  createRifleMount(instance);
+  return instance;
  }
  function ensureInstances(party){
   const active=new Set();
@@ -87,127 +111,19 @@ if(canvas){
   for(const [id,instance] of instances)if(!active.has(id)){disposeInstance(instance);instances.delete(id);}
  }
  function saluteState(instance,time){
-  if(!instance.saluteActive&&time>=instance.nextSaluteAt){instance.saluteActive=true;instance.saluteStarted=time;instance.salutePose=null;}
-  if(!instance.saluteActive)return {amount:0,flick:0};
+  if(!instance.saluteActive&&time>=instance.nextSaluteAt){instance.saluteActive=true;instance.saluteStarted=time;}
+  if(!instance.saluteActive)return {amount:0};
   const elapsed=time-instance.saluteStarted;
-  if(elapsed<.42)return {amount:easeOut(elapsed/.42),flick:0};
-  if(elapsed<1.12)return {amount:1,flick:0};
-  if(elapsed<1.28){const t=smooth((elapsed-1.12)/.16);return {amount:1,flick:t};}
-  if(elapsed<1.68){const t=smooth((elapsed-1.28)/.40);return {amount:1-t,flick:1-t};}
-  instance.saluteActive=false;instance.salutePose=null;
+  if(elapsed<2)return {amount:Math.min(smooth(elapsed/.46),smooth((2-elapsed)/.46))};
+  instance.saluteActive=false;
   instance.nextSaluteAt=time+16+rand01(instance)*18;
-  return {amount:0,flick:0};
+  return {amount:0};
  }
- function rotateBoneToward(bone,child,target,amount){
-  if(!bone||!child||amount<=0)return;
-  bone.updateWorldMatrix(true,true);
-  child.updateWorldMatrix(true,true);
-  bone.getWorldPosition(vA);child.getWorldPosition(vB);
-  vC.copy(vB).sub(vA);vD.copy(target).sub(vA);
-  if(vC.lengthSq()<1e-8||vD.lengthSq()<1e-8)return;
-  vC.normalize();vD.normalize();
-  qA.setFromUnitVectors(vC,vD);
-  bone.getWorldQuaternion(qB);qC.copy(qA).multiply(qB);
-  if(bone.parent){bone.parent.getWorldQuaternion(qA).invert();qC.premultiply(qA);}
-  bone.quaternion.slerp(qC,clamp01(amount));
-  bone.updateWorldMatrix(false,true);
- }
+ const idleRotation=new THREE.Quaternion();
  function additiveRotate(bone,x=0,y=0,z=0,weight=1){
   if(!bone||weight<=0)return;
-  qA.setFromEuler(new THREE.Euler(x*weight,y*weight,z*weight,'XYZ'));
-  bone.quaternion.multiply(qA);
- }
- function updateSkinnedMatrices(model){
-  model.updateMatrixWorld(true);
-  model.traverse(object=>{if(object.isSkinnedMesh)object.skeleton.update();});
- }
- function getForeheadTargets(instance){
-  const {head,rightShoulder}=instance.rig;
-  if(!head||!rightShoulder)return null;
-  updateSkinnedMatrices(instance.model);
-  head.getWorldPosition(vA);rightShoulder.getWorldPosition(vB);
-  const probes=buildForeheadSaluteProbes(vA.toArray(),vB.toArray(),camera.position.toArray(),instance.holder.scale.x);
-  const faceDirection=new THREE.Vector3(...probes.direction).normalize();
-  const fallbackDistance=.32*(instance.holder.scale.x/1.78);
-  return probes.probes.map(probe=>{
-   const fallback=new THREE.Vector3(...probe).addScaledVector(faceDirection,fallbackDistance);
-   if(!instance.foreheadMeshes.length)return fallback;
-   const origin=new THREE.Vector3(...probe).addScaledVector(faceDirection,1);
-   saluteRaycaster.set(origin,faceDirection.clone().negate());
-   saluteRaycaster.near=0;saluteRaycaster.far=1.8;
-   const hit=saluteRaycaster.intersectObjects(instance.foreheadMeshes,false)[0];
-   if(!hit)return fallback;
-   const normal=hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
-   if(normal.dot(faceDirection)<0)normal.negate();
-   return hit.point.clone().addScaledVector(normal,.003);
-  });
- }
- function alignSaluteHand(instance,tips,targets){
-  const {rightHand}=instance.rig;
-  if(!rightHand||!tips[0]||!tips[1])return;
-  rightHand.updateWorldMatrix(true,true);
-  tips[0].getWorldPosition(vA);tips[1].getWorldPosition(vB);vC.copy(vA).sub(vB);
-  vA.copy(targets[0]).sub(targets[1]);
-  if(vA.lengthSq()<1e-8||vC.lengthSq()<1e-8)return;
-  qA.setFromUnitVectors(vC.normalize(),vA.normalize());
-  rightHand.getWorldQuaternion(qB);qC.copy(qA).multiply(qB);
-  if(rightHand.parent){rightHand.parent.getWorldQuaternion(qA).invert();qC.premultiply(qA);}
-  rightHand.quaternion.copy(qC);rightHand.updateWorldMatrix(false,true);
- }
- function solveSalutePose(instance){
-  const {rightShoulder,rightArm,rightForeArm,rightHand,rightIndex4,rightMiddle4}=instance.rig;
-  if(!rightShoulder||!rightArm||!rightForeArm||!rightHand||!rightIndex4||!rightMiddle4)return new Map();
-
-  // Start from a complete two-finger salute pose, then solve its tips onto the
-  // Soldier's actual forehead surface. All results are reapplied after Idle.
-  rightArm.quaternion.set(.4095411,0,-.0013047,.9122907);
-  rightForeArm.quaternion.set(.5717739,0,-.5741454,.5860305);
-  additiveRotate(rightShoulder,-.015,-.015,-.075);
-  additiveRotate(rightHand,-.24,-.08,.28);
-  for(const target of instance.fingerTargets){
-   target.bone.quaternion.copy(target.quaternion);
-   if(target.curl){
-    qA.setFromAxisAngle(vA.fromArray(target.curl.axis),target.curl.angle);
-    target.bone.quaternion.multiply(qA);
-   }
-  }
-
-  const targets=getForeheadTargets(instance);
-  if(targets){
-   const tips=[rightIndex4,rightMiddle4];
-   alignSaluteHand(instance,tips,targets);
-   updateSkinnedMatrices(instance.model);
-   rightHand.updateWorldMatrix(true,true);
-   tips[0].getWorldPosition(vA);tips[1].getWorldPosition(vB);vA.add(vB).multiplyScalar(.5);
-   const midpointEffector=new THREE.Object3D();rightHand.add(midpointEffector);
-   midpointEffector.position.copy(rightHand.worldToLocal(vA.clone()));
-   const targetCenter=targets[0].clone().add(targets[1]).multiplyScalar(.5);
-   const chain=[rightForeArm,rightArm,rightShoulder];
-   for(let pass=0;pass<8;pass++){
-    alignSaluteHand(instance,tips,targets);
-    for(const joint of chain){
-     rotateBoneToward(joint,midpointEffector,targetCenter,1);
-     rotateBoneToward(joint,midpointEffector,targetCenter,1);
-    }
-   }
-   rightHand.remove(midpointEffector);
-  }
-  instance.model.updateMatrixWorld(true);
-  return new Map(instance.saluteBones.map(bone=>[bone.name,bone.quaternion.clone()]));
- }
- function applySalute(instance,state){
-  const amount=state.amount;
-  if(amount<=.001||!instance.saluteBones.length)return;
-  const basePose=instance.saluteBones.map(bone=>[bone,bone.quaternion.clone()]);
-  if(!instance.salutePose){
-   instance.salutePose=solveSalutePose(instance);
-   for(const [bone,quaternion] of basePose)bone.quaternion.copy(quaternion);
-  }
-  for(const bone of instance.saluteBones){
-   const target=instance.salutePose.get(bone.name);
-   if(target)bone.quaternion.slerp(target,amount);
-  }
-  additiveRotate(instance.rig.rightHand,-state.flick*.22,-state.flick*.08,state.flick*.30,amount);
+  idleRotation.setFromEuler(new THREE.Euler(x*weight,y*weight,z*weight,'XYZ'));
+  bone.quaternion.multiply(idleRotation);
  }
  function applyIdleLayers(instance,time,salute){
   const rig=instance.rig,phase=instance.phase;
@@ -242,9 +158,10 @@ if(canvas){
    instance.idleAction.setEffectiveWeight(1-walkWeight);
    if(instance.walkAction)instance.walkAction.setEffectiveWeight(walkWeight);
    applyIdleLayers(instance,time,salute);
-   // The mixer rewrites its tracked bones at the start of every frame. Keep these
-   // direct pose overrides after that update so Idle cannot erase the salute.
-   applySalute(instance,salute);
+   // Keep the calibrated AR in both hands; the native deployment salute then
+   // releases the trigger hand while the support hand stays on the rifle.
+   poseRifle(instance);
+   if(salute.amount>.001)poseNativeSalute(instance,salute.amount);
   }
  }
  function resize(){
@@ -265,7 +182,8 @@ if(canvas){
   poseInstances(party,preview,time);
   renderer.render(scene,camera);
  }
- new GLTFLoader().load(
+ const loader=new GLTFLoader();
+ loader.load(
   '/models/Soldier.glb',
   gltf=>{
    template=gltf.scene;
@@ -285,4 +203,8 @@ if(canvas){
   undefined,
   error=>console.error('Horizon could not load the lobby Soldier model.',error)
  );
+ loader.load('/models/weapons/Rifle_Assault_East.glb',gltf=>{
+  rifleTemplate=gltf.scene;
+  for(const instance of instances.values())createRifleMount(instance);
+ },undefined,error=>console.error('Horizon could not load the lobby assault rifle model.',error));
 }
