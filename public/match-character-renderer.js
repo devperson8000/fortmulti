@@ -25,7 +25,7 @@ const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const saluteForehead=[-5.12026438883,17.57254662871,11.46768078850];
 const saluteTips=[['index3',[-.0972724658,3.7575946381,-.0024291103]],['middle3',[-.8392463825,3.7000995029,.0195624377]]];
 const saluteHandRotation=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(0,0,1),new THREE.Vector3(-.866,.5,0).normalize(),new THREE.Vector3(-.5,-.866,0).normalize()));
-function poseNativeSalute(instance,amount){
+export function poseNativeSalute(instance,amount){
  const {model,holder,bones,fingerRest}=instance,arm=bones.get('mixamorigrightarm'),fore=bones.get('mixamorigrightforearm'),hand=bones.get('mixamorigrighthand'),head=bones.get('mixamorighead');
  if(!arm||!fore||!hand||!head)return;
  const base=[arm,fore,hand].map(b=>b.quaternion.clone()),fingers=[];
