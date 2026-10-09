@@ -14,6 +14,12 @@ Ground queries use nearby terrain and rooftop collision buckets rather than scan
 
 The island and its gameplay systems are original. Bundled model sources and licenses are documented in [`public/models/ASSET-LICENSES.md`](public/models/ASSET-LICENSES.md). The project is not affiliated with or endorsed by Epic Games.
 
+## Military lobby
+
+The lobby presents the local operator in front of a compact squad formation. All members hold the actual assault rifle across the torso with both calibrated palms on its real grip and fore-end contacts. Idle animation and occasional staggered salutes preserve the native skeleton. Party framing adapts through eight members and compact/phone viewports; the Character tab fits the full operator and rifle above its matching inspection platform.
+
+Run `GAME_TEST_URL=http://127.0.0.1:4176 npm run test:lobby-browser` against the running app to verify real local-transport parties with two, four and eight connected clients, visible character framing and party removal. Captures and verification notes are in [screenshots/lobby-polish](screenshots/lobby-polish).
+
 ## Match maps
 
 The party leader chooses **Ironwood Island** (outdoor military terrain and forests) or **Platform 23** (EmperorJack’s military industrial arena from Unvanquished). Platform 23 replaces the discarded Reactor Facility option; the network map identifier remains `facility` for existing parties. The selection synchronizes across the party and loads before deployment begins. Unselected map assets are never requested.
