@@ -91,11 +91,12 @@ export function safeLandingPoint(destination,world,reserved=[]){
   const y=Number(world.height(x,z));if(!Number.isFinite(y)||Number.isFinite(world.minLandingHeight)&&y<world.minLandingHeight)continue;
   // Reserve the full portrait orbit at selection time. A .75m body clearance
   // lets a nearby car or wall force the camera inside the capsule on landing.
-  const blocked=obstacles.some(box=>Math.hypot(Math.max(box.min[0]-x,0,x-box.max[0]),Math.max(box.min[2]-z,0,z-box.max[2]))<CINEMATIC_CAMERA_RADIUS+.45&&box.max[1]>y+.02);
+  const radius=world.cinematicRadius||CINEMATIC_CAMERA_RADIUS;
+  const blocked=world.isLandingClear?!world.isLandingClear(x,z,y,radius):obstacles.some(box=>Math.hypot(Math.max(box.min[0]-x,0,x-box.max[0]),Math.max(box.min[2]-z,0,z-box.max[2]))<radius+.45&&box.max[1]>y+.02);
   // A landing reserves a full capsule AND its exterior camera orbit.
   // Two operators choosing the same spot must not spawn intersecting pods
   // or place one capsule inside the other player's cinematic camera.
-  const minimumSpacing=CINEMATIC_CAMERA_RADIUS*2+1.2;
+  const minimumSpacing=radius*2+1.2;
   if(blocked||reserved.some(other=>other&&Math.hypot(x-other.x,z-other.z)<minimumSpacing))continue;
   // A 3.8m high rigid capsule sinks into steep terrain unless its entire
   // footprint is near the landing height; an exit hatch needs firm ground.

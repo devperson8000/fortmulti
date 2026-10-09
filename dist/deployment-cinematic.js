@@ -43,12 +43,12 @@ export function cinematicPodPosition(landing,sequenceTime){
  return [landing.x,landing.y+80*(1-progress**3),landing.z];
 }
 
-export function cinematicFov(aspect=16/9){
- return Math.max(73*Math.PI/180,Math.min(86*Math.PI/180,2*Math.atan(2.25/(Math.max(.4,aspect)*(CINEMATIC_CAMERA_RADIUS-.95)))));
+export function cinematicFov(aspect=16/9,cameraRadius=CINEMATIC_CAMERA_RADIUS){
+ return Math.max(73*Math.PI/180,Math.min(86*Math.PI/180,2*Math.atan(2.25/(Math.max(.4,aspect)*(cameraRadius-.95)))));
 }
 
-export function cinematicCamera(position,yaw,{orbit=0,impact=0,returnProgress=0,musicTime=-1,saluteFraming=0}={}, {groundHeight,wallDistance,reducedMotion=false,subjectPosition=null,returnYaw=null}={}){
- const q=clamp(returnProgress),angle=-1.0+orbit*1.28,radius=CINEMATIC_CAMERA_RADIUS*(1-q);
+export function cinematicCamera(position,yaw,{orbit=0,impact=0,returnProgress=0,musicTime=-1,saluteFraming=0}={}, {groundHeight,wallDistance,reducedMotion=false,subjectPosition=null,returnYaw=null,cameraRadius=CINEMATIC_CAMERA_RADIUS}={}){
+ const q=clamp(returnProgress),angle=-1.0+orbit*1.28,radius=cameraRadius*(1-q);
  const actor=subjectPosition||position,heading=Number.isFinite(returnYaw)?returnYaw:yaw;
  const x=Math.sin(angle)*radius,z=Math.cos(angle)*radius;
  const preImpact=musicTime<DEPLOYMENT_CUES.impact?Math.pow(clamp(1-(DEPLOYMENT_CUES.impact-musicTime)/1.2),2)*.065:0;
@@ -69,7 +69,7 @@ export function cinematicCamera(position,yaw,{orbit=0,impact=0,returnProgress=0,
  const target=[position[0]+delta[0]*gaze-Math.sin(heading)*targetBlend*2,position[1]+focusHeight+delta[1]*gaze+(1.72-focusHeight-Math.tan(.04)*2)*targetBlend,position[2]+delta[2]*gaze-Math.cos(heading)*targetBlend*2];
  // The operator faces a stable portrait camera for the held salute. Ease in
  // during the final steps, then share the same first-person handoff endpoint.
- const heroEye=[actor[0]-Math.sin(heading)*4.4*(1-q),actor[1]+1.4+.32*q,actor[2]-Math.cos(heading)*4.4*(1-q)];
+ const heroEye=[actor[0]-Math.sin(heading)*Math.min(4.4,cameraRadius)*(1-q),actor[1]+1.4+.32*q,actor[2]-Math.cos(heading)*Math.min(4.4,cameraRadius)*(1-q)];
  const heroTarget=[actor[0]-Math.sin(heading)*targetBlend*2,actor[1]+1.0+(.72-Math.tan(.04)*2)*targetBlend,actor[2]-Math.cos(heading)*targetBlend*2];
  for(let k=0;k<3;k++){eye[k]+=(heroEye[k]-eye[k])*saluteFraming;target[k]+=(heroTarget[k]-target[k])*saluteFraming;}
  if(wallDistance){

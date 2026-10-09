@@ -1,0 +1,156 @@
+import assert from 'node:assert/strict';
+import {existsSync} from 'node:fs';
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
+import {chromium} from 'playwright';
+import {DEPLOYMENT_CUES} from '../public/deployment-cues.js';
+import {POD_RELEASE,DEPLOYMENT_MUSIC_END} from '../public/deployment-cinematic.js';
+const url=process.env.GAME_TEST_URL||'http://127.0.0.1:4176',artifacts=process.env.GAME_ARTIFACTS||'/workspace/fortmulti-artifacts/platform23';
+await mkdir(artifacts,{recursive:true});
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--disable-dev-shm-usage','--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows','--disable-features=CalculateNativeWinOcclusion,IntensiveWakeUpThrottling','--autoplay-policy=no-user-gesture-required']});
+const context=await browser.newContext({viewport:{width:960,height:540},...(process.env.GAME_TEST_VIDEO?{recordVideo:{dir:artifacts+'/raw-video',size:{width:960,height:540}}}:{})}),errors=[],checks=[],requests=[],webglErrors=[],frameResults=[];
+await context.route('https://cdn.jsdelivr.net/npm/three@0.186.0/**',async route=>route.fulfill({contentType:'text/javascript',body:await readFile('node_modules/three/'+route.request().url().split('three@0.186.0/')[1])}));
+async function open(){
+ const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));p.on('request',r=>requests.push(r.url()));p.on('console',m=>{if(m.type()==='error'&&/WebGL|GL_INVALID|shader|geometry|avatar|character/i.test(m.text()))webglErrors.push(m.text());});
+ await p.addInitScript(value=>localStorage.setItem('sunny.graphicsQuality',value),process.env.GAME_TEST_GRAPHICS||'low');
+ await p.addInitScript(()=>{
+  window.__music=[];window.__landings=[];window.__views=[];window.__voices=[];
+  const start=AudioBufferSourceNode.prototype.start;
+  AudioBufferSourceNode.prototype.start=function(...args){
+   if(this.buffer?.duration>20||(this.loop&&this.buffer?.duration>5)){window.__music.push({duration:this.buffer.duration,loop:this.loop,loopStart:this.loopStart,loopEnd:this.loopEnd,start:args[0],offset:args[1],anchor:args[0]-(args[1]||0),context:this.context,performance:performance.now()});}
+   if(this.buffer&&this.buffer.duration<20)window.__voices.push({duration:this.buffer.duration,loop:this.loop,at:performance.now()});return start.apply(this,args);
+  };
+ });
+ await p.goto(url+'/?local=1');await p.waitForFunction(()=>Boolean(window.Game));
+ await p.evaluate(async()=>{
+  const [{Connection},{Match}]=await Promise.all([import('/network.js'),import('/simulation.js')]);
+  const originalOpen=Connection.prototype.open;Connection.prototype.open=async function(...args){await originalOpen.apply(this,args);window.__testConnection=this;};
+  const round=Match.prototype.startRound;Match.prototype.startRound=function(...args){const result=round.apply(this,args);window.__testMatch=this;return result;};
+  const {MatchCharacterRenderer}=await import('/match-character-renderer.js'),render=MatchCharacterRenderer.prototype.render;
+  MatchCharacterRenderer.prototype.render=function(...args){window.__renderer=this;return render.apply(this,args);};
+  const effect=window.Game.effect;window.Game.effect=function(e,...args){if(e.type==='deployment_landed'){const m=window.__music.at(-1);window.__landings.push({musicTime:m?m.context.currentTime-m.anchor:null,sequence:e.sequence});}return effect.call(this,e,...args);};
+  const sample=()=>{const v=window.Game.deploymentView();if(document.body.classList.contains('deployment-cinematic'))window.__views.push({...v,at:performance.now(),position:window.Game.pose().p.slice(),logoOpacity:Number(document.getElementById('deployment-cinematic').style.opacity)});requestAnimationFrame(sample);};requestAnimationFrame(sample);
+ });return p;
+}
+try{
+ const host=await open(),guest=await open();await host.locator('#create').click();await host.waitForFunction(()=>window.__testConnection?.connected);
+ const code=await host.evaluate(()=>window.__testConnection.code);await guest.locator('.test-tools summary').first().click();await guest.locator('#code').fill(code);await guest.locator('#join').click();
+ await host.waitForFunction(()=>document.getElementById('party-count').textContent.startsWith('2'));await guest.waitForFunction(()=>window.__testConnection?.host);
+ assert.equal(await host.evaluate(()=>window.Game.mapId()),'island');assert.ok(!requests.some(u=>/\/maps\/(platform23|reactor)\//.test(u)),'unselected facility geometry must not download');
+ assert.match(await host.locator('#map-choice option[value=facility]').textContent(),/PLATFORM 23/i);await host.locator('#map-choice').selectOption('facility');await guest.waitForFunction(()=>document.getElementById('map-choice').value==='facility');assert.equal(await guest.locator('#map-choice').isDisabled(),true);checks.push('Outdoor starts without facility downloads; PLATFORM 23 leader choice synchronizes to the locked guest selector');
+ await host.locator('#ready').click();await guest.locator('#ready').click();await host.waitForFunction(()=>Boolean(window.__testMatch));
+ await Promise.all([host.evaluate(()=>window.Game.startAudio({deployment:true})),guest.evaluate(()=>window.Game.startAudio({deployment:true}))]);
+ await host.waitForFunction(()=>window.Game.deploymentView().stage==='landing_selection');
+ await host.keyboard.down('w');assert.equal(await host.evaluate(()=>window.Game.input().z),1);await host.keyboard.up('w');
+ checks.push('Multiplayer controls activate from lobby without clicking the hidden solo Play button');
+ await Promise.all([host,guest].map(p=>p.locator('.landing-quick-picks button').first().waitFor({state:'visible',timeout:90000})));
+ const padCount=await host.locator('.landing-quick-picks button').count();assert.ok(padCount>=2,'two distinct real landing pads');await host.screenshot({path:artifacts+'/00-platform23-whole-map.png'});
+ await host.locator('.landing-quick-picks button').first().click();await guest.locator('.landing-quick-picks button').nth(Math.floor(padCount/2)).click();
+ await host.waitForFunction(()=>window.__testMatch.players.every(p=>p.destination));
+ const chosen=await host.evaluate(()=>window.__testMatch.players.map(p=>p.destination));assert.ok(Math.hypot(chosen[0].x-chosen[1].x,chosen[0].z-chosen[1].z)>10);
+ const padValidity=await host.evaluate(async()=>{const {isPlatformLandingAllowed,platformSupportHeight}=await import('/platform23-map.js');return window.__testMatch.players.map(p=>({allowed:isPlatformLandingAllowed(p.destination.x,p.destination.z),delta:Math.abs(p.destination.y-platformSupportHeight(p.destination.x,p.destination.z,p.destination.y,.01))}));});assert.ok(padValidity.every(p=>p.allowed&&p.delta<.05),'actual landing destination must be supported on a native pad');checks.push('Both connected players select distinct supported native pads through visible quick picks');
+ async function walkToPod(page,direction){
+  const id=await page.evaluate(()=>window.__testConnection.id),sideways=direction<0?'a':'d';await page.evaluate(()=>window.Game.look(0));
+  await page.keyboard.down(sideways);await host.waitForFunction(({id,direction})=>window.__testMatch.players.find(p=>p.id===id).shipLocal[0]*direction>5.1,{id,direction},{timeout:8000});await page.keyboard.up(sideways);
+  await page.keyboard.down('w');await host.waitForFunction(id=>window.__testMatch.players.find(p=>p.id===id).shipLocal[2]<-6.6,id,{timeout:8000});await page.keyboard.up('w');
+ }
+ await walkToPod(guest,1);
+ // Use actual keyboard interaction, not direct enterPod calls.
+ await guest.waitForFunction(()=>window.Game.pose().deploymentState==='pod_available'&&window.Game.pose().p[0]>5);
+ await guest.keyboard.down('e');await guest.waitForFunction(()=>window.Game.pose().deploymentState==='entering_pod');await guest.keyboard.up('e');
+ await guest.waitForFunction(()=>window.Game.pose().podProgress>.25&&window.Game.pose().podProgress<.6);
+ const boarding=await guest.evaluate(()=>({view:window.Game.deploymentView(),p:window.Game.pose().p.slice(),input:window.Game.input()}));
+ assert.equal(boarding.view.boarding,true);assert.equal(boarding.view.localVisible,true);assert.equal(boarding.view.boardingDoorOpen,1);
+ assert.ok(Math.hypot(boarding.view.eye[0]-boarding.p[0],boarding.view.eye[2]-boarding.p[2])>3);
+ await guest.screenshot({path:artifacts+'/00a-boarding.png'});checks.push('Pressing E switches to exterior camera watching the operator enter through open doors');
+ await guest.waitForFunction(()=>window.Game.pose().deploymentState==='pod_ready');
+ const waiting=await guest.evaluate(()=>({view:window.Game.deploymentView(),sources:window.__music.length,locked:window.Game.input()}));
+ assert.equal(waiting.view.boardingDoorOpen,0);assert.equal(waiting.view.localVisible,false);assert.equal(waiting.sources,0);
+ assert.equal(waiting.locked.interact,false);await guest.screenshot({path:artifacts+'/00b-sealed-waiting.png'});
+ await guest.waitForTimeout(500);assert.deepEqual(await guest.evaluate(()=>window.Game.deploymentView().eye),waiting.view.eye);
+ checks.push('Doors close after boarding; sealed exterior view stays stationary while waiting for teammate');
+ await walkToPod(host,-1);
+ await host.keyboard.down('e');await host.waitForFunction(()=>window.Game.pose().deploymentState==='entering_pod');await host.keyboard.up('e');
+ await guest.waitForFunction(()=>window.Game.deploymentView().sequenceElapsed>.68&&window.Game.deploymentView().sequenceElapsed<1.1);
+ const ejection=await guest.evaluate(()=>({view:window.Game.deploymentView(),p:window.Game.pose().p.slice(),operators:[...window.__renderer.instances.values()].map(i=>({visible:i.holder.visible,opacity:i.cinematicOpacity}))}));
+ assert.equal(ejection.view.boarding,true);assert.equal(ejection.view.shipLaunch.hatchOpen,1);assert.ok(ejection.view.shipLaunch.drop>5);assert.equal(ejection.view.black,0);assert.ok(ejection.operators.every(i=>!i.visible||i.opacity===0),'all sealed operators stay concealed, including remote players');
+ await guest.screenshot({path:artifacts+'/00c-pod-ejection.png'});checks.push('Launch hatches slide open and complete pods fire below the floor before blackout');
+ await guest.waitForFunction(()=>window.Game.deploymentView().musicTime>=.15,{timeout:30000});
+ const black=await guest.evaluate(()=>({view:window.Game.deploymentView(),fade:Number(document.getElementById('deployment-fade').style.opacity),ui:['mapbox','deployment-ui','inventory','chatbox','round-banner','resume-control'].map(id=>[id,getComputedStyle(document.getElementById(id)).visibility])}));
+ assert.equal(black.fade,1);assert.ok(black.ui.every(([,v])=>v==='hidden'));await guest.screenshot({path:artifacts+'/01-black-screen.png'});checks.push('Music begins on full black with gameplay UI hidden');
+ await guest.waitForFunction(c=>window.Game.deploymentView().musicTime>=c.uhYeahStart+.85,DEPLOYMENT_CUES,{timeout:30000});
+ assert.ok(await guest.evaluate(()=>Number(document.getElementById('deployment-cinematic').style.opacity)>.99));await guest.screenshot({path:artifacts+'/02-horizon-reveal.png'});checks.push('HORIZON symbol appears at the uh yeah cue');
+ await guest.waitForFunction(c=>window.Game.deploymentView().musicTime>=c.businessStart,DEPLOYMENT_CUES,{timeout:30000});
+ const portrait=await guest.evaluate(()=>({view:window.Game.deploymentView(),position:window.Game.pose().p,landing:window.Game.pose().destination,logo:Number(document.getElementById('deployment-cinematic').style.opacity)}));
+ assert.equal(portrait.logo,0);assert.equal(portrait.view.black,0);assert.equal(portrait.view.orbit,1);assert.equal(portrait.view.localVisible,false);assert.equal(portrait.view.operatorOpacity,0);assert.equal(portrait.view.hatchOpen,0);assert.ok(portrait.position[1]>portrait.landing.y+10);
+ await guest.screenshot({path:artifacts+'/03-sealed-pod.png'});checks.push('Logo fades at the opening lyric; the descent shows only the sealed capsule exterior');
+ await guest.waitForFunction(c=>window.Game.deploymentView().musicTime>=c.impact+.08,DEPLOYMENT_CUES,{timeout:15000});
+ const impact=await guest.evaluate(()=>({view:window.Game.deploymentView(),position:window.Game.pose().p.slice(),landing:window.Game.pose().destination}));
+ assert.deepEqual(impact.position,[impact.landing.x,impact.landing.y,impact.landing.z]);assert.equal(impact.view.localVisible,false);assert.equal(impact.view.hatchOpen,0);await guest.screenshot({path:artifacts+'/04-touchdown.png'});checks.push('Sealed pod slams onto the selected ground on the measured bass drop');
+ for(const phase of ['opening','walkout','salute']){
+  const time=DEPLOYMENT_CUES.impact+POD_RELEASE.hold+(phase==='opening'?POD_RELEASE.open*.55:POD_RELEASE.open+(phase==='walkout'?POD_RELEASE.exit*.5:POD_RELEASE.exit+POD_RELEASE.salute*.5));
+  await guest.waitForFunction(t=>window.Game.deploymentView().musicTime>=t,time,{timeout:15000});
+  const shot=await guest.evaluate(()=>({view:window.Game.deploymentView(),position:window.Game.pose().p.slice(),animation:window.Game.pose().animationState,salute:window.Game.pose().saluteProgress,input:window.Game.input()}));
+  assert.equal(shot.view.localVisible,true);assert.ok(shot.view.operatorOpacity>.99);assert.equal(shot.input.fire,false);assert.equal(shot.input.slot,0);
+  if(phase==='opening'){assert.ok(shot.view.hatchOpen>.5,'the hatch opens after the landing hold even when the software renderer skips its midpoint frame');}
+  else assert.ok(Math.hypot(shot.position[0]-shot.view.podPosition[0],shot.position[2]-shot.view.podPosition[2])>1);
+  if(phase==='salute'){assert.ok(shot.salute>.99,'native salute is fully raised');assert.ok(shot.view.musicTime<DEPLOYMENT_MUSIC_END-.4);assert.equal(shot.view.saluteFraming,1);assert.equal(shot.view.returnProgress,0);assert.ok(Math.abs(shot.view.eye[0]-shot.position[0])<.01);assert.ok(shot.view.eye[2]>shot.position[2]+2,'camera views the front of the saluting character');}
+  await guest.screenshot({path:artifacts+'/0'+(phase==='opening'?5:phase==='walkout'?6:7)+'-'+phase+'.png'});
+ }
+ checks.push('Hatch reveals the operator after impact; walkout and salute remain visible with music and combat locked');
+ await host.waitForFunction(()=>window.__testMatch.phase==='playing',{timeout:15000});await guest.waitForFunction(()=>window.Game.deploymentView().stage==='match_active'&&!document.body.classList.contains('deployment-cinematic'),{timeout:15000});
+ assert.equal(await guest.evaluate(()=>document.body.classList.contains('deployment-cinematic')),false);await guest.screenshot({path:artifacts+'/08-gameplay.png'});checks.push('Salute finishes before the camera returns and gameplay unlocks');
+ await guest.keyboard.press('z');await guest.waitForFunction(()=>window.Game.input().slot===6);await guest.keyboard.down('w');assert.equal(await guest.evaluate(()=>window.Game.input().z),1);await guest.keyboard.up('w');checks.push('Gameplay build and movement controls work after the salute');
+ const results=await Promise.all([host,guest].map(async p=>p.evaluate(c=>({music:window.__music.map(({context,...m})=>m),firstBoarding:window.__views.find(v=>v.boarding),landings:window.__landings,frames:window.__views.length,firstLogo:window.__views.find(v=>v.logoOpacity>0),firstVisible:window.__views.find(v=>v.black<.02&&v.portrait),firstImpact:window.__views.find(v=>v.musicTime>=c.impact),firstImpactFrameGap:(()=>{const i=window.__views.findIndex(v=>v.musicTime>=c.impact);return i>0?(window.__views[i].at-window.__views[i-1].at)/1000:0;})(),firstLogoFrameGap:(()=>{const i=window.__views.findIndex(v=>v.logoOpacity>0);return i>0?(window.__views[i].at-window.__views[i-1].at)/1000:0;})(),exit:window.__views.filter(v=>v.returnProgress>.15&&v.returnProgress<1).map(v=>({returnProgress:v.returnProgress,position:v.position,podPosition:v.podPosition,eye:v.eye,localVisible:v.localVisible})),largestFrameGap:window.__views.reduce((max,v,i,a)=>i?Math.max(max,v.at-a[i-1].at):max,0)}),DEPLOYMENT_CUES)));
+ await writeFile(artifacts+'/deployment-clock-diagnostics.json',JSON.stringify(results,null,2));
+ console.log(JSON.stringify(results.map(r=>({music:r.music,landings:r.landings,firstImpact:r.firstImpact})),null,2));
+ // Guest receipt includes transport/render latency; visible impact is driven by its audio clock.
+ // The host observation checks authority timing; both clients retain strict visible cue deadlines.
+ for(const [client,result] of results.entries()){assert.equal(result.music.filter(m=>!m.loop).length,1,'one complete song per client');assert.equal(result.music.length,1,'the supplied song continues with no repeat or extra voice');assert.equal(result.music.filter(m=>m.loop).length,0);assert.ok(result.music.find(m=>!m.loop).duration>=30);assert.equal(result.landings.length,1,'one touchdown per client');if(client===0)assert.ok(Math.abs(result.landings[0].musicTime-DEPLOYMENT_CUES.impact)<.25,'authoritative host touchdown must align with the music');assert.deepEqual(result.firstImpact.position,result.firstImpact.podPosition,'first visible touchdown reaches the anchored landing floor on both clients');assert.ok(result.firstImpact.musicTime-DEPLOYMENT_CUES.impact<Math.max(.16,result.firstImpactFrameGap+.05),'visible touchdown occurs within one measured presented frame of the audio clock');assert.ok(result.firstLogo.musicTime>=DEPLOYMENT_CUES.uhYeahStart&&result.firstLogo.musicTime-DEPLOYMENT_CUES.uhYeahStart<Math.max(.16,result.firstLogoFrameGap+.05),'first logo frame follows the measured vocal onset');}
+ checks.push('Both real network clients play once, retain distinct landings and synchronize touchdown');
+ for(const result of results){
+  assert.ok(result.exit.length>0,'both exit cameras must render the handoff');
+  const start=result.exit[0].podPosition;
+  assert.ok(result.exit.every(v=>v.podPosition.every((n,k)=>Math.abs(n-start[k])<1e-8)),'landed pod stays anchored while the operator exits');
+  assert.ok(result.exit.some(v=>Math.hypot(v.position[0]-start[0],v.position[2]-start[2])>.4),'operator actually walks out of the stationary pod');
+  const end=result.exit.at(-1);
+  if(end.returnProgress>.6)assert.equal(end.localVisible,false,'hide avatar before camera enters the first-person head');
+  assert.ok(end.eye.every(Number.isFinite),'camera handoff stays finite while the software renderer drops frames');
+ }
+ checks.push('Pods stay fixed during exit and camera returns smoothly to first person');
+ const playingState=await Promise.all([host,guest].map(p=>p.evaluate(()=>({hp:window.Game.pose().hp,air:window.Game.pose().air,stage:window.Game.deploymentView().stage,fade:Number(getComputedStyle(document.getElementById('deployment-fade')).opacity),logo:Number(getComputedStyle(document.getElementById('deployment-cinematic')).opacity),damage:Number(getComputedStyle(document.getElementById('damage')).opacity),menu:getComputedStyle(document.getElementById('overlay')).display,avatarFailed:window.__renderer.failed,avatars:window.__renderer.instances.size}))));
+ for(const state of playingState){assert.equal(state.hp,100);assert.equal(state.air,'landed');assert.equal(state.stage,'match_active');assert.equal(state.fade,0);assert.equal(state.logo,0);assert.equal(state.damage,0);assert.equal(state.menu,'none');assert.equal(state.avatarFailed,false);assert.ok(state.avatars>=2);}
+ checks.push('Both peers enter gameplay at full health with cinematic and red damage overlays hidden and two avatar instances');
+ const fixtures=await host.evaluate(async()=>{
+  const {gridPlacement,gridValid}=await import('/build-grid.js'),{ground}=await import('/simulation.js'),{moveHorizontal}=await import('/movement-collision.js');const world=window.Game.world;
+  const sources=[...world.pois,...world.chests];let fixture=null;
+  search: for(const s of sources)for(const offset of [[0,0],[3,0],[-3,0],[0,3],[0,-3],[6,0],[-6,0]])for(const yaw of [0,Math.PI/2,Math.PI,-Math.PI/2]){
+   const x=s.x+offset[0],z=s.z+offset[1],y=world.supportHeight?world.supportHeight(x,z,s.y??world.height(x,z),.55):world.height(x,z),p={p:[x,y,z],hp:100,air:'landed'};
+   if(!Number.isFinite(y)||y<-20)continue;
+   const wall=gridPlacement(p,{yaw,slot:6,material:'wood'},world,[]),ramp=gridPlacement(p,{yaw,slot:10,material:'wood'},world,[]);if(!gridValid(wall,[],[p],world)||!gridValid(ramp,[],[p],world))continue;
+   const end=p.p.slice();for(let i=0;i<20;i++){moveHorizontal(end,-Math.sin(yaw)*.1,-Math.cos(yaw)*.1,world.obstacles);end[1]=ground(end[0],end[2],end[1],[],world);}
+   if(Math.hypot(end[0]-x,end[2]-z)>1.8&&Math.abs(end[1]-y)<.2){fixture={p:p.p,yaw,wall,ramp};break search;}
+  }
+  if(!fixture)throw Error('No native supported clear movement/build floor found');return fixture;
+ });
+ const hostId=await host.evaluate(()=>window.__testConnection.id);
+ async function placeHost(position,yaw=0){await host.evaluate(({position,yaw,id})=>{const p=window.__testMatch.players.find(p=>p.id===id);p.p=position.slice();p.vy=0;p.impulse=[0,0];p.materials={wood:200,stone:200};window.Game.look(yaw,0);},{position,yaw,id:hostId});await host.waitForFunction(p=>Math.hypot(window.Game.pose().p[0]-p[0],window.Game.pose().p[2]-p[2])<.3,position);}
+ await placeHost(fixtures.p,fixtures.yaw);await host.keyboard.down('w');await host.waitForFunction(({p,id})=>Math.hypot(...window.__testMatch.players.find(v=>v.id===id).p.map((n,k)=>n-p[k]))>1.2,{p:fixtures.p,id:hostId},{timeout:12000});await host.keyboard.up('w');
+ const moved=await host.evaluate(async id=>{const p=window.__testMatch.players.find(p=>p.id===id),{ground}=await import('/simulation.js');return {p:p.p,hp:p.hp,ground:ground(p.p[0],p.p[2],p.p[1],window.__testMatch.structures,window.Game.world)};},hostId);assert.equal(moved.hp,100);assert.ok(Math.abs(moved.p[1]-moved.ground)<.1);checks.push('Real keyboard movement crosses native corridor/deck floor without falling or floor teleporting');
+ await placeHost(fixtures.p,fixtures.yaw);await host.keyboard.press('z');await host.waitForFunction(()=>window.Game.input().slot===6);await host.mouse.move(480,270);await host.mouse.down();try{await host.waitForFunction(()=>window.__testMatch.structures.some(s=>s.type===2),{},{timeout:12000});}finally{await host.mouse.up();}
+ const built=await host.evaluate(async()=>{const {supported,gridBaseY}=await import('/build-grid.js');return window.__testMatch.structures.map(s=>({nativeSupported:supported(s,[],window.Game.world),base:gridBaseY(s),floor:window.Game.world.supportHeight(s.x,s.z,gridBaseY(s),.55)}));});assert.ok(built.every(s=>s.nativeSupported&&Math.abs(s.base-s.floor)<.05));await guest.waitForFunction(()=>window.Game.pose().hp===100);checks.push('Keyboard-selected wall places through normal fire input with its base on the native deck floor');
+ await host.evaluate(()=>window.__testMatch.structures=[]);await placeHost(fixtures.p,fixtures.yaw);await host.keyboard.press('v');await host.waitForFunction(()=>window.Game.input().slot===10);await host.mouse.down();try{await host.waitForFunction(()=>window.__testMatch.structures.some(s=>s.type===3),{},{timeout:12000});}finally{await host.mouse.up();}
+ const ramp=await host.evaluate(()=>window.__testMatch.structures.find(s=>s.type===3));const rampBottom=[ramp.x+Math.sin(ramp.angle)*2.3,ramp.y,ramp.z+Math.cos(ramp.angle)*2.3];await placeHost(rampBottom,ramp.angle);await host.keyboard.down('w');try{await host.waitForFunction(({id,y})=>window.__testMatch.players.find(p=>p.id===id).p[1]>y+1.2,{id:hostId,y:ramp.y},{timeout:15000});}finally{await host.keyboard.up('w');}assert.equal(await host.evaluate(()=>window.Game.pose().hp),100);checks.push('Player climbs a normally placed ramp from the actual native floor with authoritative step support');
+ await host.evaluate(()=>window.__testMatch.structures=[]);await placeHost(fixtures.p,fixtures.yaw);
+ await host.evaluate(({id,p,yaw})=>{const m=window.__testMatch,player=m.players.find(v=>v.id===id);player.slot=0;player.inventory.fill(null);player.inventoryRevision++;m.pickups.push({id:'platform23-browser-loot',weaponId:'platform23-browser-ar',type:'ar',count:1,ammo:30,x:p[0]-Math.sin(yaw),y:p[1],z:p[2]-Math.cos(yaw)});},{id:hostId,p:fixtures.p,yaw:fixtures.yaw});await host.keyboard.press('0');await host.keyboard.down('e');try{await host.waitForFunction(id=>window.__testMatch.players.find(p=>p.id===id).inventory.some(w=>w?.id==='platform23-browser-ar'),hostId,{timeout:12000});}finally{await host.keyboard.up('e');}checks.push('Normal E interaction collects supported floor loot into replicated inventory');
+ const guestId=await guest.evaluate(()=>window.__testConnection.id),listenerPosition=[fixtures.p[0]+Math.sin(fixtures.yaw)*2,fixtures.p[1],fixtures.p[2]+Math.cos(fixtures.yaw)*2];await host.evaluate(({id,p})=>{const other=window.__testMatch.players.find(v=>v.id===id);other.p=p.slice();other.vy=0;}, {id:guestId,p:listenerPosition});await guest.waitForFunction(p=>Math.hypot(window.Game.pose().p[0]-p[0],window.Game.pose().p[2]-p[2])<.3,listenerPosition);
+ const voicesBefore=await host.evaluate(()=>window.__voices.length),remoteVoicesBefore=await guest.evaluate(()=>window.__voices.length);await host.keyboard.press('1');await host.waitForFunction(()=>window.Game.input().slot===1);await host.waitForTimeout(900);await host.mouse.down();try{await host.waitForFunction(id=>window.__testMatch.events.some(e=>e.type==='shot'&&e.by===id),hostId,{timeout:12000});}finally{await host.mouse.up();}assert.ok(await host.evaluate(()=>window.__voices.length)>voicesBefore,'real gunshot audio voice starts');await guest.waitForFunction(n=>window.__voices.length>n,remoteVoicesBefore,{timeout:12000});checks.push('Collected rifle fires normally with replicated shot events and local/remote audio voices');
+ await guest.evaluate(()=>{window.requestAnimationFrame=()=>0;});await host.bringToFront();
+ const views=await host.evaluate(()=>{const w=window.Game.world,deck=w.pois[0],center=[w.pois.reduce((v,p)=>v+p.x,0)/w.pois.length,w.pois.reduce((v,p)=>v+p.z,0)/w.pois.length],span=Math.max(35,...w.pois.map(p=>Math.hypot(p.x-center[0],p.z-center[1]))),room=w.chests.find(c=>Math.hypot(c.x,c.z)<Math.max(...w.pois.map(p=>Math.hypot(p.x,p.z)))*.7)||w.chests[0];return [{name:'whole-map',p:[center[0],Math.max(...w.pois.map(p=>p.y))+span*1.2,center[1]+span*1.1],yaw:0,pitch:-.7},{name:'deck',p:[deck.x,deck.y,deck.z],yaw:Math.atan2(deck.x,deck.z)},{name:'room',p:[room.x,room.y,room.z],yaw:0}];});
+ for(const view of views){await placeHost(view.p,view.yaw);await host.evaluate(v=>window.Game.look(v.yaw,v.pitch||0),view);await host.waitForTimeout(view.name==='whole-map'?150:900);await host.screenshot({path:artifacts+'/platform23-'+view.name+'.png'});frameResults.push(await host.evaluate(({name,count})=>new Promise(resolve=>{const intervals=[];let last=performance.now();function sample(now){intervals.push(now-last);last=now;if(intervals.length<count)requestAnimationFrame(sample);else{intervals.sort((a,b)=>a-b);const canvas=document.getElementById('game'),gl=canvas.getContext('webgl2')||canvas.getContext('webgl'),ext=gl.getExtension('WEBGL_debug_renderer_info');resolve({name,samples:count,p50ms:intervals[Math.floor(count*.5)],p95ms:intervals[Math.min(count-1,Math.floor(count*.95))],over50ms:intervals.filter(v=>v>50).length,gpu:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):'unavailable',contextLost:gl.isContextLost(),status:window.Game.mapStatus(),position:window.Game.pose().p.slice(),guestRenderingPaused:true});}}requestAnimationFrame(sample);}),{name:view.name,count:Math.max(8,Math.min(120,Number(process.env.PLATFORM23_FRAME_SAMPLES)||24))}));assert.equal(frameResults.at(-1).contextLost,false);assert.ok(frameResults.at(-1).status.render?.triangles>0,'actual native map triangles render');}
+ checks.push('Native deck and room captures include actual frame interval medians, GPU identity and render costs; guest rendering is paused only for profiling');
+
+ assert.deepEqual(errors,[]);assert.deepEqual(webglErrors,[]);assert.ok(!requests.some(u=>u.includes('/maps/reactor/')),'old Reactor assets must never load');assert.ok(requests.some(u=>u.includes('/maps/platform23/')),'approved native geometry must load');
+ await writeFile(artifacts+'/deployment-browser-results.json',JSON.stringify({checks,errors,webglErrors,requests,frameResults,cues:DEPLOYMENT_CUES,boarding,waiting,ejection,black,portrait,impact,clients:results},null,2));
+ console.log(JSON.stringify({passed:checks.length,checks,errors,clients:results.map(r=>({frames:r.frames,landingMusicTime:r.landings[0].musicTime,visibleImpactMusicTime:r.firstImpact.musicTime,largestFrameGap:r.largestFrameGap}))},null,2));
+ await guest.waitForTimeout(800);
+}catch(error){await writeFile(artifacts+'/platform23-failure.json',JSON.stringify({message:error.message,stack:error.stack,checks,errors,webglErrors,requests,frameResults},null,2));for(const [index,page] of context.pages().entries())await page.screenshot({path:artifacts+'/failure-peer-'+index+'.png'}).catch(()=>{});throw error;}finally{await writeFile(artifacts+'/recordings.json',JSON.stringify(await Promise.all(context.pages().map(async p=>({file:p.video()?await p.video().path():null}))),null,2));await context.close();await browser.close();}

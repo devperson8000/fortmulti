@@ -1,5 +1,5 @@
 import {ISLAND_POIS,drawIslandMap,militaryLayout,islandRoadRibbon} from './island-map.js';
-import {REACTOR_POIS,drawReactorMap} from './reactor-map.js';
+import {PLATFORM_POIS as REACTOR_POIS,drawPlatformMap as drawReactorMap} from './platform23-map.js';
 import './engine.js';
 import {Connection,Voice,SocialDirectory,uid} from './network.js';
 import {Match,placement,validBuild} from './simulation.js';
@@ -10,7 +10,7 @@ const $=id=>document.getElementById(id),game=window.Game;
 let conn=null,peers=new Map(),host=false,ready=false,match=null,snapshot=null,matchId='',seenEvent=0,lastHello=0,lastPing=0,pingCursor=0,lastSnap=0,lastInput=0,pendingInput=null,busy=false,voiceWanted=false,muted=false,showMenu=false,snapshotFrame=-1,matchEpoch=0;
 let selectedMap='island',startingMatch=false,mapGeneration=0,pendingSnapshot=null,loadingSnapshot=false;
 const validMap=id=>id==='island'||id==='facility';
-const mapName=id=>id==='facility'?'REACTOR FACILITY':'IRONWOOD ISLAND';
+const mapName=id=>id==='facility'?'PLATFORM 23':'IRONWOOD ISLAND';
 let social=null,onlinePlayers=[],incomingInvites=[],socialBusy=false,socialTimer=null,socialError='',lastStatusAt=0,latencies=new Map();
 
 const readStore=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null;}};
@@ -92,7 +92,7 @@ function refresh(){
  const party=partyProfiles();window.Duel.myColor=profile.color;window.Duel.party=party;window.Duel.peerColors=colors();
  $('hero-name').textContent=profile.name;$('character-preview-name').textContent=profile.name+' · CURRENT OUTFIT';$('hero-state').textContent=ready?'READY':'NOT READY';$('hero-state').classList.toggle('ready',ready);
  $('ready').textContent=startingMatch?'LOADING MAP…':ready?'CANCEL READY':'READY UP';$('ready').disabled=!conn||party.length<2||!game||!!match||startingMatch;
- $('map-choice').value=selectedMap;$('map-choice').disabled=(!!conn&&!host)||inMatch()||startingMatch;$('map-description').textContent=selectedMap==='facility'?'Armored reactor · exterior landing pads':'Open terrain · six military outposts';$('mode').disabled=(!!conn&&!host)||!!match||startingMatch;$('room-actions').hidden=!conn;$('connect').hidden=!!conn;
+ $('map-choice').value=selectedMap;$('map-choice').disabled=(!!conn&&!host)||inMatch()||startingMatch;$('map-description').textContent=selectedMap==='facility'?'Military platform · eight landing zones':'Open terrain · six military outposts';$('mode').disabled=(!!conn&&!host)||!!match||startingMatch;$('room-actions').hidden=!conn;$('connect').hidden=!!conn;
  if(conn){$('room-code').textContent=host?'PRIVATE PARTY · YOU ARE LEADER':'PRIVATE PARTY · MEMBER';$('invite-more').disabled=inMatch()||party.length>=(conn.maxPlayers||8);}
  $('outfit').disabled=inMatch();$('name').disabled=inMatch();$('local').disabled=!!conn;drawPartyCards();renderOnlinePlayers();renderInvites();updateNetworkChip();
 }
@@ -164,7 +164,7 @@ const landingPois=()=>selectedMap==='facility'?REACTOR_POIS:ISLAND_POIS;
 const LANDING_ROADS=militaryLayout().roads.map(islandRoadRibbon);
 function renderLandingMap(s,me){
  const LANDING_POIS=landingPois();renderLandingQuickPicks();
- const canvas=$('landing-map'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,pad=30,extent=selectedMap==='facility'?360:584,scaleX=(w-pad*2)/extent,scaleZ=(h-pad*2)/extent,map=(x,z)=>[w/2+x*scaleX,h/2+z*scaleZ];
+ const canvas=$('landing-map'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,pad=30,extent=selectedMap==='facility'?230:584,scaleX=(w-pad*2)/extent,scaleZ=(h-pad*2)/extent,map=(x,z)=>[w/2+x*scaleX,h/2+z*scaleZ];
  ctx.clearRect(0,0,w,h);const bg=ctx.createLinearGradient(0,0,w,h);bg.addColorStop(0,'#122d43');bg.addColorStop(1,'#081927');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
  ctx.strokeStyle='#8dc0ce16';ctx.lineWidth=1;for(let i=0;i<=10;i++){const x=pad+i*(w-pad*2)/10,y=pad+i*(h-pad*2)/10;ctx.beginPath();ctx.moveTo(x,pad);ctx.lineTo(x,h-pad);ctx.stroke();ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke();}
  const [mx,my]=map(-320,-320);(selectedMap==='facility'?drawReactorMap:drawIslandMap)(ctx,mx,my,640*scaleX,640*scaleZ);
@@ -269,7 +269,7 @@ $('lobby-play-toggle').onclick=()=>selectLobbyTab('play');$('profile-toggle').on
 $('online-refresh').onclick=()=>social?pollSocial():startSocial();
 $('ready').onclick=()=>{if(!conn||match)return;ready=!ready;game?.startAudio({deployment:true});hello();refresh();if(host)start();};
 function chooseLanding(x,z){if(!game?.setLanding(x,z))return;const me=snapshot?.players.find(player=>player.id===conn?.id);if(snapshot&&me)updateDeploymentUI(snapshot,{...me,destination:{x,z}});}
-$('landing-map').onclick=e=>{const rect=e.currentTarget.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width,z=(e.clientY-rect.top)/rect.height;if(x<.058||x>.942||z<.088||z>.912)return;const extent=selectedMap==='facility'?360:584;chooseLanding(((x-.058)/.884-.5)*extent,((z-.088)/.824-.5)*extent);};
+$('landing-map').onclick=e=>{const rect=e.currentTarget.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width,z=(e.clientY-rect.top)/rect.height;if(x<.058||x>.942||z<.088||z>.912)return;const extent=selectedMap==='facility'?230:584;chooseLanding(((x-.058)/.884-.5)*extent,((z-.088)/.824-.5)*extent);};
 let quickPickMap='';
 function renderLandingQuickPicks(){
  if(quickPickMap===selectedMap)return;quickPickMap=selectedMap;

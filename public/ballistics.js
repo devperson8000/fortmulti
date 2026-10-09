@@ -1,3 +1,4 @@
+export {segmentColliderTime} from './collision-shapes.js';
 const finite=(value,fallback=0)=>Number.isFinite(value)?value:fallback;
 
 export function createProjectile({id,owner,origin,direction,speed,gravity=0,range,damage,spawnTick=0,maxAge=3}){

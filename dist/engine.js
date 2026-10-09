@@ -1,3 +1,4 @@
+import {rayCollider} from './collision-shapes.js';
 import {createDeploymentAudio} from './deployment-audio.js';
 import {deploymentCinematic,cinematicCamera,cinematicPodPosition,cinematicFov,MUSIC_START,DEPLOYMENT_CUES,DEPLOYMENT_MUSIC_END,podLandingBurst,stepPodLandingParticle,podLandingParticleSize,podImpactOffset} from './deployment-cinematic.js';
 import {createWeaponAudio,remoteGunshotGain} from './weapon-audio.js';
@@ -25,7 +26,7 @@ import {AVATAR_MODEL_PARTS,AVATAR_GEAR} from './avatar-model.js';
 import {WEAPON_MODELS} from './weapon-model.js';
 import {MatchCharacterRenderer} from './match-character-renderer.js';
 import {createMapSelection} from './map-selection.js';
-import {reactorHeight,reactorLayout,REACTOR_POIS,drawReactorMap,isReactorLandingAllowed,reactorSupportHeight} from './reactor-map.js';
+import {platformHeight as reactorHeight,platformLayout as reactorLayout,PLATFORM_POIS as REACTOR_POIS,drawPlatformMap as drawReactorMap,isPlatformLandingAllowed as isReactorLandingAllowed,platformSupportHeight as reactorSupportHeight,loadPlatformMap} from './platform23-map.js';
 
 'use strict';
 (()=>{
@@ -294,7 +295,7 @@ function allObstacles(){return obstacles.concat(structures.filter(s=>s.type===2)
 function blocked(p,r=.4){return allObstacles().some(b=>p[0]>b.min[0]-r&&p[0]<b.max[0]+r&&p[2]>b.min[2]-r&&p[2]<b.max[2]+r&&p[1]<b.max[1]&&p[1]+2>b.min[1]);}
 function floorAt(x,z){let h=height(x,z);for(const s of structures){const q=transform([x-s.x,0,z-s.z],[0,0,0],-(s.angle||0));if(s.type===3&&Math.abs(q[0])<2.3&&Math.abs(q[2])<2.5)h=Math.max(h,s.y+(2.5-q[2])*.72);}return h;}
 function move(p,dx,dz){let next=[p[0]+dx,p[1],p[2]];if(!blocked(next))p[0]=clamp(next[0],-292,292);next=[p[0],p[1],p[2]+dz];if(!blocked(next))p[2]=clamp(next[2],-292,292);}
-function rayBox(o,d,b){let lo=0,hi=500;for(let i=0;i<3;i++){if(Math.abs(d[i])<1e-6){if(o[i]<b.min[i]||o[i]>b.max[i])return Infinity;continue;}let a=(b.min[i]-o[i])/d[i],c=(b.max[i]-o[i])/d[i];if(a>c)[a,c]=[c,a];lo=Math.max(lo,a);hi=Math.min(hi,c);if(hi<lo)return Infinity;}return lo;}
+function rayBox(o,d,b){return b.blocksShots===false?Infinity:rayCollider(o,d,b);}
 function wallDistance(o,d,limit=360){let dist=limit;for(const b of allObstacles())dist=Math.min(dist,rayBox(o,d,b));for(const s of structures)if(s.type===3)dist=Math.min(dist,rayRamp(o,d,s));for(let t=.5;t<dist;t+=.75){const p=add(o,mul(d,t));if(p[1]<(activeMap==='facility'?-50:height(p[0],p[2]))){dist=t;break;}}return dist;}
 let audio,noiseBuffer;const weaponAudio=createWeaponAudio(),deploymentAudio=createDeploymentAudio();
 function spawnPodLandingBurst(point){
@@ -378,7 +379,7 @@ function structure(s,ghost=false){
 }
 
 const ctx=$('map').getContext('2d');function minimap(){
- const scale=activeMap==='facility'?.5:.275,to=x=>90+x*scale;ctx.fillStyle='#286e91';ctx.fillRect(0,0,180,180);
+ const scale=activeMap==='facility'?.9:.275,to=x=>90+x*scale;ctx.fillStyle='#286e91';ctx.fillRect(0,0,180,180);
  (activeMap==='facility'?drawReactorMap:drawIslandMap)(ctx,to(-320),to(-320),640*scale,640*scale);
  ctx.strokeStyle='#929b85';ctx.lineWidth=2.2;ctx.beginPath();for(const points of activeMap==='island'?roadSamples:[]){for(const [i,p] of points.entries()){if(i===0)ctx.moveTo(to(p.center[0]),to(p.center[2]));else ctx.lineTo(to(p.center[0]),to(p.center[2]));}}ctx.stroke();
  ctx.fillStyle='#ded19f';for(const b of activeMap==='island'?buildings:[])ctx.fillRect(to(b.x-b.w/2),to(b.z-b.d/2),Math.max(1,b.w*scale),Math.max(1,b.d*scale));
@@ -386,7 +387,7 @@ const ctx=$('map').getContext('2d');function minimap(){
  ctx.font='700 5.5px Arial';ctx.textAlign='center';ctx.fillStyle='#f8f4df';ctx.shadowColor='#17343c';ctx.shadowBlur=2;for(const p of pois)ctx.fillText(p.name,to(p.x),to(p.z)-4);ctx.shadowBlur=0;
  if(storm<ISLAND_SIZE){ctx.fillStyle='#8b4dbb45';ctx.beginPath();ctx.rect(0,0,180,180);ctx.arc(90,90,storm*scale,0,Math.PI*2,true);ctx.fill('evenodd');ctx.strokeStyle='#e7cbff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(90,90,storm*scale,0,Math.PI*2);ctx.stroke();}
  const px=clamp(to(player.p[0]),5,175),pz=clamp(to(player.p[2]),5,175);ctx.save();ctx.translate(px,pz);ctx.rotate(-yaw);ctx.fillStyle='white';ctx.shadowColor='#183941';ctx.shadowBlur=4;ctx.beginPath();ctx.moveTo(0,-6);ctx.lineTo(4,5);ctx.lineTo(0,3);ctx.lineTo(-4,5);ctx.closePath();ctx.fill();ctx.restore();
- const nearest=pois.reduce((best,p)=>Math.hypot(player.p[0]-p.x,player.p[2]-p.z)<best.d?{p,d:Math.hypot(player.p[0]-p.x,player.p[2]-p.z)}:best,{p:pois[0],d:Infinity});$('mapbox').querySelector('b').textContent=player.air==='ship'?'STAGING SHIP':player.air==='pod'?'DEPLOYMENT POD':nearest.d<55?nearest.p.name:activeMap==='facility'?'REACTOR FACILITY':'WILDLANDS';
+ const nearest=pois.reduce((best,p)=>Math.hypot(player.p[0]-p.x,player.p[2]-p.z)<best.d?{p,d:Math.hypot(player.p[0]-p.x,player.p[2]-p.z)}:best,{p:pois[0],d:Infinity});$('mapbox').querySelector('b').textContent=player.air==='ship'?'STAGING SHIP':player.air==='pod'?'DEPLOYMENT POD':nearest.d<55?nearest.p.name:activeMap==='facility'?'PLATFORM 23':'WILDLANDS';
 }
 function drawFirstPersonWeapon(profile,state,parts,armsOnly=false){
  const root=state.position,rotation=state.rotation,scale=profile.presentation.scale,point=v=>transform(v.map(n=>n*scale),root,rotation[1],rotation[0]+parts.rootTilt),drawBox=(v,s,c,rx=0)=>box(point(v),s,c,rotation[1],rotation[0]+parts.rootTilt+rx),drawOval=(v,r,c,n,q)=>ellipsoid(point(v),r,c,n,q),drawTube=(a,b,r,c,n)=>tube(point(a),point(b),r,c,n);
@@ -448,7 +449,7 @@ if(portrait){
  const exterior=['exiting','saluting'].includes(deploymentData?.stage);
  const podCenter=exterior&&cinematicPodAnchor?cinematicPodAnchor:player.p;
  const podHeading=Number.isFinite(player.podYaw)?player.podYaw:player.yaw;
- const view=cinematicCamera(podCenter,podHeading,cinematicFrame,{groundHeight:height,wallDistance,
+ const view=cinematicCamera(podCenter,podHeading,cinematicFrame,{groundHeight:height,wallDistance,cameraRadius:window.Game.world.cinematicRadius,
   subjectPosition:player.p,returnYaw:player.yaw,
   reducedMotion:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches});
  eye=view.eye;cameraTarget=view.target;forward=norm(sub(cameraTarget,eye));
@@ -469,7 +470,7 @@ else if(player.air==='ship'||player.air==='pod'){
  const thirdTarget=add(thirdEye,forward),firstEye=[player.p[0],player.p[1]+1.72-cameraCrouch+motionFeel.cameraY*(1-adsBlend*.9),player.p[2]],firstTarget=add(firstEye,forward),view=blendCameraViews(thirdEye,thirdTarget,firstEye,firstTarget,cameraPresentation,cameraBlendOutput);
  eye=view.eye;cameraTarget=view.target;
 }
-const sequence=deploymentData?.stage||'',sequenceElapsed=deploymentData?.sequenceElapsed||0,launchFov=cinematicLock&&['pod_sealing','launching','transition'].includes(sequence)?deploymentPresentation(sequence,sequenceElapsed).launchProgress*10:0,baseFov=portrait?mix(mix(cinematicFov(width/h),54*Math.PI/180,cinematicFrame.saluteFraming),75*Math.PI/180,cinematicFrame.returnProgress)+(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?0:cinematicFrame.impact*4*Math.PI/180):boarding?boardingFov:player.air==='ship'?(73+launchFov+Math.sin(time*2)*.35)*Math.PI/180:player.air==='pod'&&['pod_sealing','launching','transition'].includes(sequence)?(71+Math.sin(sequenceElapsed*5)*1.2)*Math.PI/180:(75+(player.sprinting?clamp(motionFeel.speed/10,0,1)*2.5:0))*Math.PI/180,targetFov=adsTarget&&player.air==='landed'?profile.adsFov*Math.PI/180:baseFov;cameraFov=mix(cameraFov,targetFov,1-Math.exp(-dt*(adsTarget?13:7.5)));gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);drawSky(eye,cameraTarget,width/h,cameraFov);gl.uniformMatrix4fv(um,false,matrix(eye,cameraTarget,width/h,cameraFov));gl.uniform3fv(ue,eye);updateFrustum(worldFrustum,matrix(eye,cameraTarget,width/h,cameraFov));gl.bindBuffer(gl.ARRAY_BUFFER,staticBuffer);gl.vertexAttribPointer(ap,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(ac,3,gl.FLOAT,false,24,12);for(const chunk of worldChunks)if(chunkVisible(chunk,worldFrustum))gl.drawArrays(gl.TRIANGLES,chunk.start,chunk.count);gl.bindBuffer(gl.ARRAY_BUFFER,resourceBuffer);gl.vertexAttribPointer(ap,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(ac,3,gl.FLOAT,false,24,12);if(activeMap==='island')drawVisibleResources(resourceRanges,resourceHP,eye,currentQuality.remoteDetail>.7?190:135,drawResourceSpan);geo.length=0;
+const sequence=deploymentData?.stage||'',sequenceElapsed=deploymentData?.sequenceElapsed||0,launchFov=cinematicLock&&['pod_sealing','launching','transition'].includes(sequence)?deploymentPresentation(sequence,sequenceElapsed).launchProgress*10:0,baseFov=portrait?mix(mix(cinematicFov(width/h,window.Game.world.cinematicRadius),54*Math.PI/180,cinematicFrame.saluteFraming),75*Math.PI/180,cinematicFrame.returnProgress)+(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?0:cinematicFrame.impact*4*Math.PI/180):boarding?boardingFov:player.air==='ship'?(73+launchFov+Math.sin(time*2)*.35)*Math.PI/180:player.air==='pod'&&['pod_sealing','launching','transition'].includes(sequence)?(71+Math.sin(sequenceElapsed*5)*1.2)*Math.PI/180:(75+(player.sprinting?clamp(motionFeel.speed/10,0,1)*2.5:0))*Math.PI/180,targetFov=adsTarget&&player.air==='landed'?profile.adsFov*Math.PI/180:baseFov;cameraFov=mix(cameraFov,targetFov,1-Math.exp(-dt*(adsTarget?13:7.5)));gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);drawSky(eye,cameraTarget,width/h,cameraFov);gl.uniformMatrix4fv(um,false,matrix(eye,cameraTarget,width/h,cameraFov));gl.uniform3fv(ue,eye);updateFrustum(worldFrustum,matrix(eye,cameraTarget,width/h,cameraFov));gl.bindBuffer(gl.ARRAY_BUFFER,staticBuffer);gl.vertexAttribPointer(ap,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(ac,3,gl.FLOAT,false,24,12);for(const chunk of worldChunks)if(chunkVisible(chunk,worldFrustum))gl.drawArrays(gl.TRIANGLES,chunk.start,chunk.count);gl.bindBuffer(gl.ARRAY_BUFFER,resourceBuffer);gl.vertexAttribPointer(ap,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(ac,3,gl.FLOAT,false,24,12);if(activeMap==='island')drawVisibleResources(resourceRanges,resourceHP,eye,currentQuality.remoteDetail>.7?190:135,drawResourceSpan);geo.length=0;
 const deploymentOperatorOpacity=actor=>{
  if(portrait)return cinematicFrame.operatorOpacity;
  if(matchPhase!=='deployment'||!actor.pod)return 1;
@@ -533,20 +534,17 @@ const outdoorWorld={obstacles:obstacles.slice(),resources:resources.slice(),ches
 let facilityStatic=null;const facilityVertices=[];
 const mapSelection=createMapSelection(async()=>{
  if(!matchCharacterRenderer)throw new Error('The detailed facility needs WebGL rendering support.');
- await matchCharacterRenderer.loadFacilityEnvironment(graphicsSelection==='auto'?autoQuality.level:graphicsSelection);
+ await Promise.all([loadPlatformMap(),matchCharacterRenderer.loadFacilityEnvironment(graphicsSelection==='auto'?autoQuality.level:graphicsSelection)]);
 },id=>{
  activeMap=id;
  const next=id==='facility'?reactorLayout():outdoorWorld;
  obstacles.splice(0,obstacles.length,...next.obstacles);resources.splice(0,resources.length,...next.resources);chestSpawns.splice(0,chestSpawns.length,...next.chests);
  pois=id==='facility'?REACTOR_POIS:ISLAND_POIS;
  if(id==='facility'&&!facilityStatic){const saved=geo;geo=facilityVertices;for(const part of next.parts||[])if(part.kind!=='floor')box(part.position,part.size,color(part.color),part.yaw||0);
-  // Clean contiguous deck surfaces cover the collision raster without coplanar seams.
-  for(const pad of REACTOR_POIS){const c=Math.cos(pad.angle),sn=Math.sin(pad.angle),deck=(r0,r1,width,tint)=>box([(r0+r1)/2*c,6.55,(r0+r1)/2*sn],[r1-r0,.5,width],color(tint),-pad.angle);deck(96,110,14,'425762');deck(110,137,10,'425762');deck(137,155,18,'526975');for(const side of [-1,1])beam([120*c-side*6*sn,-2,120*sn+side*6*c],[152*c-side*6*sn,6.25,152*sn+side*6*c],.16,color('344955'));}
-  for(let i=0;i<180;i++){const a=i/180*Math.PI*2,b=(i+1)/180*Math.PI*2,at=(r,t,y)=>[Math.cos(t)*r,y,Math.sin(t)*r];quad(at(97,a,6.79),at(101,a,6.79),at(101,b,6.79),at(97,b,6.79),color('425762'));}
   facilityStatic=createWorldChunks(geo);facilityVertices.length=0;geo=saved;}
  const geometry=id==='facility'?facilityStatic:{data:outdoorWorld.data,chunks:outdoorWorld.chunks};staticData=geometry.data;worldChunks=geometry.chunks;
  gl.bindBuffer(gl.ARRAY_BUFFER,staticBuffer);gl.bufferData(gl.ARRAY_BUFFER,staticData,gl.STATIC_DRAW);
- Object.assign(window.Game.world,{map:id==='facility'?{id:'facility',name:'Reactor Facility'}:MAP_SOURCE,pois,minLandingHeight:id==='facility'?6:0,landingPoints:id==='facility'?REACTOR_POIS:undefined,isLandingAllowed:id==='facility'?isReactorLandingAllowed:undefined,supportHeight:id==='facility'?reactorSupportHeight:undefined,terrainHeight:id==='facility'?()=>-50:undefined});
+ Object.assign(window.Game.world,{map:id==='facility'?next.map:MAP_SOURCE,pois,minLandingHeight:id==='facility'?next.minLandingHeight:0,landingPoints:id==='facility'?next.landingPoints:undefined,isLandingAllowed:id==='facility'?next.isLandingAllowed:undefined,isLandingClear:id==='facility'?next.isLandingClear:undefined,cinematicRadius:id==='facility'?next.cinematicRadius:undefined,supportHeight:id==='facility'?next.supportHeight:undefined,terrainHeight:id==='facility'?next.terrainHeight:undefined});
  matchCharacterRenderer.setMap(id);landingChoice=null;
 });
 window.Game={world:{height,obstacles,resources,chests:chestSpawns,map:MAP_SOURCE,pois,minLandingHeight:0},setMap:id=>mapSelection.select(id),mapId:()=>mapSelection.id,mapStatus:()=>({id:activeMap,render:matchCharacterRenderer?.facilityRenderStats}),input:()=>({x:cinematicLock?0:(keys.KeyD?1:0)-(keys.KeyA?1:0),z:cinematicLock?0:(keys.KeyW?1:0)-(keys.KeyS?1:0),yaw,pitch,aimYaw:yaw+recoilYaw,aimPitch:clamp(pitch+recoilPitch,-.8,.62),rotation:buildRotation,inventoryRevision:Math.max(0,inventoryPrediction.revision+inventoryPrediction.pending.length),material:selectedMaterial,drop:!cinematicLock&&!!keys.KeyX,slot:matchPhase==='playing'&&!cinematicLock?slot:0,jump:!cinematicLock&&!!keys.Space,interact:!cinematicLock&&!!keys.KeyE,crouchRevision,crouchPress,reloadRevision,crouch:!cinematicLock&&(!!keys.ControlLeft||!!keys.ControlRight||!!keys.KeyC),sprint:!cinematicLock&&(!!keys.ShiftLeft||!!keys.ShiftRight),aim:aim&&matchPhase==='playing'&&!cinematicLock,fire:firing&&matchPhase==='playing'&&!cinematicLock&&player.air==='landed'&&canFireDuringPresentation(cameraPresentation),reload:!!keys.KeyR&&matchPhase==='playing'&&!cinematicLock,landing:landingChoice}),setLanding:(x,z)=>{if(matchPhase!=='deployment'||!Number.isFinite(x)||!Number.isFinite(z))return false;landingChoice={x:clamp(x,-292,292),z:clamp(z,-292,292)};return true;},landingChoice:()=>landingChoice,audioDeploymentElapsed(sequence){const music=deploymentAudio.time(audio,sequence);return music===null?null:music+MUSIC_START+DEPLOYMENT_TIMELINE.readyBeat;},deploymentView:()=>({stage:deploymentData?.stage,sequenceElapsed:deploymentData?.sequenceElapsed,boarding:Boolean(player.pod&&matchPhase==='deployment'&&!deploymentCinematic(deploymentData?.sequenceElapsed||0).portrait),boardingDoorOpen:player.pod?podBoardingPose(SHIP_PODS.find(p=>p.id===player.pod),player.entryStart||player.p,player.podProgress||0).doorOpen:0,shipLaunch:podShipLaunch(deploymentData?.sequenceElapsed||0),...deploymentCinematic(deploymentData?.sequenceElapsed||0),eye:eye.slice(),podPosition:cinematicPodAnchor?.slice()||null,cameraFov,localVisible:Boolean(matchCharacterRenderer?.instances.get(String(player.id))?.holder.visible)}),moveInventory(from,to){if(matchPhase!=='playing'||player.hp<=0||window.Duel?.spectating)return false;const op={id:`${inventoryContext}:${++inventorySequence}`,from,to};if(!predictInventoryMove(inventoryPrediction,op))return false;presentInventory();lastInventorySend=-Infinity;sendInventoryOperation();return true;},inventoryState:()=>({inventory:loadout,slot,pending:inventoryPrediction.pending}),ackInventory(ack){if(!inventoryPrediction.pending.some(op=>op.id===ack.id))return;reconcileInventory(inventoryPrediction,{inventory:ack.inventory,revision:ack.revision,slot:ack.slot,acknowledgements:[ack]});presentInventory();lastInventorySend=-Infinity;sendInventoryOperation();},clear:({resetInventory=false}={})=>{if(resetInventory){deploymentAudio.reset(audio);boardingTracks.clear();deploymentSnapshot=null;deploymentData=null;deploymentClock=createDeploymentClock();matchPhase='';document.body.classList.remove('deployment-cinematic');$('deployment-cinematic').style.opacity='0';$('deployment-fade').style.opacity='0';}weaponAudio.stopReload(audio);inventoryMenu.close();if(resetInventory){clearInventoryPrediction(inventoryPrediction);desiredItem=null;desiredUtility=null;lastWeaponItem=null;inventoryContext='';}keysClear();$('resume-control').hidden=true;$('game-settings').hidden=true;},look:(a,b=-.03)=>{yaw=a;pitch=clamp(b,-.8,.62);},pose:()=>player,
@@ -613,7 +611,7 @@ window.Game={world:{height,obstacles,resources,chests:chestSpawns,map:MAP_SOURCE
   }else if(e.type==='pod_ready'&&e.by===id){sound(410,.16,'triangle',.024);sound(610,.22,'sine',.012);notify('POD SEALED · WAITING FOR SQUAD');
   }else if(e.type==='both_pods_ready'){sound(112,.45,'sawtooth',.014);sound(228,.48,'sine',.018);
   }else if(e.type==='deployment_landed'){notify('IMPACT · POD SECURED');
-  }else if(e.type==='match_active'){sound(490,.26,'triangle',.024);notify('DEPLOYED · FIGHT FOR THE ISLAND');
+  }else if(e.type==='match_active'){sound(490,.26,'triangle',.024);notify(activeMap==='facility'?'DEPLOYED · SECURE PLATFORM 23':'DEPLOYED · FIGHT FOR THE ISLAND');
   }else if(e.type==='land'&&e.by===id){sound(130,.12,'triangle',.02);notify('Touchdown');
   }else if(e.type==='elimination'&&e.hit===id){hurt=.35;notify('Eliminated · spectating the round');}
  },startAudio({deployment=false}={}){try{audio??=new(window.AudioContext||window.webkitAudioContext)();audio.resume();return deployment?Promise.all([weaponAudio.load(audio),deploymentAudio.load(audio)]):weaponAudio.load(audio);}catch{return Promise.resolve(false);}},capture:captureMouse};

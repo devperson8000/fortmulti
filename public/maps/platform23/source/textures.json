@@ -1,0 +1,324 @@
+{
+  "plat23_pk02/pipes01_250": {
+    "file": "plat23-pipes01_d.png",
+    "size": [
+      512,
+      512
+    ]
+  },
+  "shared_pk02/floor09a": {
+    "file": "plat23-floor09a_d.png",
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  "plat23_custom/lol": {
+    "file": "plat23-lol_p.png",
+    "size": [
+      512,
+      512
+    ]
+  },
+  "shared_pk02/trim03": {
+    "file": "plat23-trim03_d.png",
+    "size": [
+      1024,
+      256
+    ]
+  },
+  "shared_pk02/wall06a": {
+    "file": "plat23-wall06a_d.png",
+    "size": [
+      512,
+      512
+    ]
+  },
+  "shared_pk02/wall03b": {
+    "file": "plat23-wall03b_d.png",
+    "size": [
+      1024,
+      512
+    ]
+  },
+  "plat23_custom/forcefield": {
+    "file": "plat23-forcefield_p.png",
+    "size": [
+      512,
+      512
+    ]
+  },
+  "plat23_pk02/light03_blue_750": {
+    "file": "plat23-light03_d.png",
+    "size": [
+      512,
+      128
+    ]
+  },
+  "plat23_pk02/light01_blue_2000": {
+    "file": "plat23-light01_d.png",
+    "size": [
+      128,
+      64
+    ]
+  },
+  "shared_pk02/panels01c": {
+    "file": "plat23-panels01c_d.png",
+    "size": [
+      512,
+      512
+    ]
+  },
+  "plat23_pk02/light02_orange_2000": {
+    "file": "plat23-light02_d.png",
+    "size": [
+      256,
+      256
+    ]
+  },
+  "plat23_pk02/light03_red_750": {
+    "file": "plat23-light03_d.png",
+    "size": [
+      512,
+      128
+    ]
+  },
+  "plat23_pk02/light02_orange_3000": {
+    "file": "plat23-light02_d.png",
+    "size": [
+      256,
+      256
+    ]
+  },
+  "shared_pk02/floor12a": {
+    "file": "plat23-floor12a_d.png",
+    "size": [
+      256,
+      256
+    ]
+  },
+  "plat23_pk02/light02_yellow_3000": {
+    "file": "plat23-light02_d.png",
+    "size": [
+      256,
+      256
+    ]
+  },
+  "shared_pk02/floor06a": {
+    "file": "plat23-floor06a_d.png",
+    "size": [
+      256,
+      256
+    ]
+  },
+  "shared_pk02/trim02": {
+    "file": "plat23-trim02_d.png",
+    "size": [
+      256,
+      128
+    ]
+  },
+  "plat23_pk02/light01_red_2000": {
+    "file": "plat23-light01_d.png",
+    "size": [
+      128,
+      64
+    ]
+  },
+  "shared_pk02/floor05": {
+    "file": "plat23-floor05_d.png",
+    "size": [
+      512,
+      512
+    ]
+  },
+  "shared_pk02/wall_big02a": {
+    "file": "plat23-wall_big02a_d.png",
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  "shared_pk02/floor04": {
+    "file": "plat23-floor04_d.png",
+    "size": [
+      512,
+      512
+    ]
+  },
+  "plat23_pk02/rock01_terrain_xy": {
+    "file": "plat23-rock01_d.png",
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  "shared_pk02/floor01": {
+    "file": "plat23-floor01_d.png",
+    "size": [
+      512,
+      512
+    ]
+  },
+  "plat23_pk02/dec_num03": {
+    "file": "plat23-dec_num03_d.png",
+    "size": [
+      256,
+      512
+    ]
+  },
+  "shared_pk02/generic01b": {
+    "file": "plat23-generic01b_d.png",
+    "size": [
+      512,
+      512
+    ]
+  },
+  "shared_pk02/ceiling03": {
+    "file": "plat23-ceiling03_d.png",
+    "size": [
+      512,
+      512
+    ]
+  },
+  "shared_pk02/floor12b": {
+    "file": "plat23-floor12b_d.png",
+    "size": [
+      256,
+      256
+    ]
+  },
+  "shared_pk02/switches01a": {
+    "file": "plat23-switches01a_d.png",
+    "size": [
+      128,
+      256
+    ]
+  },
+  "plat23_pk02/rock01_terrain_yz": {
+    "file": "plat23-rock01_d.png",
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  "shared_pk02/sand01": {
+    "file": "plat23-sand01_d.png",
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  "shared_pk02/trim01": {
+    "file": "plat23-trim01_d.png",
+    "size": [
+      128,
+      512
+    ]
+  },
+  "shared_pk02/trim04b": {
+    "file": "plat23-trim04b_d.png",
+    "size": [
+      256,
+      32
+    ]
+  },
+  "shared_pk02/floor_cyl01": {
+    "file": "plat23-floor_cyl01_d.png",
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  "shared_pk02/trim04a": {
+    "file": "plat23-trim04a_d.png",
+    "size": [
+      256,
+      32
+    ]
+  },
+  "plat23_pk02/rock01_terrain_xz": {
+    "file": "plat23-rock01_d.png",
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  "plat23_pk02/computer01a_250": {
+    "file": "plat23-computer01a_d.png",
+    "size": [
+      256,
+      512
+    ]
+  },
+  "plat23_pk02/dec_num02": {
+    "file": "plat23-dec_num02_d.png",
+    "size": [
+      256,
+      512
+    ]
+  },
+  "shared_pk02/wall08a": {
+    "file": "plat23-wall08a_d.png",
+    "size": [
+      1024,
+      512
+    ]
+  },
+  "shared_pk02/floor03": {
+    "file": "plat23-floor03_d.png",
+    "size": [
+      256,
+      256
+    ]
+  },
+  "plat23_pk02/light01_yellow_5000": {
+    "file": "plat23-light01_d.png",
+    "size": [
+      128,
+      64
+    ]
+  },
+  "plat23_pk02/light01_yellow_2000": {
+    "file": "plat23-light01_d.png",
+    "size": [
+      128,
+      64
+    ]
+  },
+  "shared_pk02/wall_big02b": {
+    "file": "plat23-wall_big02b_d.png",
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  "shared_pk02/wall05c": {
+    "file": "plat23-wall05c_d.png",
+    "size": [
+      512,
+      512
+    ]
+  },
+  "plat23_pk02/switches01b_250": {
+    "file": "plat23-switches01b_d.png",
+    "size": [
+      128,
+      256
+    ]
+  },
+  "plat23_pk02/light02_yellow_2000": {
+    "file": "plat23-light02_d.png",
+    "size": [
+      256,
+      256
+    ]
+  },
+  "shared_pk02/panels01b": {
+    "file": "plat23-panels01b_d.png",
+    "size": [
+      512,
+      512
+    ]
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "method": "Native upward brush/patch triangle support; 1m square grid; flat height within .02m; exact outward convex planes checked against 0.4m-radius, 1.8m-height upright capsule at each sample. This is standing/body clearance, not cinematic camera or pod model validation. Source sky and playerclip top caps must be excluded for aerial entry.",
+  "sites": [
+    {
+      "position": [
+        0,
+        -0.125,
+        -10
+      ],
+      "flatClearSquareMetres": 10
+    },
+    {
+      "position": [
+        0,
+        -0.125,
+        -2
+      ],
+      "flatClearSquareMetres": 8
+    },
+    {
+      "position": [
+        -35,
+        1.5,
+        17
+      ],
+      "flatClearSquareMetres": 10
+    },
+    {
+      "position": [
+        35,
+        1.5,
+        17
+      ],
+      "flatClearSquareMetres": 10
+    },
+    {
+      "position": [
+        -8,
+        1.5,
+        22
+      ],
+      "flatClearSquareMetres": 8
+    },
+    {
+      "position": [
+        8,
+        1.5,
+        22
+      ],
+      "flatClearSquareMetres": 8
+    },
+    {
+      "position": [
+        -74,
+        4,
+        -14
+      ],
+      "flatClearSquareMetres": 8
+    },
+    {
+      "position": [
+        74,
+        4,
+        -14
+      ],
+      "flatClearSquareMetres": 8
+    }
+  ],
+  "corridorFixtures": [
+    {
+      "position": [
+        0,
+        -0.25,
+        44
+      ],
+      "description": "north base interior floor, below native ceiling"
+    },
+    {
+      "position": [
+        64,
+        -0.5,
+        -3
+      ],
+      "description": "east base corridor floor"
+    },
+    {
+      "position": [
+        -64,
+        -0.5,
+        -3
+      ],
+      "description": "west base corridor floor"
+    }
+  ],
+  "renderBounds": {
+    "min": [
+      -93.5,
+      -47.5,
+      -56.75
+    ],
+    "max": [
+      93.5,
+      16,
+      56.75
+    ]
+  }
+}

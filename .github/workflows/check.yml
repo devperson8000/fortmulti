@@ -49,6 +49,12 @@ jobs:
         env:
           GAME_TEST_URL: http://127.0.0.1:4174
           GAME_ARTIFACTS: /tmp/horizon-deployment/weapons
+      - name: Verify Platform 23 native map integration
+        run: npm run test:platform23-browser
+        env:
+          GAME_TEST_URL: http://127.0.0.1:4174
+          GAME_TEST_GRAPHICS: low
+          GAME_ARTIFACTS: /tmp/horizon-deployment/platform23
       - name: Upload browser diagnostics if a test fails
         if: failure()
         uses: actions/upload-artifact@v4

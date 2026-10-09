@@ -1,0 +1,31 @@
+{
+  "sourceBrushes": 3546,
+  "invalidBrushes": 0,
+  "solidBrushes": 3542,
+  "sourcePatches": 189,
+  "collisionPatches": 189,
+  "walkableTriangles": 9473,
+  "renderTriangles": 27952,
+  "sourceRenderTriangles": 25489,
+  "recoveredGroundTriangles": 997,
+  "materials": 46,
+  "spatialPrimitives": 2538,
+  "geometryBytes": 1329596,
+  "geometryGzipBytes": 302214,
+  "textureFiles": 65,
+  "textureBytes": 3664140,
+  "normalMapMaterials": 36,
+  "bounds": {
+    "min": [
+      -93.5,
+      -47.5,
+      -56.75
+    ],
+    "max": [
+      93.5,
+      16.0,
+      57.25
+    ]
+  },
+  "sourceSha256": "cd737458dcb7710867966e4b9e21161ce910fa475e6fd6f7362ecb1a3ab4b6dc"
+}

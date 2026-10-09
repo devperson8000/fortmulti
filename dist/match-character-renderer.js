@@ -70,10 +70,10 @@ export class MatchCharacterRenderer{
    this.facilityScene.add(new THREE.HemisphereLight(0x96b0bf,0x725139,1.1));
    const warm=new THREE.DirectionalLight(0xffd0a0,1.25);warm.position.set(-15,35,10);this.facilityScene.add(warm);
    const cool=new THREE.DirectionalLight(0x64c9ff,.7);cool.position.set(25,18,-12);this.facilityScene.add(cool);
-   this.facilityEnvironment=createReactorEnvironment(this.facilityScene);
+   this.facilityEnvironment=createReactorEnvironment(this.facilityScene,{baseUrl:'/maps/platform23/',offsetY:0,maxDistance:220});
    await this.facilityEnvironment.ready;
    this.facilityDepthMaterials=[THREE.FrontSide,THREE.BackSide,THREE.DoubleSide].map(side=>new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:true,side,fog:false,toneMapped:false}));
-   const camera=new THREE.PerspectiveCamera(75,1,.15,820);camera.position.set(140,12,0);camera.lookAt(0,8,0);
+   const camera=new THREE.PerspectiveCamera(75,1,.15,820);camera.position.set(0,6,-18);camera.lookAt(0,2,-6);this.facilityEnvironment.update(camera);
    prepareFacilityDepth(this.facilityEnvironment.group,this.facilityDepthMaterials);this.renderer.resetState();const depthCompiled=this.renderer.compileAsync(this.facilityScene,camera);restoreFacilityColor(this.facilityEnvironment.group);this.restoreRawState();await depthCompiled;this.restoreRawState();
    for(const quality of ['low','medium','high']){this.facilityEnvironment.setQuality(quality);this.renderer.resetState();const compiled=this.renderer.compileAsync(this.facilityScene,camera);this.restoreRawState();await compiled;this.restoreRawState();}
    this.facilityEnvironment.setQuality(quality);this.renderer.resetState();try{warmFacilityResources(this.renderer,this.facilityScene,camera,this.facilityEnvironment.group);}finally{this.restoreRawState();}
@@ -294,7 +294,7 @@ export class MatchCharacterRenderer{
   this.camera.aspect=Math.max(.1,aspect||width/Math.max(1,height));this.camera.fov=Number.isFinite(fov)?fov*180/Math.PI:75;this.camera.position.set(...eye);this.camera.lookAt(...target);this.camera.updateProjectionMatrix();
   this.cinematicLight.intensity=cinematic?1.15:0;if(cinematic){this.cinematicLight.position.set(eye[0],eye[1]+.8,eye[2]);this.cinematicLight.target.position.set(...target);}
   this.renderer.resetState();
-  if(this.activeMap==='facility'&&this.facilityEnvironment){this.facilityEnvironment.setQuality(quality);this.facilityEnvironment.update(this.camera,performance.now()/1000);renderFacilityPass(this.renderer,this.facilityScene,this.camera,this.facilityEnvironment.group,this.facilityDepthMaterials,{depth:quality==='high'});this.facilityRenderStats={calls:this.renderer.info.render.calls+(this.facilityEnvironment.group.userData.depthCalls||0),colorCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles+(this.facilityEnvironment.group.userData.depthTriangles||0)};}
+  if(this.activeMap==='facility'&&this.facilityEnvironment){this.facilityEnvironment.setQuality(quality);this.facilityEnvironment.update(this.camera,performance.now()/1000);renderFacilityPass(this.renderer,this.facilityScene,this.camera,this.facilityEnvironment.group,this.facilityDepthMaterials,{depth:false});this.facilityRenderStats={calls:this.renderer.info.render.calls+(this.facilityEnvironment.group.userData.depthCalls||0),colorCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles+(this.facilityEnvironment.group.userData.depthTriangles||0)};}
   this.renderer.render(this.scene,this.camera);
   // Restore the raw renderer's state before it draws the view model in its own pass.
   this.restoreRawState();

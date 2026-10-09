@@ -1,0 +1,587 @@
+{
+  "plat23-ceiling03_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/ceiling03_d.png",
+    "sha256": "0e27e9b34d89f4e98328b4bee5078d85258f15241997d8c025a9b7e82020d03c",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-ceiling03_d.webp"
+  },
+  "plat23-ceiling03_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/ceiling03_n.png",
+    "sha256": "65800c0ee26e9df36dde2fe89c6d2c051faa6c74b58162f21b9e9402ff7456db",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-ceiling03_n.webp"
+  },
+  "plat23-computer01a_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/computer01a_d.png",
+    "sha256": "7c56a35c235d6f6a5e5784076867502fe85ca4f1153c9d02afae9336ec829eab",
+    "dimensions": [
+      256,
+      512
+    ],
+    "output": "plat23-computer01a_d.webp"
+  },
+  "plat23-computer01a_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/computer01a_n.png",
+    "sha256": "18f410a4cb7d9bd2240b38164055480c0a4d3d9239bb499e77287000dc711694",
+    "dimensions": [
+      256,
+      512
+    ],
+    "output": "plat23-computer01a_n.webp"
+  },
+  "plat23-dec_num02_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/dec_num02_d.png",
+    "sha256": "80c36269cf8bd44dee2cca4fee8a9905cf5e730cd6a01432638037eca508f341",
+    "dimensions": [
+      256,
+      512
+    ],
+    "output": "plat23-dec_num02_d.webp"
+  },
+  "plat23-dec_num03_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/dec_num03_d.png",
+    "sha256": "c4a1c004b84f5b50abe9fc4d3357571e52f3b06d52fa95c8677abc39300963ad",
+    "dimensions": [
+      256,
+      512
+    ],
+    "output": "plat23-dec_num03_d.webp"
+  },
+  "plat23-floor01_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor01_d.png",
+    "sha256": "44b62659376301d14f674e3f32e4e8f883ba2fbe7ff4381b8914e9fe2e1d8f9e",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-floor01_d.webp"
+  },
+  "plat23-floor01_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor01_n.png",
+    "sha256": "f724137f6dd5c805375a66772b9336c7f12bb66ac8c52df3458473a5facb0ff6",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-floor01_n.webp"
+  },
+  "plat23-floor03_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor03_d.png",
+    "sha256": "7f9c9468e683c707b65207ab549824f35269150f1aa4a44e2a8ba0ad2586aa71",
+    "dimensions": [
+      256,
+      256
+    ],
+    "output": "plat23-floor03_d.webp"
+  },
+  "plat23-floor03_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor03_n.png",
+    "sha256": "2699e571d6e3b4c2df0cff69ea12f6ecd97215c883583d7513755f463d519e25",
+    "dimensions": [
+      256,
+      256
+    ],
+    "output": "plat23-floor03_n.webp"
+  },
+  "plat23-floor04_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor04_d.png",
+    "sha256": "7b82785141fd90fa9fb5a9197b569f6b0e8c094879958bdda31afdf25b0842bd",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-floor04_d.webp"
+  },
+  "plat23-floor04_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor04_n.png",
+    "sha256": "f5dc66b75b54b46d429b0e85165e67fd8e429b2e5afb103c46ece2ef4f617001",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-floor04_n.webp"
+  },
+  "plat23-floor05_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor05_d.png",
+    "sha256": "63b6378f27e2cf52dd81eeac1fa84cee6df6d903f1681af05f2e442c08b7e171",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-floor05_d.webp"
+  },
+  "plat23-floor05_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor05_n.png",
+    "sha256": "ed81bd2904752f977af1b4ba2612e149de9849db61148cf3e54ac0223aef0146",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-floor05_n.webp"
+  },
+  "plat23-floor06a_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor06a_d.png",
+    "sha256": "7a2dd27c86db7cd45277d052c6a63ea572e2fba32460f13b4e844f4fea8aa6e8",
+    "dimensions": [
+      256,
+      256
+    ],
+    "output": "plat23-floor06a_d.webp"
+  },
+  "plat23-floor09a_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor09a_d.png",
+    "sha256": "6e510cc9b0e8cbf3a7aed8457868804f27c052af75e9b1f73b4c9eae21907c85",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "output": "plat23-floor09a_d.webp"
+  },
+  "plat23-floor12a_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor12a_d.png",
+    "sha256": "a333e83d094fb8afd2b81bb3a435fa4cab050bd945924a82e6989918858f8546",
+    "dimensions": [
+      256,
+      256
+    ],
+    "output": "plat23-floor12a_d.webp"
+  },
+  "plat23-floor12b_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor12b_d.png",
+    "sha256": "adf90b521402559cbd7d2aaec425820351b72418d480b63a6804230740181068",
+    "dimensions": [
+      256,
+      256
+    ],
+    "output": "plat23-floor12b_d.webp"
+  },
+  "plat23-floor_cyl01_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor_cyl01_d.png",
+    "sha256": "096473bc1e1d36a7fa3a2289a23312f92928dab0524b46914ab87d51133578b2",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "output": "plat23-floor_cyl01_d.webp"
+  },
+  "plat23-floor_cyl01_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/floor_cyl01_n.png",
+    "sha256": "51a59a411de1df6197f7a343f68bc85a14ac763d4955957e063cf1e8e4f91c44",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "output": "plat23-floor_cyl01_n.webp"
+  },
+  "plat23-forcefield_p.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/map-plat23_src.dpkdir/2d9acc8509cc3040691b9bf30415fec273af0839/textures/plat23_custom_src/forcefield_p.png",
+    "sha256": "86ef697c520c8c3c188e8e8de29420b3a086f8ae676ca68ed97e2887d947db16",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-forcefield_p.webp"
+  },
+  "plat23-generic01b_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/generic01b_d.png",
+    "sha256": "7bea8237b556a56375653b6f209cdb15218e80568b5286f7d38c52bda633c57d",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-generic01b_d.webp"
+  },
+  "plat23-light01_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/light01_d.png",
+    "sha256": "ea07b6deb1a716933f650dfc8964c3ecc0ff1625e26a5924bdb9fbc2b2ad2fc1",
+    "dimensions": [
+      128,
+      64
+    ],
+    "output": "plat23-light01_d.webp"
+  },
+  "plat23-light01_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/light01_n.png",
+    "sha256": "18c671c4762da72ad9d6cd04fd4a2506e8c5659e42caa8c2a7d2aa3d02445767",
+    "dimensions": [
+      128,
+      64
+    ],
+    "output": "plat23-light01_n.webp"
+  },
+  "plat23-light02_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/light02_d.png",
+    "sha256": "b4380eacb2741a4f8fea26e79d83a27f6a04043584719a08a09d04d3fc66b6f4",
+    "dimensions": [
+      256,
+      256
+    ],
+    "output": "plat23-light02_d.webp"
+  },
+  "plat23-light02_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/light02_n.png",
+    "sha256": "07b9a8167daa6d2940514b8170b28ae7aff8df02cf3ac89a49b39d080f712bcd",
+    "dimensions": [
+      256,
+      256
+    ],
+    "output": "plat23-light02_n.webp"
+  },
+  "plat23-light03_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/light03_d.png",
+    "sha256": "e2921f6bd48b93de9790492bdba26b4d43931c729ac8d715f11ed15c6c4a757a",
+    "dimensions": [
+      512,
+      128
+    ],
+    "output": "plat23-light03_d.webp"
+  },
+  "plat23-light03_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/light03_n.png",
+    "sha256": "9125695f7ab9fa9499814278fd0d93b3bd7cfd5b22a5581976e9705027f923fa",
+    "dimensions": [
+      512,
+      128
+    ],
+    "output": "plat23-light03_n.webp"
+  },
+  "plat23-light03a_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/map-plat23_src.dpkdir/2d9acc8509cc3040691b9bf30415fec273af0839/textures/plat23_pk02_src/light03a_d.png",
+    "sha256": "9c74eb08199895f9ad74ec12ec93749dfe4fb893e145670289ff86f6b262c8fb",
+    "dimensions": [
+      512,
+      128
+    ],
+    "output": "plat23-light03a_d.webp"
+  },
+  "plat23-lol_p.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/map-plat23_src.dpkdir/2d9acc8509cc3040691b9bf30415fec273af0839/textures/plat23_custom_src/lol_p.png",
+    "sha256": "375a7f6424ba9bf9a44d628bf2634b3ab9cc69060a253efc47b9a4fc3019bacd",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-lol_p.webp"
+  },
+  "plat23-panels01b_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/panels01b_d.png",
+    "sha256": "71ea1c56b380b67f98b6586ddd090c52db236ede287da2577815b65a03527705",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-panels01b_d.webp"
+  },
+  "plat23-panels01b_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/panels01b_n.png",
+    "sha256": "fbc4b3b74654e773c7de79357f9cc1ff35f4ae522cc7f02f1caf29522ea63674",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-panels01b_n.webp"
+  },
+  "plat23-panels01c_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/panels01c_d.png",
+    "sha256": "83ca95ccbc78d03e790ff33ca196e790356ca940da38598fa122406bbd300e8f",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-panels01c_d.webp"
+  },
+  "plat23-panels01c_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/panels01c_n.png",
+    "sha256": "4c33f6f544901e705a3c23040635c52035aec34c593dc5dfbb66d02be56d9095",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-panels01c_n.webp"
+  },
+  "plat23-pipes01_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/pipes01_n.png",
+    "sha256": "0a48ca3f5dc3343761e547b83776c683581f0b829dde99d17a784dc1eca3c169",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-pipes01_n.webp"
+  },
+  "plat23-pipes01a_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/map-plat23_src.dpkdir/2d9acc8509cc3040691b9bf30415fec273af0839/textures/plat23_pk02_src/pipes01a_d.png",
+    "sha256": "22180453fc73577a27e2b1fb79176075f50297ea9c4d657ec4b677fea726ad1f",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-pipes01a_d.webp"
+  },
+  "plat23-rock01_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/rock01_d.png",
+    "sha256": "2efdb5c2b1972415b611f24a59622f655009ef3928481103f107696db6726dd1",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "output": "plat23-rock01_d.webp"
+  },
+  "plat23-rock01_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/rock01_n.png",
+    "sha256": "d409e30536f55e34e3f0169df1f4f1b5a080ff0b79bc9daf2c5c3266bc59d626",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "output": "plat23-rock01_n.webp"
+  },
+  "plat23-sand01_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/sand01_d.png",
+    "sha256": "f88eefb75364ab4c869a6c93a69f2b004fc87b2547cae226fc013259217b4a73",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "output": "plat23-sand01_d.webp"
+  },
+  "plat23-sand01_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/sand01_n.png",
+    "sha256": "e003c33dba37cd434e2b2f658b2f031f0750b27ce6ed0c4c4fd81c6e98b4b3f1",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "output": "plat23-sand01_n.webp"
+  },
+  "plat23-switches01a_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/switches01a_d.png",
+    "sha256": "00a3b50782cd1fdd9186a003d8d93d7dfdca83f22cd36a885279de4c4faa878b",
+    "dimensions": [
+      128,
+      256
+    ],
+    "output": "plat23-switches01a_d.webp"
+  },
+  "plat23-switches01a_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/switches01a_n.png",
+    "sha256": "0f4c8bef1906369c941dc3ad2cd6e990847b713b35e6a8c3ea538849ba71d91b",
+    "dimensions": [
+      128,
+      256
+    ],
+    "output": "plat23-switches01a_n.webp"
+  },
+  "plat23-switches01b_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/switches01b_d.png",
+    "sha256": "ccfb85c5a7e2b9cbb1b2852a3311761d26ecd42199cda0b35da6e2c78f4ee62d",
+    "dimensions": [
+      128,
+      256
+    ],
+    "output": "plat23-switches01b_d.webp"
+  },
+  "plat23-switches01b_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/switches01b_n.png",
+    "sha256": "4eb3608426c1896e1eaa82bd4db7475407d55fdcc5bc0efd5e05f03da10a45bf",
+    "dimensions": [
+      128,
+      256
+    ],
+    "output": "plat23-switches01b_n.webp"
+  },
+  "plat23-trim01_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/trim01_d.png",
+    "sha256": "cfb72831a2766c987e587946f462b7048578a1aa58e42f45aa64f961f46b6106",
+    "dimensions": [
+      128,
+      512
+    ],
+    "output": "plat23-trim01_d.webp"
+  },
+  "plat23-trim01_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/trim01_n.png",
+    "sha256": "3f997d223e2c531f588665fc2b05f18f4c274c9112d65a415237da02162136f6",
+    "dimensions": [
+      128,
+      512
+    ],
+    "output": "plat23-trim01_n.webp"
+  },
+  "plat23-trim02_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/trim02_d.png",
+    "sha256": "c462d7270ccf8dc2cd0595b30c4bba64dbb4595a579192287040ae17acea5556",
+    "dimensions": [
+      256,
+      128
+    ],
+    "output": "plat23-trim02_d.webp"
+  },
+  "plat23-trim02_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/trim02_n.png",
+    "sha256": "f6648211fec8dcdb40ad8eb7d0fd2d4f962afa459223b3ea4a5dac7b96042177",
+    "dimensions": [
+      256,
+      128
+    ],
+    "output": "plat23-trim02_n.webp"
+  },
+  "plat23-trim03_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/trim03_d.png",
+    "sha256": "6e341a0442db70ec8c9c9356673ead4afcc4c82ba60cac5dd74315bff6540f86",
+    "dimensions": [
+      1024,
+      256
+    ],
+    "output": "plat23-trim03_d.webp"
+  },
+  "plat23-trim03_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/trim03_n.png",
+    "sha256": "551da37e88302e69e1ce7b4d2d56c935c40284caa3fa6e7344faa71bbb38bfe0",
+    "dimensions": [
+      1024,
+      256
+    ],
+    "output": "plat23-trim03_n.webp"
+  },
+  "plat23-trim04a_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/trim04a_d.png",
+    "sha256": "419eaf55fe4f6ff36b086eb1e468de933118cbb38034f9b6ab5b30b82359cd56",
+    "dimensions": [
+      256,
+      32
+    ],
+    "output": "plat23-trim04a_d.webp"
+  },
+  "plat23-trim04a_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/trim04a_n.png",
+    "sha256": "2d882f3b5a433905de8b0d1bd0dfcbcade1bf3cecb44744d0c6f9c5d6bc0ee01",
+    "dimensions": [
+      256,
+      32
+    ],
+    "output": "plat23-trim04a_n.webp"
+  },
+  "plat23-trim04b_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/trim04b_d.png",
+    "sha256": "8a8f83e327b96a58182a71d1d81ce04d46b59d1923cacb78bab086fd5ea2eb76",
+    "dimensions": [
+      256,
+      32
+    ],
+    "output": "plat23-trim04b_d.webp"
+  },
+  "plat23-trim04b_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/trim04b_n.png",
+    "sha256": "f004246513df532aa7f77b25f668c2b363115633bed6494997fb3e66ac7dc7f3",
+    "dimensions": [
+      256,
+      32
+    ],
+    "output": "plat23-trim04b_n.webp"
+  },
+  "plat23-wall03b_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/wall03b_d.png",
+    "sha256": "ce9d1fe8e85aaf90d501887666a4b89cf7e82d3a02ec6f2cbbcd1c9f0e2d3f2c",
+    "dimensions": [
+      1024,
+      512
+    ],
+    "output": "plat23-wall03b_d.webp"
+  },
+  "plat23-wall03b_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/wall03b_n.png",
+    "sha256": "a8efbd13ef8115463b095eb0eefa69e193a62d80432bc11d1429a417a2ded4b7",
+    "dimensions": [
+      1024,
+      512
+    ],
+    "output": "plat23-wall03b_n.webp"
+  },
+  "plat23-wall05c_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/wall05c_d.png",
+    "sha256": "9e82482be4ca42c6829d8fcc1aa6a3647e60005e419c7e3d5f8c43264c509d06",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-wall05c_d.webp"
+  },
+  "plat23-wall05c_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/wall05c_n.png",
+    "sha256": "aeea51323e03ab0a87903240c0745f7528c425d9fc26414844f9da9107017c7e",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-wall05c_n.webp"
+  },
+  "plat23-wall06a_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/wall06a_d.png",
+    "sha256": "5e4399a86979582f223dd8b79caee4d709753604520705b4bb6523f2890f8285",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-wall06a_d.webp"
+  },
+  "plat23-wall06a_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/wall06a_n.png",
+    "sha256": "cc4238617484d67dfd4d86a12041ef90523d5302183ac1c21540148e601e9e31",
+    "dimensions": [
+      512,
+      512
+    ],
+    "output": "plat23-wall06a_n.webp"
+  },
+  "plat23-wall08a_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/wall08a_d.png",
+    "sha256": "c9264ced3226b38478cf7e8c79896c7f609035102559d80e63b4e48c68d1350c",
+    "dimensions": [
+      1024,
+      512
+    ],
+    "output": "plat23-wall08a_d.webp"
+  },
+  "plat23-wall_big02a_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/wall_big02a_d.png",
+    "sha256": "bee9e0ff972e55c023dcf585fae824b2dc9459329401b3e7680557b3baf68a17",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "output": "plat23-wall_big02a_d.webp"
+  },
+  "plat23-wall_big02a_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/wall_big02a_n.png",
+    "sha256": "77ef8e788f77f35f2e81e13069d19259e5ae85d757776046e71ea7f333811eeb",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "output": "plat23-wall_big02a_n.webp"
+  },
+  "plat23-wall_big02b_d.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/wall_big02b_d.png",
+    "sha256": "ac6b7045cdf41e62d0b2d5e7d1364e9aedde3bbc2196f59aba2e50f6bd0a6463",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "output": "plat23-wall_big02b_d.webp"
+  },
+  "plat23-wall_big02b_n.png": {
+    "url": "https://raw.githubusercontent.com/UnvanquishedAssets/tex-pk02_src.dpkdir/093481388468655bf5ec77df6acdeb881fca227a/textures/shared_pk02_src/wall_big02b_n.png",
+    "sha256": "a9a648af69708c84ea7df924454746661a82fbccd861d291828c4796e5ac67f8",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "output": "plat23-wall_big02b_n.webp"
+  }
+}

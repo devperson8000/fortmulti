@@ -1,0 +1,1295 @@
+{
+  "checks": [
+    "Outdoor starts without facility downloads; PLATFORM 23 leader choice synchronizes to the locked guest selector",
+    "Multiplayer controls activate from lobby without clicking the hidden solo Play button",
+    "Both connected players select distinct supported native pads through visible quick picks",
+    "Pressing E switches to exterior camera watching the operator enter through open doors",
+    "Doors close after boarding; sealed exterior view stays stationary while waiting for teammate",
+    "Launch hatches slide open and complete pods fire below the floor before blackout",
+    "Music begins on full black with gameplay UI hidden",
+    "HORIZON symbol appears at the uh yeah cue",
+    "Logo fades at the opening lyric; the descent shows only the sealed capsule exterior",
+    "Sealed pod slams onto the selected ground on the measured bass drop",
+    "Hatch reveals the operator after impact; walkout and salute remain visible with music and combat locked",
+    "Salute finishes before the camera returns and gameplay unlocks",
+    "Gameplay build and movement controls work after the salute",
+    "Both real network clients play once, retain distinct landings and synchronize touchdown",
+    "Pods stay fixed during exit and camera returns smoothly to first person",
+    "Both peers enter gameplay at full health with cinematic and red damage overlays hidden and two avatar instances",
+    "Real keyboard movement crosses native corridor/deck floor without falling or floor teleporting",
+    "Keyboard-selected wall places through normal fire input with its base on the native deck floor",
+    "Player climbs a normally placed ramp from the actual native floor with authoritative step support",
+    "Normal E interaction collects supported floor loot into replicated inventory",
+    "Collected rifle fires normally with replicated shot events and local/remote audio voices",
+    "Native deck and room captures include actual frame interval medians, GPU identity and render costs; guest rendering is paused only for profiling"
+  ],
+  "errors": [],
+  "webglErrors": [],
+  "requests": [
+    "http://127.0.0.1:4186/?local=1",
+    "http://127.0.0.1:4186/game.css",
+    "http://127.0.0.1:4186/lobby.css",
+    "http://127.0.0.1:4186/inventory-menu.css",
+    "http://127.0.0.1:4186/deployment-cinematic.css",
+    "http://127.0.0.1:4186/horizon-logo-transparent.webp",
+    "http://127.0.0.1:4186/config.js",
+    "http://127.0.0.1:4186/lobby-characters.js",
+    "http://127.0.0.1:4186/app.js",
+    "http://127.0.0.1:4186/connection-stability.js",
+    "http://127.0.0.1:4186/multiplayer-runtime.js",
+    "http://127.0.0.1:4186/character-lighting.js",
+    "http://127.0.0.1:4186/vendor/three/build/three.module.js",
+    "http://127.0.0.1:4186/vendor/three/examples/jsm/loaders/GLTFLoader.js",
+    "http://127.0.0.1:4186/vendor/three/examples/jsm/utils/SkeletonUtils.js",
+    "http://127.0.0.1:4186/lobby-rig.js",
+    "http://127.0.0.1:4186/island-map.js",
+    "http://127.0.0.1:4186/platform23-map.js",
+    "http://127.0.0.1:4186/engine.js",
+    "http://127.0.0.1:4186/network.js",
+    "http://127.0.0.1:4186/simulation.js",
+    "http://127.0.0.1:4186/lobby-state.js",
+    "http://127.0.0.1:4186/network-tuning.js",
+    "http://127.0.0.1:4186/maps/ironwood/height-data.js",
+    "http://127.0.0.1:4186/maps/ironwood/forest-data.js",
+    "http://127.0.0.1:4186/world-layout.js",
+    "http://127.0.0.1:4186/vendor/three/examples/jsm/utils/BufferGeometryUtils.js",
+    "http://127.0.0.1:4186/collision-shapes.js",
+    "http://127.0.0.1:4186/deployment-audio.js",
+    "http://127.0.0.1:4186/deployment-cinematic.js",
+    "http://127.0.0.1:4186/weapon-audio.js",
+    "http://127.0.0.1:4186/world-chunks.js",
+    "http://127.0.0.1:4186/weapon-inventory.js",
+    "http://127.0.0.1:4186/inventory-prediction.js",
+    "http://127.0.0.1:4186/inventory-menu.js",
+    "http://127.0.0.1:4186/bullet-presentation.js",
+    "http://127.0.0.1:4186/visual-presentation.js",
+    "http://127.0.0.1:4186/items.js",
+    "http://127.0.0.1:4186/resource-system.js",
+    "http://127.0.0.1:4186/build-grid.js",
+    "http://127.0.0.1:4186/weapon-system.js",
+    "http://127.0.0.1:4186/render-buffer.js",
+    "http://127.0.0.1:4186/first-person-system.js",
+    "http://127.0.0.1:4186/view-model.js",
+    "http://127.0.0.1:4186/effect-pool.js",
+    "http://127.0.0.1:4186/quality-system.js",
+    "http://127.0.0.1:4186/deployment-ship.js",
+    "http://127.0.0.1:4186/deployment-sequence.js",
+    "http://127.0.0.1:4186/avatar-model.js",
+    "http://127.0.0.1:4186/weapon-model.js",
+    "http://127.0.0.1:4186/match-character-renderer.js",
+    "http://127.0.0.1:4186/map-selection.js",
+    "http://127.0.0.1:4186/movement-collision.js",
+    "http://127.0.0.1:4186/loot-system.js",
+    "http://127.0.0.1:4186/shockwave.js",
+    "http://127.0.0.1:4186/ballistics.js",
+    "http://127.0.0.1:4186/vendor/three/build/three.core.js",
+    "http://127.0.0.1:4186/deployment-cues.js",
+    "http://127.0.0.1:4186/first-person-calibration.js",
+    "http://127.0.0.1:4186/weapon-assets.js",
+    "http://127.0.0.1:4186/soldier-arms.js",
+    "http://127.0.0.1:4186/held-items.js",
+    "http://127.0.0.1:4186/vendor/three/examples/jsm/environments/RoomEnvironment.js",
+    "http://127.0.0.1:4186/facility-render-pass.js",
+    "http://127.0.0.1:4186/character-animation.js",
+    "http://127.0.0.1:4186/models/Soldier.glb",
+    "http://127.0.0.1:4186/models/weapons/Rifle_Assault_East.glb",
+    "http://127.0.0.1:4186/models/weapons/Shotgun_Pump_East.glb",
+    "http://127.0.0.1:4186/models/weapons/SMG_Compact_East.glb",
+    "http://127.0.0.1:4186/models/weapons/Sniper_Rifle_East.glb",
+    "http://127.0.0.1:4186/audio/ar-shot.wav",
+    "http://127.0.0.1:4186/audio/shotgun-shot.wav",
+    "http://127.0.0.1:4186/audio/shotgun-reload.wav",
+    "http://127.0.0.1:4186/audio/deployment-intro.mp3",
+    "http://127.0.0.1:4186/horizon-logo-transparent.webp",
+    "http://127.0.0.1:4186/?local=1",
+    "http://127.0.0.1:4186/game.css",
+    "http://127.0.0.1:4186/lobby.css",
+    "http://127.0.0.1:4186/inventory-menu.css",
+    "http://127.0.0.1:4186/deployment-cinematic.css",
+    "http://127.0.0.1:4186/horizon-logo-transparent.webp",
+    "http://127.0.0.1:4186/config.js",
+    "http://127.0.0.1:4186/lobby-characters.js",
+    "http://127.0.0.1:4186/app.js",
+    "http://127.0.0.1:4186/connection-stability.js",
+    "http://127.0.0.1:4186/multiplayer-runtime.js",
+    "http://127.0.0.1:4186/character-lighting.js",
+    "http://127.0.0.1:4186/vendor/three/build/three.module.js",
+    "http://127.0.0.1:4186/vendor/three/examples/jsm/loaders/GLTFLoader.js",
+    "http://127.0.0.1:4186/vendor/three/examples/jsm/utils/SkeletonUtils.js",
+    "http://127.0.0.1:4186/lobby-rig.js",
+    "http://127.0.0.1:4186/island-map.js",
+    "http://127.0.0.1:4186/platform23-map.js",
+    "http://127.0.0.1:4186/engine.js",
+    "http://127.0.0.1:4186/network.js",
+    "http://127.0.0.1:4186/simulation.js",
+    "http://127.0.0.1:4186/lobby-state.js",
+    "http://127.0.0.1:4186/network-tuning.js",
+    "http://127.0.0.1:4186/collision-shapes.js",
+    "http://127.0.0.1:4186/vendor/three/examples/jsm/utils/BufferGeometryUtils.js",
+    "http://127.0.0.1:4186/maps/ironwood/height-data.js",
+    "http://127.0.0.1:4186/maps/ironwood/forest-data.js",
+    "http://127.0.0.1:4186/world-layout.js",
+    "http://127.0.0.1:4186/vendor/three/build/three.core.js",
+    "http://127.0.0.1:4186/deployment-cinematic.js",
+    "http://127.0.0.1:4186/weapon-inventory.js",
+    "http://127.0.0.1:4186/movement-collision.js",
+    "http://127.0.0.1:4186/build-grid.js",
+    "http://127.0.0.1:4186/items.js",
+    "http://127.0.0.1:4186/resource-system.js",
+    "http://127.0.0.1:4186/loot-system.js",
+    "http://127.0.0.1:4186/shockwave.js",
+    "http://127.0.0.1:4186/weapon-system.js",
+    "http://127.0.0.1:4186/ballistics.js",
+    "http://127.0.0.1:4186/deployment-sequence.js",
+    "http://127.0.0.1:4186/deployment-ship.js",
+    "http://127.0.0.1:4186/deployment-audio.js",
+    "http://127.0.0.1:4186/weapon-audio.js",
+    "http://127.0.0.1:4186/world-chunks.js",
+    "http://127.0.0.1:4186/inventory-prediction.js",
+    "http://127.0.0.1:4186/inventory-menu.js",
+    "http://127.0.0.1:4186/bullet-presentation.js",
+    "http://127.0.0.1:4186/visual-presentation.js",
+    "http://127.0.0.1:4186/render-buffer.js",
+    "http://127.0.0.1:4186/first-person-system.js",
+    "http://127.0.0.1:4186/view-model.js",
+    "http://127.0.0.1:4186/effect-pool.js",
+    "http://127.0.0.1:4186/quality-system.js",
+    "http://127.0.0.1:4186/avatar-model.js",
+    "http://127.0.0.1:4186/weapon-model.js",
+    "http://127.0.0.1:4186/match-character-renderer.js",
+    "http://127.0.0.1:4186/map-selection.js",
+    "http://127.0.0.1:4186/deployment-cues.js",
+    "http://127.0.0.1:4186/first-person-calibration.js",
+    "http://127.0.0.1:4186/models/Soldier.glb",
+    "http://127.0.0.1:4186/weapon-assets.js",
+    "http://127.0.0.1:4186/soldier-arms.js",
+    "http://127.0.0.1:4186/held-items.js",
+    "http://127.0.0.1:4186/vendor/three/examples/jsm/environments/RoomEnvironment.js",
+    "http://127.0.0.1:4186/facility-render-pass.js",
+    "http://127.0.0.1:4186/character-animation.js",
+    "http://127.0.0.1:4186/models/Soldier.glb",
+    "http://127.0.0.1:4186/models/weapons/Rifle_Assault_East.glb",
+    "http://127.0.0.1:4186/models/weapons/Shotgun_Pump_East.glb",
+    "http://127.0.0.1:4186/models/weapons/SMG_Compact_East.glb",
+    "http://127.0.0.1:4186/models/weapons/Sniper_Rifle_East.glb",
+    "http://127.0.0.1:4186/audio/ar-shot.wav",
+    "http://127.0.0.1:4186/audio/shotgun-shot.wav",
+    "http://127.0.0.1:4186/audio/shotgun-reload.wav",
+    "http://127.0.0.1:4186/audio/deployment-intro.mp3",
+    "http://127.0.0.1:4186/horizon-logo-transparent.webp",
+    "http://127.0.0.1:4186/maps/platform23/collision-data.js",
+    "http://127.0.0.1:4186/reactor-environment.js",
+    "http://127.0.0.1:4186/facility-detail.js",
+    "http://127.0.0.1:4186/maps/platform23/environment.json",
+    "http://127.0.0.1:4186/maps/platform23/geometry.bin.gz",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-forcefield_p.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-lol_p.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-computer01a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-computer01a_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-dec_num02_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-dec_num03_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light01_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light02_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light02_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light03_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light03_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light03a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-pipes01a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-pipes01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-rock01_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-rock01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-switches01b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-switches01b_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-ceiling03_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-ceiling03_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor01_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor03_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor03_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor04_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor04_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor05_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor05_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor06a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor09a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor12a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor12b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor_cyl01_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor_cyl01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-generic01b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-panels01b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-panels01b_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-panels01c_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-panels01c_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-sand01_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-sand01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-switches01a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-switches01a_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim01_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim02_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim02_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim03_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim03_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim04a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim04a_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim04b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim04b_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall03b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall03b_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall05c_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall05c_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall06a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall06a_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall08a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall_big02a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall_big02a_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall_big02b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall_big02b_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/collision-data.js",
+    "http://127.0.0.1:4186/reactor-environment.js",
+    "http://127.0.0.1:4186/facility-detail.js",
+    "http://127.0.0.1:4186/horizon-logo-transparent.webp",
+    "http://127.0.0.1:4186/maps/platform23/environment.json",
+    "http://127.0.0.1:4186/maps/platform23/geometry.bin.gz",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-forcefield_p.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-lol_p.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-computer01a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-computer01a_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-dec_num02_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-dec_num03_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light01_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light02_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light02_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light03_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light03_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-light03a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-pipes01a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-pipes01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-rock01_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-rock01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-switches01b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-switches01b_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-ceiling03_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-ceiling03_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor01_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor03_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor03_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor04_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor04_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor05_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor05_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor06a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor09a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor12a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor12b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor_cyl01_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-floor_cyl01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-generic01b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-panels01b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-panels01b_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-panels01c_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-panels01c_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-sand01_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-sand01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-switches01a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-switches01a_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim01_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim01_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim02_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim02_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim03_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim03_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim04a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim04a_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim04b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-trim04b_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall03b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall03b_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall05c_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall05c_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall06a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall06a_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall08a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall_big02a_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall_big02a_n.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall_big02b_d.webp",
+    "http://127.0.0.1:4186/maps/platform23/textures/plat23-wall_big02b_n.webp",
+    "http://127.0.0.1:4186/horizon-logo-transparent.webp"
+  ],
+  "frameResults": [
+    {
+      "name": "whole-map",
+      "samples": 12,
+      "p50ms": 33.39999999999418,
+      "p95ms": 50.10000000000582,
+      "over50ms": 2,
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "contextLost": false,
+      "status": {
+        "id": "facility",
+        "render": {
+          "calls": 46,
+          "colorCalls": 46,
+          "triangles": 27952
+        }
+      },
+      "position": [
+        0,
+        90.04576911956111,
+        89.04028795762186
+      ],
+      "guestRenderingPaused": true
+    },
+    {
+      "name": "deck",
+      "samples": 12,
+      "p50ms": 83.39999999999418,
+      "p95ms": 100.10000000000582,
+      "over50ms": 11,
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "contextLost": false,
+      "status": {
+        "id": "facility",
+        "render": {
+          "calls": 41,
+          "colorCalls": 41,
+          "triangles": 9286
+        }
+      },
+      "position": [
+        0,
+        -0.125,
+        -10
+      ],
+      "guestRenderingPaused": true
+    },
+    {
+      "name": "room",
+      "samples": 12,
+      "p50ms": 66.69999999999709,
+      "p95ms": 83.29999999998836,
+      "over50ms": 11,
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "contextLost": false,
+      "status": {
+        "id": "facility",
+        "render": {
+          "calls": 45,
+          "colorCalls": 45,
+          "triangles": 14665
+        }
+      },
+      "position": [
+        -4,
+        0,
+        48
+      ],
+      "guestRenderingPaused": true
+    }
+  ],
+  "cues": {
+    "mainRiff": 3.92,
+    "uhYeahStart": 9.59,
+    "lyricsStart": 20.19,
+    "businessStart": 23.55,
+    "impact": 25.285,
+    "bigStart": 25.58,
+    "stepperStart": 25.77
+  },
+  "boarding": {
+    "view": {
+      "stage": "landing_selection",
+      "sequenceElapsed": 0,
+      "boarding": true,
+      "boardingDoorOpen": 1,
+      "shipLaunch": {
+        "hatchOpen": 0,
+        "drop": 0
+      },
+      "musicTime": -1.54,
+      "logo": 0,
+      "black": 0,
+      "orbit": 0,
+      "impact": 0,
+      "returnProgress": 0,
+      "avatarOpacity": 1,
+      "hatchOpen": 0,
+      "saluteFraming": 0,
+      "operatorOpacity": 0,
+      "portrait": false,
+      "logoScale": 1.045,
+      "eye": [
+        4.4,
+        242.25,
+        -3.2
+      ],
+      "podPosition": [
+        7,
+        240,
+        -10
+      ],
+      "cameraFov": 1.0181974830187759,
+      "localVisible": true
+    },
+    "p": [
+      4.519884387987371,
+      240,
+      -7.65
+    ],
+    "input": {
+      "x": 0,
+      "z": 0,
+      "yaw": 0,
+      "pitch": -0.03,
+      "aimYaw": 0,
+      "aimPitch": -0.03,
+      "rotation": 0,
+      "inventoryRevision": 0,
+      "material": "wood",
+      "drop": false,
+      "slot": 0,
+      "jump": false,
+      "interact": false,
+      "crouchRevision": 0,
+      "crouchPress": null,
+      "reloadRevision": 0,
+      "crouch": false,
+      "sprint": false,
+      "aim": false,
+      "fire": false,
+      "reload": false,
+      "landing": {
+        "x": -74,
+        "z": -14
+      }
+    }
+  },
+  "waiting": {
+    "view": {
+      "stage": "landing_selection",
+      "sequenceElapsed": 0,
+      "boarding": true,
+      "boardingDoorOpen": 0,
+      "shipLaunch": {
+        "hatchOpen": 0,
+        "drop": 0
+      },
+      "musicTime": -1.54,
+      "logo": 0,
+      "black": 0,
+      "orbit": 0,
+      "impact": 0,
+      "returnProgress": 0,
+      "avatarOpacity": 1,
+      "hatchOpen": 0,
+      "saluteFraming": 0,
+      "operatorOpacity": 0,
+      "portrait": false,
+      "logoScale": 1.045,
+      "eye": [
+        4.4,
+        242.25,
+        -3.2
+      ],
+      "podPosition": [
+        7,
+        240,
+        -10
+      ],
+      "cameraFov": 1.012290971810449,
+      "localVisible": false
+    },
+    "sources": 0,
+    "locked": {
+      "x": 0,
+      "z": 0,
+      "yaw": 0,
+      "pitch": -0.03,
+      "aimYaw": 0,
+      "aimPitch": -0.03,
+      "rotation": 0,
+      "inventoryRevision": 0,
+      "material": "wood",
+      "drop": false,
+      "slot": 0,
+      "jump": false,
+      "interact": false,
+      "crouchRevision": 0,
+      "crouchPress": null,
+      "reloadRevision": 0,
+      "crouch": false,
+      "sprint": false,
+      "aim": false,
+      "fire": false,
+      "reload": false,
+      "landing": {
+        "x": -74,
+        "z": -14
+      }
+    }
+  },
+  "ejection": {
+    "view": {
+      "stage": "pod_sealing",
+      "sequenceElapsed": 0.6817134535326135,
+      "boarding": true,
+      "boardingDoorOpen": 0,
+      "shipLaunch": {
+        "hatchOpen": 1,
+        "drop": 5.371331878958536
+      },
+      "musicTime": -0.8582865464673866,
+      "logo": 0,
+      "black": 0,
+      "orbit": 0,
+      "impact": 0,
+      "returnProgress": 0,
+      "avatarOpacity": 1,
+      "hatchOpen": 0,
+      "saluteFraming": 0,
+      "operatorOpacity": 0,
+      "portrait": false,
+      "logoScale": 1.045,
+      "eye": [
+        4.4,
+        242.25,
+        -3.2
+      ],
+      "podPosition": [
+        7,
+        234.62866812104147,
+        -10
+      ],
+      "cameraFov": 1.0122909661567117,
+      "localVisible": false
+    },
+    "p": [
+      6.999999999999999,
+      236.5380957142734,
+      -10.000000120939596
+    ],
+    "operators": [
+      {
+        "visible": false,
+        "opacity": 0
+      },
+      {
+        "visible": true,
+        "opacity": 0
+      }
+    ]
+  },
+  "black": {
+    "view": {
+      "stage": "launching",
+      "sequenceElapsed": 1.6931854535147375,
+      "boarding": true,
+      "boardingDoorOpen": 0,
+      "shipLaunch": {
+        "hatchOpen": 1,
+        "drop": 80
+      },
+      "musicTime": 0.15318545351473745,
+      "logo": 0,
+      "black": 1,
+      "orbit": 0,
+      "impact": 0,
+      "returnProgress": 0,
+      "avatarOpacity": 1,
+      "hatchOpen": 0,
+      "saluteFraming": 0,
+      "operatorOpacity": 0,
+      "portrait": false,
+      "logoScale": 1.045,
+      "eye": [
+        4.4,
+        242.25,
+        -3.2
+      ],
+      "podPosition": [
+        7,
+        160,
+        -10
+      ],
+      "cameraFov": 1.0122909661567117,
+      "localVisible": false
+    },
+    "fade": 1,
+    "ui": [
+      [
+        "mapbox",
+        "hidden"
+      ],
+      [
+        "deployment-ui",
+        "hidden"
+      ],
+      [
+        "inventory",
+        "hidden"
+      ],
+      [
+        "chatbox",
+        "hidden"
+      ],
+      [
+        "round-banner",
+        "hidden"
+      ],
+      [
+        "resume-control",
+        "hidden"
+      ]
+    ]
+  },
+  "portrait": {
+    "view": {
+      "stage": "launching",
+      "sequenceElapsed": 25.105973453520694,
+      "boarding": false,
+      "boardingDoorOpen": 0,
+      "shipLaunch": {
+        "hatchOpen": 1,
+        "drop": 80
+      },
+      "musicTime": 23.565973453520694,
+      "logo": 0,
+      "black": 0,
+      "orbit": 1,
+      "impact": 0,
+      "returnProgress": 0,
+      "avatarOpacity": 1,
+      "hatchOpen": 0,
+      "saluteFraming": 0,
+      "operatorOpacity": 0,
+      "portrait": true,
+      "logoScale": 0.9999999999999999,
+      "eye": [
+        -73.08802635973842,
+        63.82392357569779,
+        -10.828517053574457
+      ],
+      "podPosition": [
+        -74,
+        61.57392357569779,
+        -14
+      ],
+      "cameraFov": 1.2740903539330188,
+      "localVisible": false
+    },
+    "position": [
+      -74,
+      61.57392357569779,
+      -14
+    ],
+    "landing": {
+      "x": -74,
+      "z": -14,
+      "y": 4
+    },
+    "logo": 0
+  },
+  "impact": {
+    "view": {
+      "stage": "landed",
+      "sequenceElapsed": 26.93711545351474,
+      "boarding": false,
+      "boardingDoorOpen": 0,
+      "shipLaunch": {
+        "hatchOpen": 1,
+        "drop": 80
+      },
+      "musicTime": 25.39711545351474,
+      "logo": 0,
+      "black": 0,
+      "orbit": 1,
+      "impact": 0.6530910517537102,
+      "returnProgress": 0,
+      "avatarOpacity": 1,
+      "hatchOpen": 0,
+      "saluteFraming": 0,
+      "operatorOpacity": 0,
+      "portrait": true,
+      "logoScale": 0.9999999999999999,
+      "eye": [
+        -72.99967525846316,
+        6.1175535367826726,
+        -10.818247557213288
+      ],
+      "podPosition": [
+        -74,
+        4,
+        -14
+      ],
+      "cameraFov": 1.3025315876439179,
+      "localVisible": false
+    },
+    "position": [
+      -74,
+      4,
+      -14
+    ],
+    "landing": {
+      "x": -74,
+      "z": -14,
+      "y": 4
+    }
+  },
+  "clients": [
+    {
+      "music": [
+        {
+          "duration": 30,
+          "loop": false,
+          "loopStart": 0,
+          "loopEnd": 0,
+          "start": 26.56991814059553,
+          "offset": 0,
+          "anchor": 26.56991814059553,
+          "performance": 34494.5
+        }
+      ],
+      "firstBoarding": {
+        "stage": "landing_selection",
+        "sequenceElapsed": 0,
+        "boarding": true,
+        "boardingDoorOpen": 1,
+        "shipLaunch": {
+          "hatchOpen": 0,
+          "drop": 0
+        },
+        "musicTime": -1.54,
+        "logo": 0,
+        "black": 0,
+        "orbit": 0,
+        "impact": 0,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 0,
+        "saluteFraming": 0,
+        "operatorOpacity": 0,
+        "portrait": false,
+        "logoScale": 1.045,
+        "eye": [
+          -4.4,
+          242.25,
+          -3.2
+        ],
+        "podPosition": [
+          -7,
+          240,
+          -10
+        ],
+        "cameraFov": 1.2099305181149416,
+        "localVisible": true,
+        "at": 31350.80000001192,
+        "position": [
+          -5.707738728407181,
+          240,
+          -9.091320000064375
+        ],
+        "logoOpacity": 0
+      },
+      "landings": [
+        {
+          "musicTime": 25.352802947839844,
+          "sequence": "1:1"
+        }
+      ],
+      "frames": 654,
+      "firstLogo": {
+        "stage": "launching",
+        "sequenceElapsed": 11.173328859422352,
+        "boarding": true,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 9.633328859422353,
+        "logo": 0.011019908990341755,
+        "black": 1,
+        "orbit": 0,
+        "impact": 0,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 0,
+        "saluteFraming": 0,
+        "operatorOpacity": 0,
+        "portrait": false,
+        "logoScale": 1.0445379251761184,
+        "eye": [
+          -4.4,
+          242.25,
+          -3.2
+        ],
+        "podPosition": [
+          -7,
+          160,
+          -10
+        ],
+        "cameraFov": 1.0255833991709165,
+        "localVisible": false,
+        "at": 45476.90000000596,
+        "position": [
+          -7,
+          160,
+          -10
+        ],
+        "logoOpacity": 0.0110199
+      },
+      "firstVisible": {
+        "stage": "launching",
+        "sequenceElapsed": 23.039237859428315,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 21.499237859428316,
+        "logo": 0,
+        "black": 0,
+        "orbit": 0.3268408490711339,
+        "impact": 0,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 0,
+        "saluteFraming": 0,
+        "operatorOpacity": 0,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          -1.8130137317787647,
+          81.03225982254337,
+          -7.242649603626402
+        ],
+        "podPosition": [
+          0,
+          78.78225982254337,
+          -10
+        ],
+        "cameraFov": 1.1054580156275156,
+        "localVisible": false,
+        "at": 57356,
+        "position": [
+          0,
+          78.78225982254337,
+          -10
+        ],
+        "logoOpacity": 0
+      },
+      "firstImpact": {
+        "stage": "landed",
+        "sequenceElapsed": 27.056244859428315,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 25.516244859428316,
+        "logo": 0,
+        "black": 0,
+        "orbit": 1,
+        "impact": 0.4153098271599223,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 0,
+        "saluteFraming": 0,
+        "operatorOpacity": 0,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          0.8562521951722982,
+          2.116932244406498,
+          -6.813400915376449
+        ],
+        "podPosition": [
+          0,
+          -0.125,
+          -10
+        ],
+        "cameraFov": 1.2807233657188575,
+        "localVisible": false,
+        "at": 61463.40000000596,
+        "position": [
+          0,
+          -0.125,
+          -10
+        ],
+        "logoOpacity": 0
+      },
+      "firstImpactFrameGap": 1.0810999999940396,
+      "firstLogoFrameGap": 0.534,
+      "exit": [
+        {
+          "returnProgress": 0.7524889912176257,
+          "position": [
+            -0.32,
+            -0.224997701903671,
+            -7.65
+          ],
+          "podPosition": [
+            0,
+            -0.125,
+            -10
+          ],
+          "eye": [
+            -0.3200000000000002,
+            1.415798775285969,
+            -6.833213671018165
+          ],
+          "localVisible": false
+        }
+      ],
+      "largestFrameGap": 1081.0999999940395
+    },
+    {
+      "music": [
+        {
+          "duration": 30,
+          "loop": false,
+          "loopStart": 0,
+          "loopEnd": 0,
+          "start": 26.462499546485265,
+          "offset": 0,
+          "anchor": 26.462499546485265,
+          "performance": 32860.59999999404
+        }
+      ],
+      "firstBoarding": {
+        "stage": "landing_selection",
+        "sequenceElapsed": 0,
+        "boarding": true,
+        "boardingDoorOpen": 1,
+        "shipLaunch": {
+          "hatchOpen": 0,
+          "drop": 0
+        },
+        "musicTime": -1.54,
+        "logo": 0,
+        "black": 0,
+        "orbit": 0,
+        "impact": 0,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 0,
+        "saluteFraming": 0,
+        "operatorOpacity": 0,
+        "portrait": false,
+        "logoScale": 1.045,
+        "eye": [
+          4.4,
+          242.25,
+          -3.2
+        ],
+        "podPosition": [
+          7,
+          240,
+          -10
+        ],
+        "cameraFov": 1.2203467622619004,
+        "localVisible": true,
+        "at": 24250.09999999404,
+        "position": [
+          5.62051902092332,
+          240,
+          -9.229020000064377
+        ],
+        "logoOpacity": 0
+      },
+      "landings": [
+        {
+          "musicTime": 25.387659183673467,
+          "sequence": "1:1"
+        }
+      ],
+      "frames": 1919,
+      "firstLogo": {
+        "stage": "launching",
+        "sequenceElapsed": 11.14223745353262,
+        "boarding": true,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 9.60223745353262,
+        "logo": 0.0009061831444081039,
+        "black": 1,
+        "orbit": 0,
+        "impact": 0,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 0,
+        "saluteFraming": 0,
+        "operatorOpacity": 0,
+        "portrait": false,
+        "logoScale": 1.0449600153654794,
+        "eye": [
+          4.4,
+          242.25,
+          -3.2
+        ],
+        "podPosition": [
+          7,
+          160,
+          -10
+        ],
+        "cameraFov": 1.0122909661567117,
+        "localVisible": false,
+        "at": 44410.39999997616,
+        "position": [
+          6.999999999999999,
+          160.00000000000006,
+          -10.000000000000004
+        ],
+        "logoOpacity": 0.000906183
+      },
+      "firstVisible": {
+        "stage": "launching",
+        "sequenceElapsed": 22.764405453526653,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 21.224405453526654,
+        "logo": 0,
+        "black": 0.016946523120191515,
+        "orbit": 0.2085098430859884,
+        "impact": 0,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 0,
+        "saluteFraming": 0,
+        "operatorOpacity": 0,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          -76.20830049184053,
+          85.75326226312468,
+          -11.54777469678317
+        ],
+        "podPosition": [
+          -74,
+          83.50326226312468,
+          -14
+        ],
+        "cameraFov": 1.2731574205760467,
+        "localVisible": false,
+        "at": 56036.5,
+        "position": [
+          -74,
+          83.50326226312468,
+          -14
+        ],
+        "logoOpacity": 0
+      },
+      "firstImpact": {
+        "stage": "landed",
+        "sequenceElapsed": 26.846063453514734,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 25.306063453514735,
+        "logo": 0,
+        "black": 0,
+        "orbit": 1,
+        "impact": 0.923078385525045,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 0,
+        "saluteFraming": 0,
+        "operatorOpacity": 0,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          -72.8834534020526,
+          6.18794003783811,
+          -10.68825764891204
+        ],
+        "podPosition": [
+          -74,
+          4,
+          -14
+        ],
+        "cameraFov": 1.2883701892259678,
+        "localVisible": false,
+        "at": 60154.09999999404,
+        "position": [
+          -74,
+          4,
+          -14
+        ],
+        "logoOpacity": 0
+      },
+      "firstImpactFrameGap": 0.046400000005960465,
+      "firstLogoFrameGap": 0.016899999976158143,
+      "exit": [
+        {
+          "returnProgress": 0.19166219757463035,
+          "position": [
+            -73.68,
+            4,
+            -11.65
+          ],
+          "podPosition": [
+            -74,
+            4,
+            -14
+          ],
+          "eye": [
+            -73.68,
+            5.461331903223882,
+            -8.98248525199628
+          ],
+          "localVisible": true
+        },
+        {
+          "returnProgress": 0.2988570879033372,
+          "position": [
+            -73.68,
+            4,
+            -11.65
+          ],
+          "podPosition": [
+            -74,
+            4,
+            -14
+          ],
+          "eye": [
+            -73.68,
+            5.495634268129068,
+            -9.336228390081013
+          ],
+          "localVisible": true
+        },
+        {
+          "returnProgress": 0.40329178289065876,
+          "position": [
+            -73.68,
+            4,
+            -11.65
+          ],
+          "podPosition": [
+            -74,
+            4,
+            -14
+          ],
+          "eye": [
+            -73.68,
+            5.529053370525011,
+            -9.680862883539174
+          ],
+          "localVisible": true
+        },
+        {
+          "returnProgress": 0.522467237585008,
+          "position": [
+            -73.68,
+            4,
+            -11.65
+          ],
+          "podPosition": [
+            -74,
+            4,
+            -14
+          ],
+          "eye": [
+            -73.68,
+            5.567189516027203,
+            -10.074141884030526
+          ],
+          "localVisible": true
+        },
+        {
+          "returnProgress": 0.6325823985828323,
+          "position": [
+            -73.68,
+            4,
+            -11.65
+          ],
+          "podPosition": [
+            -74,
+            4,
+            -14
+          ],
+          "eye": [
+            -73.68,
+            5.6024263675465065,
+            -10.437521915323346
+          ],
+          "localVisible": false
+        },
+        {
+          "returnProgress": 0.7118634001991985,
+          "position": [
+            -73.68,
+            4,
+            -11.65
+          ],
+          "podPosition": [
+            -74,
+            4,
+            -14
+          ],
+          "eye": [
+            -73.68,
+            5.6277962880637435,
+            -10.699149220657356
+          ],
+          "localVisible": false
+        },
+        {
+          "returnProgress": 0.8306012680553295,
+          "position": [
+            -73.68,
+            4,
+            -11.65
+          ],
+          "podPosition": [
+            -74,
+            4,
+            -14
+          ],
+          "eye": [
+            -73.68,
+            5.665792405777706,
+            -11.090984184582588
+          ],
+          "localVisible": false
+        },
+        {
+          "returnProgress": 0.9443535356996562,
+          "position": [
+            -73.68,
+            4,
+            -11.65
+          ],
+          "podPosition": [
+            -74,
+            4,
+            -14
+          ],
+          "eye": [
+            -73.68,
+            5.702193131423891,
+            -11.466366667808865
+          ],
+          "localVisible": false
+        }
+      ],
+      "largestFrameGap": 142.5
+    }
+  ]
+}

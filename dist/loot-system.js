@@ -1,11 +1,11 @@
 import {WEAPON_ORDER} from './weapon-system.js';
 import {ITEMS} from './items.js';
-import {segmentAabbTime} from './ballistics.js';
+import {segmentColliderTime,boundsIntersectCollider} from './collision-shapes.js';
 export function seededRandom(key){let n=2166136261;for(const c of String(key))n=Math.imul(n^c.charCodeAt(0),16777619)>>>0;return ()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};}
 function supportedLootPosition(item,chest,world,placed,obstacles){
  const valid=(x,z)=>{const y=world.supportHeight(x,z,chest.y||0,.05);if(!Number.isFinite(y)||y<(chest.y||0)-1.2||y>(chest.y||0)+.05||Math.hypot(x-chest.x,z-chest.z)>3.2)return null;
- if(obstacles.some(b=>x+.36>b.min[0]&&x-.36<b.max[0]&&z+.36>b.min[2]&&z-.36<b.max[2]&&b.max[1]>y+.15&&b.min[1]<y+1.78))return null;
- const from=[chest.x,(chest.y||0)+1.4,chest.z],to=[x,y+.9,z],distance=Math.hypot(...to.map((v,k)=>v-from[k])),limit=1-.25/Math.max(distance,.25);if(obstacles.some(b=>{const t=segmentAabbTime(from,to,b.min,b.max);return t!==null&&t<limit;}))return null;
+ if(obstacles.some(b=>boundsIntersectCollider({min:[x-.36,y+.15,z-.36],max:[x+.36,y+1.78,z+.36]},b)))return null;
+ const from=[chest.x,(chest.y||0)+1.4,chest.z],to=[x,y+.9,z],distance=Math.hypot(...to.map((v,k)=>v-from[k])),limit=1-.25/Math.max(distance,.25);if(obstacles.some(b=>{const t=b.blocksShots===false?null:segmentColliderTime(from,to,b);return t!==null&&t<limit;}))return null;
  return {x,y,z};};
  const original=valid(item.x,item.z);if(original)return original;
  const candidates=[];for(const radius of [.45,.8,1.2,1.6,2,2.5])for(let step=0;step<16;step++){const angle=step*Math.PI/8,p=valid(chest.x+Math.cos(angle)*radius,chest.z+Math.sin(angle)*radius);if(p)candidates.push(p);}
