@@ -16,6 +16,7 @@ export async function createHCSServer({
   now = Date.now,
   heartbeatMs = 15000,
 } = {}) {
+  origins = origins.map((value) => String(value).trim().replace(/\/+$/, ""));
   const championship = new Championship(await load(), now()),
     clients = new Map(),
     matches = new Map(),

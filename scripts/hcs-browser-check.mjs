@@ -33,13 +33,22 @@ try {
   );
   assert.equal(await page.locator("#hcs-ranks tr").count(), 0);
   const before = await page.locator("#hcs-countdown").textContent();
-  await page.waitForFunction(value => document.querySelector("#hcs-countdown").textContent !== value, before, { timeout: 10000 });
+  await page.waitForFunction(
+    (value) => document.querySelector("#hcs-countdown").textContent !== value,
+    before,
+    { timeout: 10000 },
+  );
   assert.notEqual(await page.locator("#hcs-countdown").textContent(), before);
   await page.screenshot({ path: out + "/hcs-desktop.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: out + "/hcs-phone.png" });
   const panel = await page.locator("#hcs-panel").boundingBox();
   assert.ok(panel.x >= 0 && panel.x + panel.width <= 390);
+  const eventCard = await page.locator(".hcs-event").boundingBox();
+  assert.ok(
+    eventCard.x >= 0 && eventCard.x + eventCard.width <= 390,
+    "event information must fit without horizontal clipping",
+  );
   await page.setViewportSize({ width: 1600, height: 900 });
   await page.locator("#character-preview-toggle").click();
   assert.equal(await page.locator("#hcs-panel").isVisible(), false);

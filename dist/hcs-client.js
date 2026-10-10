@@ -22,7 +22,10 @@ export function createHCS({
     retry = 0,
     closed = false,
     declined = null,
-    rosterKey = "";
+    rosterKey = "",
+    transition = 0,
+    disconnected = false,
+    checkingIn = false;
   const base = String(config.hcsUrl || "").replace(/\/$/, "");
   const valid =
     /^https:\/\/[^/]+$/.test(base) ||
@@ -65,11 +68,29 @@ export function createHCS({
   };
   function draw() {
     countdown();
+    const phase = $("hcs-phase");
+    if (phase) {
+      phase.textContent =
+        {
+          qualifying: "QUALIFICATION OPEN",
+          locked: "QUALIFIERS LOCKED",
+          checkin: "CHECK-IN OPEN",
+          live: "CHAMPIONSHIP LIVE",
+          complete: "FINAL COMPLETE",
+        }[state.phase] || "CHAMPIONSHIP";
+      phase.dataset.phase = state.phase;
+    }
     const ranks = $("hcs-ranks");
     ranks.replaceChildren();
     for (const [i, p] of state.ranks.entries()) {
       const row = document.createElement("tr");
-      row.className = i < 5 ? "qualifier" : i < 9 ? "reserve" : "";
+      row.className =
+        (i < 5 ? "qualifier" : i < 9 ? "reserve" : "") +
+        (p.id === identity ? " hcs-you" : "");
+      row.setAttribute(
+        "aria-label",
+        `${p.name}, rank ${i + 1}${p.id === identity ? ", your position" : ""}`,
+      );
       for (const text of [
         String(i + 1).padStart(2, "0"),
         p.name,
@@ -107,10 +128,16 @@ export function createHCS({
         : "";
     $("hcs-checkin").disabled =
       !qualified || !open || !identity || state.checked?.includes(identity);
-    $("hcs-checkin").textContent = state.checked?.includes(identity)
-      ? "CHECKED IN"
-      : "CHECK IN";
+    $("hcs-checkin").disabled ||= checkingIn || !identity;
+    $("hcs-checkin").textContent = checkingIn
+      ? "CHECKING IN…"
+      : state.checked?.includes(identity)
+        ? "CHECKED IN"
+        : "CHECK IN";
     $("hcs-watch").hidden = state.phase !== "live";
+    $("hcs-watch").disabled = !identity;
+    $("hcs-watch").textContent =
+      watching && !active ? "CANCEL WATCH" : "WATCH HCS";
     $("hcs-champion").textContent = state.champion
       ? `REIGNING CHAMPION · ${state.champion.name}`
       : "";
@@ -120,7 +147,9 @@ export function createHCS({
     try {
       state = await api("/state");
       $("hcs-service").textContent =
-        "Official standings · 20-second broadcast delay";
+        watching && !active
+          ? "Connecting to broadcast · waiting for the 20-second delayed feed."
+          : "Official standings · 20-second broadcast delay";
       draw();
     } catch {
       $("hcs-service").textContent =
@@ -133,9 +162,15 @@ export function createHCS({
     if (!auth?.access_token) return;
     rememberIdentity(auth);
     socket = new WebSocket(base.replace(/^http/, "ws") + "/stream");
-    socket.onopen = () =>
-      socket.send(JSON.stringify({ type: "auth", token: auth.access_token }));
+    const connection = socket;
+    socket.onopen = () => {
+      if (socket !== connection || closed) return;
+      connection.send(
+        JSON.stringify({ type: "auth", token: auth.access_token }),
+      );
+    };
     socket.onmessage = async (event) => {
+      if (socket !== connection || closed) return;
       let data;
       try {
         data = JSON.parse(event.data);
@@ -154,9 +189,14 @@ export function createHCS({
         return;
       }
       if (data.type === "authenticated") {
+        disconnected = false;
         identity = data.id;
         retry = 0;
-        await api("/profile", { name: profile().name,color:profile().color }).catch(() => {});
+        await api("/profile", {
+          name: profile().name,
+          color: profile().color,
+        }).catch(() => {});
+        if (socket !== connection || closed) return;
         if (watching) send({ type: "watch" });
         draw();
       }
@@ -171,7 +211,7 @@ export function createHCS({
             frame: data.frame,
             mapId: data.mapId,
             state: data.state,
-            profiles:data.profiles,
+            profiles: data.profiles,
           });
           return;
         }
@@ -179,9 +219,14 @@ export function createHCS({
         frame = data;
         if (!active && !loading) {
           loading = true;
+          const version = transition;
           try {
             await leaveParty();
+            if (version !== transition || socket !== connection || closed)
+              return;
             await window.Game.setMap(data.mapId);
+            if (version !== transition || socket !== connection || closed)
+              return;
             active = true;
             window.Duel.lobby = false;
             document.body.classList.remove(
@@ -231,7 +276,13 @@ export function createHCS({
       }
     };
     socket.onclose = () => {
+      if (socket !== connection || closed) return;
+      disconnected = true;
       socket = null;
+      if (active)
+        $("hcs-broadcast-label").textContent = watching
+          ? "RECONNECTING · 20s DELAY"
+          : "RECONNECTING · 60s TO RETURN";
       if (active && !watching)
         $("hcs-service").textContent =
           "Reconnecting · your character remains vulnerable for 60 seconds.";
@@ -259,25 +310,39 @@ export function createHCS({
         send({ type: "input", input: window.Game.input() });
     }, 33);
   $("hcs-checkin").onclick = async () => {
+    if (checkingIn) return;
+    checkingIn = true;
+    draw();
     try {
       state = await api("/checkin", {});
       draw();
     } catch (e) {
       $("hcs-service").textContent = e.message;
+    } finally {
+      checkingIn = false;
+      draw();
     }
   };
   $("hcs-watch").onclick = () => {
+    if (watching && !active) {
+      stop();
+      draw();
+      return;
+    }
     watching = true;
     declined = null;
     send({ type: "watch" });
     $("hcs-service").textContent =
       "Connecting to broadcast · waiting for the delayed feed.";
+    draw();
   };
   $("hcs-view-player").onchange = () => {
     viewed = $("hcs-view-player").value;
     window.Game.clear();
   };
   const stop = () => {
+    transition++;
+    window.Duel.spectating = null;
     declined = frame?.matchId;
     active = false;
     official = false;
@@ -303,7 +368,13 @@ export function createHCS({
     get official() {
       return official;
     },
-    async updateProfile(){if(valid&&identity)await api("/profile",{name:profile().name,color:profile().color}).catch(()=>{});},
+    async updateProfile() {
+      if (valid && identity)
+        await api("/profile", {
+          name: profile().name,
+          color: profile().color,
+        }).catch(() => {});
+    },
     async startParty(room, map, mode) {
       if (!valid) return false;
       declined = null;
@@ -313,15 +384,31 @@ export function createHCS({
     render(dt) {
       if (official) return false;
       if (!active || !frame) return false;
-      const s = frame.state,
-        p = s.players.find((p) => p.id === viewed);
+      const s = frame.state;
+      let p = s.players.find((p) => p.id === viewed);
+      if ((!p || p.hp <= 0) && s.phase === "playing") {
+        const living = s.players.find((p) => p.hp > 0);
+        if (living) {
+          p = living;
+          viewed = living.id;
+          $("hcs-view-player").value = viewed;
+          window.Game.clear();
+        }
+      }
       if (!p) return true;
       const colors = Object.fromEntries(
         frame.profiles.map((p) => [p.id, p.color]),
       );
-      if (watching) window.Game.look(p.yaw, p.pitch || 0);
+      if (watching || viewed !== identity)
+        window.Game.look(p.yaw, p.pitch || 0);
       window.Game.apply(s, viewed, colors, dt);
-      window.Duel.spectating = watching ? viewed : null;
+      window.Duel.spectating = watching || viewed !== identity ? viewed : null;
+      if (!disconnected)
+        $("hcs-broadcast-label").textContent = watching
+          ? "20 SECOND DELAY"
+          : viewed !== identity
+            ? "ELIMINATED · SPECTATING"
+            : "CHAMPIONSHIP FINAL";
       for (const event of s.events || []) {
         if (event.id > seen) window.Game.effect(event, viewed, s);
         seen = Math.max(seen, event.id);
@@ -345,6 +432,7 @@ export function createHCS({
       clearInterval(timer);
       clearInterval(poller);
       clearInterval(inputTimer);
+      transition++;
       socket?.close();
     },
   };

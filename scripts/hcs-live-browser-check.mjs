@@ -142,6 +142,11 @@ try {
     { timeout: 65000 },
   );
   assert.equal(service.referee.match.players.length, 5);
+  assert.equal(
+    await player.evaluate(() => document.body.dataset.camera),
+    "firstPerson",
+    "HCS competitors keep their first-person view",
+  );
   await player.screenshot({ path: out + "/hcs-five-player-deployment.png" });
   await viewer.waitForFunction(
     () => !document.getElementById("hcs-watch").hidden,
@@ -167,7 +172,17 @@ try {
     await viewer.locator("#hcs-watch-stats").textContent(),
     /HP.*KILLS.*LEFT/,
   );
+  await viewer.waitForFunction(
+    () => document.body.dataset.camera === "spectator",
+  );
   await viewer.screenshot({ path: out + "/hcs-delayed-broadcast.png" });
+  await viewer.setViewportSize({ width: 390, height: 844 });
+  const overlay = await viewer.locator("#hcs-broadcast").boundingBox();
+  assert.ok(
+    overlay.x >= 0 && overlay.x + overlay.width <= 390,
+    "mobile broadcast controls fit the screen",
+  );
+  await viewer.screenshot({ path: out + "/hcs-mobile-broadcast.png" });
   await viewer.locator("#hcs-return").click();
   await viewer.waitForTimeout(300);
   assert.equal(await viewer.evaluate(() => window.HorizonHCS.active), false);

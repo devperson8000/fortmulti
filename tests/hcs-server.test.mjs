@@ -116,3 +116,31 @@ test("shutdown waits for the in-flight save before flushing newer state", async 
   assert.equal(waited, true);
   assert.equal(writes.at(-1), "Bravo");
 });
+
+test("configured website origins tolerate trailing slashes but reject other websites", async () => {
+  const service = await api.createHCSServer({
+    authenticate: async () => null,
+    load: async () => null,
+    save: async () => {},
+    origins: [" https://fortmulti.vercel.app/ "],
+  });
+  await new Promise((r) => service.server.listen(0, "127.0.0.1", r));
+  const url = `http://127.0.0.1:${service.server.address().port}/state`;
+  try {
+    const good = await fetch(url, {
+      headers: { Origin: "https://fortmulti.vercel.app" },
+    });
+    assert.equal(good.status, 200);
+    assert.equal(
+      good.headers.get("access-control-allow-origin"),
+      "https://fortmulti.vercel.app",
+    );
+    assert.equal(
+      (await fetch(url, { headers: { Origin: "https://other.vercel.app" } }))
+        .status,
+      403,
+    );
+  } finally {
+    await service.close();
+  }
+});

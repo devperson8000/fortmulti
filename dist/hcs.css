@@ -287,3 +287,69 @@
 #hcs-broadcast-label {
   white-space: nowrap;
 }
+.hcs-phase {
+  font-weight: 800;
+  letter-spacing: 1.3px;
+  font-size: 10px !important;
+  color: #dce7a9 !important;
+}
+.hcs-phase[data-phase="live"] {
+  color: #9ce6b6 !important;
+}
+.hcs-board tr.hcs-you {
+  box-shadow: inset 3px 0 #dce7a9;
+  background: #cddc9420;
+}
+.hcs-board td:nth-child(2) {
+  overflow-wrap: anywhere;
+  max-width: 180px;
+}
+#hcs-panel button:focus-visible,
+#hcs-broadcast button:focus-visible,
+#hcs-broadcast select:focus-visible,
+#nickname-gate button:focus-visible {
+  outline: 2px solid #edf3b0;
+  outline-offset: 4px;
+}
+#hcs-panel button:not(:disabled):hover {
+  background: #f0f5c5;
+}
+#hcs-broadcast {
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);
+}
+#hcs-broadcast select {
+  min-width: 140px;
+  max-width: 240px;
+}
+#hcs-broadcast button {
+  white-space: nowrap;
+  cursor: pointer;
+}
+@media (max-width: 550px) {
+  #hcs-broadcast {
+    width: calc(100vw - 24px);
+    padding: 12px;
+  }
+  #hcs-broadcast select {
+    flex: 1;
+    min-width: 120px;
+    max-width: 100%;
+  }
+  #hcs-watch-stats {
+    width: 100%;
+    order: 3;
+  }
+  #hcs-panel {
+    padding: 14px;
+  }
+  .hcs-board table {
+    min-width: 430px;
+  }
+}
+.hcs-columns,
+.hcs-event,
+.hcs-board,
+.hcs-table-scroll {
+  min-width: 0;
+}

@@ -107,6 +107,29 @@ try {
     "unchanged snapshots must not rebuild the open competitor selector",
   );
   assert.equal(mutations.value, "b");
+  const eliminated = await page.evaluate(async () => {
+    window.__snapshot.state.players[1].hp = 0;
+    await window.__socket.onmessage({
+      data: JSON.stringify(window.__snapshot),
+    });
+    window.__client.render(0.033);
+    return {
+      selected: document.getElementById("hcs-view-player").value,
+      watching: window.Duel.spectating,
+      stats: document.getElementById("hcs-watch-stats").textContent,
+    };
+  });
+  assert.equal(
+    eliminated.selected,
+    "a",
+    "elimination switches to a living competitor",
+  );
+  assert.equal(
+    eliminated.watching,
+    "a",
+    "camera and stats follow the same competitor",
+  );
+  assert.match(eliminated.stats, /100 HP/);
   const inputs = await page.evaluate(async () => {
     window.__client.stop();
     await window.__socket.onmessage({
@@ -127,7 +150,65 @@ try {
     inputs >= 2,
     "input transport must continue independently of render frames",
   );
-  console.log("HCS client selector and input stability passed");
+  const recovery = await page.evaluate(async () => {
+    const old = window.__socket;
+    old.readyState = 3;
+    old.onclose();
+    const label = document.getElementById("hcs-broadcast-label").textContent;
+    await new Promise((r) => setTimeout(r, 1200));
+    await old.onmessage({
+      data: JSON.stringify({
+        ...window.__snapshot,
+        tournament: false,
+        matchId: "stale",
+      }),
+    });
+    return {
+      label,
+      official: window.__client.official,
+      replaced: window.__socket !== old,
+    };
+  });
+  assert.match(recovery.label, /RECONNECTING/);
+  assert.equal(recovery.replaced, true);
+  assert.equal(
+    recovery.official,
+    false,
+    "old socket snapshots cannot replace the current match",
+  );
+  const cancelled = await page.evaluate(async () => {
+    window.__client.stop();
+    const socket = window.__socket;
+    await socket.onmessage({
+      data: JSON.stringify({ type: "authenticated", id: "a" }),
+    });
+    let release;
+    window.Game.setMap = () =>
+      new Promise((r) => {
+        release = r;
+      });
+    const loading = socket.onmessage({
+      data: JSON.stringify({
+        ...window.__snapshot,
+        matchId: "cancelled-load",
+        spectator: false,
+      }),
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    window.__client.stop();
+    release?.();
+    await loading;
+    return window.__client.active;
+  });
+  assert.equal(
+    cancelled,
+    false,
+    "leaving during map loading cannot reopen the final",
+  );
+  console.log(
+    "HCS selector, elimination, reconnect, cancelled load and input stability passed",
+  );
 } finally {
   await browser.close();
 }

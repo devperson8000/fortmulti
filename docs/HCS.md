@@ -6,7 +6,7 @@ The first edition is **Sunday 1 November 2026, 7pm Australia/Sydney**, then ever
 
 Standings freeze 48 hours before. The top five receive invitations, and ranks six through nine are reserves. Check-in opens at 6:45pm. Five connected, checked-in qualifiers start at 7pm. At 7:05pm, absent places are filled by connected, checked-in reserves in ranking order. Three or four entrants can play; fewer than three postpone that edition one week and retain the locked ranking. The normal three-week anchor remains unchanged. If fewer than three players have qualified at all, qualification reopens for the postponed week; existing qualifiers retain their places and additional entrants can fill the ranking.
 
-The final is one gun-only Town Royale round on Platform 23, with five distinct pod landings and a map-sized shrinking storm. The last survivor becomes champion. Reconnects have 60 seconds; disconnected bodies stay vulnerable. Spectators use a separate authenticated stream, never occupy contestant slots, cannot send controls, and can switch players. Snapshots and public results are delayed 20 seconds. Previous champions remain in the service history.
+The final is one gun-only Town Royale round on Platform 23, with five distinct pod landings and a map-sized shrinking storm. The last survivor becomes champion. Reconnects have 60 seconds; disconnected bodies stay vulnerable. Spectators watch in third person using a separate authenticated stream, never occupy contestant slots, cannot send controls, and can switch players. Competitors retain first-person gameplay. When the viewed competitor is eliminated, the camera, player selector and stats move together to a living competitor. Reconnect notices appear directly in the broadcast controls; stale sockets and cancelled map loads cannot reopen a departed final. Snapshots and public results are delayed 20 seconds. Previous champions remain in the service history.
 
 ## Activate online
 
@@ -20,6 +20,8 @@ Set these **only on the referee** using the host's secret settings:
 - `HCS_ORIGINS`: comma-separated exact allowed site origins, with no trailing slash.
 - `PORT` if required by the host.
 
+Northflank can also run this Dockerfile as a Combined Service: repository-root build context `/`, Dockerfile `/server/Dockerfile`, one replica, and public HTTP port 4201. Use `/state` for the health check. The browser uses the generated HTTPS endpoint. Runtime variables belong on the service, not in Docker build arguments. Website origins tolerate surrounding whitespace and trailing slashes; other websites remain blocked.
+
 Set **`HCS_SERVER_URL=https://your-referee-host` on the static site's build environment**, alongside its existing public Supabase configuration, and rebuild. The service authenticates anonymous Supabase accounts, verifies party membership and room ownership, and computes qualifying results with the existing simulation. It accepts no browser-submitted scores. Verified online games use the referee; unconfigured ordinary games continue unchanged and are not ranked. If a configured referee cannot start a qualifying game, the game does not silently award practice results.
 
 A service-only database lease prevents concurrent referee instances from producing conflicting results. It renews every ten seconds; loss shuts down the process. If a process restarts during a final, that edition is postponed one week rather than inventing a winner. Qualifying matches in progress on a service restart are abandoned and do not award partial results.
@@ -31,3 +33,5 @@ No production HCS credentials were available in the implementation environment. 
 `npm run check` runs the existing suite plus HCS schedule, selection, authentication, final, reconnect and delayed-stream tests. `npm run test:hcs` runs the HCS browser gate/layout checks. `tests/hcs-multiplayer.test.mjs` connects five players and eight spectators to the real WebSocket service. Test identities and accelerated clocks are injected only by test code; there is no production test login or public result-injection endpoint.
 
 Browser screenshots and test reports are written to `/workspace/fortmulti-artifacts/hcs` by default. These are local software-rendered checks, not a guarantee of zero lag on every computer or internet connection.
+
+HCS polish checks cover mobile event-card bounds and broadcast controls, first-person competitors, third-person viewers, player selection after elimination, visible reconnect status, stale WebSocket callbacks and leaving during map loading.
