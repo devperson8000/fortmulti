@@ -1,0 +1,11 @@
+{
+  "automatedTests": 459,
+  "passed": 459,
+  "failed": 0,
+  "hcsFocusedTests": 37,
+  "hcsFocusedPassed": 37,
+  "normalInitialRun": "Platform 23 completed; subsequent island run timed out waiting for pod_opening",
+  "sourceCommit": "9b6bcbc1d78c91e575c62937a2e9d2a2ecf56434",
+  "productionGameCodeChanged": false,
+  "normalOutdoorRecheck": "Passed island-only deployment and weapon review; original facility-to-island strict checkpoint timeout remains unresolved"
+}

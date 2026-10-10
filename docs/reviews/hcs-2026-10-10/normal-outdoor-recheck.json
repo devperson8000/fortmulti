@@ -1,0 +1,543 @@
+{
+  "renderer": "Chromium SwiftShader software",
+  "transport": "local BroadcastChannel (not public internet)",
+  "results": [
+    {
+      "map": "island",
+      "players": 8,
+      "renderedClients": 8,
+      "boarding": [
+        {
+          "id": "28171672b2c9f5683c02b14fe8758f1f",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": -160,
+            "z": -100,
+            "y": 11.520000457763672
+          }
+        },
+        {
+          "id": "0729bbbe8a319c710db95783af220b11",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": 0,
+            "z": -180,
+            "y": 6.869999885559082
+          }
+        },
+        {
+          "id": "375ec96016c0c11741ce560b8c3376d5",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": 160,
+            "z": -100,
+            "y": 11.0600004196167
+          }
+        },
+        {
+          "id": "3c1103a93e94236c19edf6c639d2468a",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": -170,
+            "z": 80,
+            "y": 6
+          }
+        },
+        {
+          "id": "594840eed8e0e4f8dc99483f25bbf6f4",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": 172.09513385374856,
+            "z": 80.67112900017558,
+            "y": 10
+          }
+        },
+        {
+          "id": "8e0a50dde5febc2dd8715205ae14ef52",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": -80,
+            "z": 170,
+            "y": 13.360000133514404
+          }
+        },
+        {
+          "id": "96ee724b59a39fa4a6f2aa8f9246fe9b",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": 80,
+            "z": 170,
+            "y": 15.755000114440918
+          }
+        },
+        {
+          "id": "da9d776fad8c8225a93bae6de634e96e",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": 0,
+            "z": 0,
+            "y": 0
+          }
+        }
+      ],
+      "state": {
+        "phase": "playing",
+        "players": [
+          {
+            "id": "28171672b2c9f5683c02b14fe8758f1f",
+            "p": [
+              -160.32,
+              11.577925205230713,
+              -97.65
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 0,
+            "weapon": null,
+            "destination": {
+              "x": -160,
+              "z": -100,
+              "y": 11.520000457763672
+            }
+          },
+          {
+            "id": "0729bbbe8a319c710db95783af220b11",
+            "p": [
+              0.32,
+              7.01985000371933,
+              -177.65
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 0,
+            "weapon": null,
+            "destination": {
+              "x": 0,
+              "z": -180,
+              "y": 6.869999885559082
+            }
+          },
+          {
+            "id": "375ec96016c0c11741ce560b8c3376d5",
+            "p": [
+              159.68,
+              11.054925227165223,
+              -97.65
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 0,
+            "weapon": null,
+            "destination": {
+              "x": 160,
+              "z": -100,
+              "y": 11.0600004196167
+            }
+          },
+          {
+            "id": "3c1103a93e94236c19edf6c639d2468a",
+            "p": [
+              -169.68,
+              6,
+              82.35
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 0,
+            "weapon": null,
+            "destination": {
+              "x": -170,
+              "z": 80,
+              "y": 6
+            }
+          },
+          {
+            "id": "594840eed8e0e4f8dc99483f25bbf6f4",
+            "p": [
+              171.77513385374857,
+              10,
+              104.80108575990118
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 1,
+            "weapon": "ar",
+            "destination": {
+              "x": 172.09513385374856,
+              "z": 80.67112900017558,
+              "y": 10
+            }
+          },
+          {
+            "id": "8e0a50dde5febc2dd8715205ae14ef52",
+            "p": [
+              -79.68,
+              13.46215009689331,
+              172.35
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 0,
+            "weapon": null,
+            "destination": {
+              "x": -80,
+              "z": 170,
+              "y": 13.360000133514404
+            }
+          },
+          {
+            "id": "96ee724b59a39fa4a6f2aa8f9246fe9b",
+            "p": [
+              79.68,
+              15.492025148868558,
+              172.35
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 0,
+            "weapon": null,
+            "destination": {
+              "x": 80,
+              "z": 170,
+              "y": 15.755000114440918
+            }
+          },
+          {
+            "id": "da9d776fad8c8225a93bae6de634e96e",
+            "p": [
+              0.32,
+              0,
+              2.35
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 0,
+            "weapon": null,
+            "destination": {
+              "x": 0,
+              "z": 0,
+              "y": 0
+            }
+          }
+        ],
+        "events": [
+          {
+            "type": "deployment_stage",
+            "stage": "pod_opening",
+            "sequence": "1:1",
+            "id": 31
+          },
+          {
+            "type": "deployment_stage",
+            "stage": "exiting",
+            "sequence": "1:1",
+            "id": 32
+          },
+          {
+            "type": "deployment_stage",
+            "stage": "saluting",
+            "sequence": "1:1",
+            "id": 33
+          },
+          {
+            "type": "match_active",
+            "sequence": "1:1",
+            "id": 34
+          },
+          {
+            "type": "switch",
+            "by": "28171672b2c9f5683c02b14fe8758f1f",
+            "slot": 0,
+            "weapon": null,
+            "building": false,
+            "id": 35
+          },
+          {
+            "type": "switch",
+            "by": "375ec96016c0c11741ce560b8c3376d5",
+            "slot": 0,
+            "weapon": null,
+            "building": false,
+            "id": 36
+          },
+          {
+            "type": "switch",
+            "by": "3c1103a93e94236c19edf6c639d2468a",
+            "slot": 0,
+            "weapon": null,
+            "building": false,
+            "id": 37
+          },
+          {
+            "type": "switch",
+            "by": "da9d776fad8c8225a93bae6de634e96e",
+            "slot": 0,
+            "weapon": null,
+            "building": false,
+            "id": 38
+          },
+          {
+            "type": "switch",
+            "by": "0729bbbe8a319c710db95783af220b11",
+            "slot": 0,
+            "weapon": null,
+            "building": false,
+            "id": 39
+          },
+          {
+            "type": "switch",
+            "by": "8e0a50dde5febc2dd8715205ae14ef52",
+            "slot": 0,
+            "weapon": null,
+            "building": false,
+            "id": 40
+          },
+          {
+            "type": "switch",
+            "by": "96ee724b59a39fa4a6f2aa8f9246fe9b",
+            "slot": 0,
+            "weapon": null,
+            "building": false,
+            "id": 41
+          },
+          {
+            "type": "switch",
+            "by": "594840eed8e0e4f8dc99483f25bbf6f4",
+            "slot": 2,
+            "weapon": "shotgun",
+            "building": false,
+            "id": 42
+          },
+          {
+            "type": "switch",
+            "by": "594840eed8e0e4f8dc99483f25bbf6f4",
+            "slot": 3,
+            "weapon": "smg",
+            "building": false,
+            "id": 43
+          },
+          {
+            "type": "switch",
+            "by": "594840eed8e0e4f8dc99483f25bbf6f4",
+            "slot": 4,
+            "weapon": "sniper",
+            "building": false,
+            "id": 44
+          },
+          {
+            "type": "switch",
+            "by": "594840eed8e0e4f8dc99483f25bbf6f4",
+            "slot": 5,
+            "weapon": "ar_sentinel",
+            "building": false,
+            "id": 45
+          },
+          {
+            "type": "switch",
+            "by": "594840eed8e0e4f8dc99483f25bbf6f4",
+            "slot": 4,
+            "weapon": "sniper",
+            "building": false,
+            "id": 46
+          },
+          {
+            "type": "switch",
+            "by": "594840eed8e0e4f8dc99483f25bbf6f4",
+            "slot": 1,
+            "weapon": "ar",
+            "building": false,
+            "id": 47
+          },
+          {
+            "type": "shot",
+            "by": "594840eed8e0e4f8dc99483f25bbf6f4",
+            "weapon": "ar",
+            "a": [
+              171.53513385374856,
+              10.97,
+              105.42521849988566
+            ],
+            "b": [
+              171.2421490163977,
+              10.163523468244401,
+              129.91018849147048
+            ],
+            "traces": [
+              [
+                171.2421490163977,
+                10.163523468244401,
+                129.91018849147048
+              ]
+            ],
+            "traceHits": [
+              null
+            ],
+            "hits": [],
+            "hit": null,
+            "damage": 0,
+            "id": 48
+          },
+          {
+            "type": "switch",
+            "by": "594840eed8e0e4f8dc99483f25bbf6f4",
+            "slot": 0,
+            "weapon": null,
+            "building": false,
+            "id": 49
+          },
+          {
+            "type": "switch",
+            "by": "594840eed8e0e4f8dc99483f25bbf6f4",
+            "slot": 1,
+            "weapon": "ar",
+            "building": false,
+            "id": 50
+          }
+        ]
+      },
+      "frames": [
+        {
+          "client": 1,
+          "samples": 25,
+          "medianMs": 1066.6000000000058,
+          "p95Ms": 1150,
+          "maxMs": 1166.5999999999913
+        },
+        {
+          "client": 2,
+          "samples": 40,
+          "medianMs": 233.29999999998836,
+          "p95Ms": 1433.2999999999884,
+          "maxMs": 2249.800000000003
+        },
+        {
+          "client": 3,
+          "samples": 24,
+          "medianMs": 1066.6000000000058,
+          "p95Ms": 1433.199999999997,
+          "maxMs": 2250
+        },
+        {
+          "client": 4,
+          "samples": 25,
+          "medianMs": 1050,
+          "p95Ms": 1133.300000000003,
+          "maxMs": 1133.3999999999942
+        },
+        {
+          "client": 5,
+          "samples": 28,
+          "medianMs": 1049.9000000000087,
+          "p95Ms": 1166.7000000000116,
+          "maxMs": 1200
+        },
+        {
+          "client": 6,
+          "samples": 23,
+          "medianMs": 1066.699999999997,
+          "p95Ms": 1150,
+          "maxMs": 1166.6000000000058
+        },
+        {
+          "client": 7,
+          "samples": 25,
+          "medianMs": 1066.6000000000058,
+          "p95Ms": 1116.6000000000058,
+          "maxMs": 1150
+        },
+        {
+          "client": 8,
+          "samples": 285,
+          "medianMs": 66.69999999999709,
+          "p95Ms": 150.10000000000582,
+          "maxMs": 266.59999999999127
+        }
+      ],
+      "audio": [
+        {
+          "duration": 30,
+          "rate": 1
+        },
+        {
+          "duration": 0.3,
+          "rate": 1
+        },
+        {
+          "duration": 0.3599773242630385,
+          "rate": 1
+        }
+      ],
+      "stages": [
+        {
+          "air": "landed",
+          "lobby": true,
+          "at": 710.6000000238419
+        },
+        {
+          "air": "landed",
+          "lobby": false,
+          "at": 77303.20000004768
+        },
+        {
+          "stage": "landing_selection",
+          "elapsed": 0,
+          "air": "ship",
+          "lobby": false,
+          "at": 78861.80000001192
+        },
+        {
+          "stage": "pod_sealing",
+          "elapsed": 0.15881826301470608,
+          "air": "ship",
+          "lobby": false,
+          "at": 83153.60000002384
+        },
+        {
+          "stage": "launching",
+          "elapsed": 1.2531802630504645,
+          "air": "pod",
+          "lobby": false,
+          "at": 84249.90000003576
+        },
+        {
+          "stage": "pod_opening",
+          "elapsed": 27.280330263014708,
+          "air": "pod",
+          "lobby": false,
+          "at": 110356
+        },
+        {
+          "stage": "exiting",
+          "elapsed": 28.32681626301471,
+          "air": "pod",
+          "lobby": false,
+          "at": 111413.30000001192
+        },
+        {
+          "stage": "saluting",
+          "elapsed": 29.47876626301471,
+          "air": "pod",
+          "lobby": false,
+          "at": 112655.20000004768
+        },
+        {
+          "stage": "match_active",
+          "elapsed": 31.396730263014707,
+          "air": "landed",
+          "lobby": false,
+          "at": 115777.40000003576
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "rendererErrors": []
+}

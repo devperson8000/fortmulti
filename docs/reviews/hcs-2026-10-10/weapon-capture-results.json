@@ -1,0 +1,14 @@
+{
+  "fixture": "Single rendered client with controlled native snapshots for all weapon families and variants, correct magazine capacities; supplements multi-client live tests",
+  "profiles": [
+    "ar",
+    "shotgun",
+    "smg",
+    "sniper",
+    "ar_sentinel",
+    "shotgun_breacher",
+    "smg_viper",
+    "sniper_longbow"
+  ],
+  "errors": []
+}

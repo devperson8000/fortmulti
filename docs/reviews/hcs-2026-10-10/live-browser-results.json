@@ -1,0 +1,12 @@
+{
+  "checks": [
+    "real authenticated check-in UI",
+    "five-player automatic native deployment",
+    "separate delayed spectator stream",
+    "five selectable competitors",
+    "health kills remaining overlay",
+    "return-to-lobby persists"
+  ],
+  "errors": [],
+  "rendererErrors": []
+}

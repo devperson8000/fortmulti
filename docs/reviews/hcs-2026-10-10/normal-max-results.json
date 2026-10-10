@@ -1,0 +1,466 @@
+{
+  "renderer": "Chromium SwiftShader software",
+  "transport": "local BroadcastChannel (not public internet)",
+  "results": [
+    {
+      "map": "facility",
+      "players": 8,
+      "renderedClients": 8,
+      "boarding": [
+        {
+          "id": "94b9be0873d0ee82ca9d77b7ae5f7d60",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": 0,
+            "z": -10,
+            "y": -0.125
+          }
+        },
+        {
+          "id": "4c9b044993106d08d93ae324e381c54b",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": 0,
+            "z": -2,
+            "y": -0.125
+          }
+        },
+        {
+          "id": "6beeb75388522dce352e81298a232c88",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": -35,
+            "z": 17,
+            "y": 1.5
+          }
+        },
+        {
+          "id": "6c1bbdf2dff186f85500b84d7086bb88",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": 35,
+            "z": 17,
+            "y": 1.5
+          }
+        },
+        {
+          "id": "e2391cabb3d18271109535522537bf5c",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": -74,
+            "z": -14,
+            "y": 4
+          }
+        },
+        {
+          "id": "e4b4bcbfe8f2885f5c089f708ad4cedd",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": 74,
+            "z": -14,
+            "y": 4
+          }
+        },
+        {
+          "id": "ed5003c9c685b0f2cb7ab77c4e939edf",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": -9,
+            "z": 23,
+            "y": 1.5
+          }
+        },
+        {
+          "id": "f388740e93406633c58e72b7b51747c7",
+          "chosen": true,
+          "boarded": true,
+          "destination": {
+            "x": 9,
+            "z": 23,
+            "y": 1.5
+          }
+        }
+      ],
+      "state": {
+        "phase": "playing",
+        "players": [
+          {
+            "id": "94b9be0873d0ee82ca9d77b7ae5f7d60",
+            "p": [
+              -0.32,
+              -0.125,
+              -7.65
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 1,
+            "weapon": "ar",
+            "destination": {
+              "x": 0,
+              "z": -10,
+              "y": -0.125
+            }
+          },
+          {
+            "id": "4c9b044993106d08d93ae324e381c54b",
+            "p": [
+              0.32,
+              -0.125,
+              0.3500000000000001
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 1,
+            "weapon": "ar",
+            "destination": {
+              "x": 0,
+              "z": -2,
+              "y": -0.125
+            }
+          },
+          {
+            "id": "6beeb75388522dce352e81298a232c88",
+            "p": [
+              -35.32,
+              1.5000000000000002,
+              19.35
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 1,
+            "weapon": "ar",
+            "destination": {
+              "x": -35,
+              "z": 17,
+              "y": 1.5
+            }
+          },
+          {
+            "id": "6c1bbdf2dff186f85500b84d7086bb88",
+            "p": [
+              35.32,
+              1.5,
+              19.35
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 1,
+            "weapon": "ar",
+            "destination": {
+              "x": 35,
+              "z": 17,
+              "y": 1.5
+            }
+          },
+          {
+            "id": "e2391cabb3d18271109535522537bf5c",
+            "p": [
+              -74.32,
+              4,
+              -11.65
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 1,
+            "weapon": "ar",
+            "destination": {
+              "x": -74,
+              "z": -14,
+              "y": 4
+            }
+          },
+          {
+            "id": "e4b4bcbfe8f2885f5c089f708ad4cedd",
+            "p": [
+              74.32,
+              4,
+              -11.65
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 1,
+            "weapon": "ar",
+            "destination": {
+              "x": 74,
+              "z": -14,
+              "y": 4
+            }
+          },
+          {
+            "id": "ed5003c9c685b0f2cb7ab77c4e939edf",
+            "p": [
+              -9.32,
+              1.5,
+              25.35
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 1,
+            "weapon": "ar",
+            "destination": {
+              "x": -9,
+              "z": 23,
+              "y": 1.5
+            }
+          },
+          {
+            "id": "f388740e93406633c58e72b7b51747c7",
+            "p": [
+              9.32,
+              -0.09603031033296588,
+              39.89
+            ],
+            "air": "landed",
+            "hp": 100,
+            "slot": 1,
+            "weapon": "ar",
+            "destination": {
+              "x": 9,
+              "z": 23,
+              "y": 1.5
+            }
+          }
+        ],
+        "events": [
+          {
+            "type": "pod_ready",
+            "by": "e2391cabb3d18271109535522537bf5c",
+            "pod": "P5",
+            "id": 22
+          },
+          {
+            "type": "pod_ready",
+            "by": "e4b4bcbfe8f2885f5c089f708ad4cedd",
+            "pod": "P6",
+            "id": 23
+          },
+          {
+            "type": "pod_ready",
+            "by": "ed5003c9c685b0f2cb7ab77c4e939edf",
+            "pod": "P7",
+            "id": 24
+          },
+          {
+            "type": "pod_ready",
+            "by": "f388740e93406633c58e72b7b51747c7",
+            "pod": "P8",
+            "id": 25
+          },
+          {
+            "type": "both_pods_ready",
+            "sequence": "1:1",
+            "id": 26
+          },
+          {
+            "type": "deployment_stage",
+            "stage": "pod_sealing",
+            "sequence": "1:1",
+            "id": 27
+          },
+          {
+            "type": "deployment_stage",
+            "stage": "launching",
+            "sequence": "1:1",
+            "id": 28
+          },
+          {
+            "type": "deployment_stage",
+            "stage": "transition",
+            "sequence": "1:1",
+            "id": 29
+          },
+          {
+            "type": "deployment_landed",
+            "sequence": "1:1",
+            "id": 30
+          },
+          {
+            "type": "deployment_stage",
+            "stage": "pod_opening",
+            "sequence": "1:1",
+            "id": 31
+          },
+          {
+            "type": "deployment_stage",
+            "stage": "exiting",
+            "sequence": "1:1",
+            "id": 32
+          },
+          {
+            "type": "deployment_stage",
+            "stage": "saluting",
+            "sequence": "1:1",
+            "id": 33
+          },
+          {
+            "type": "match_active",
+            "sequence": "1:1",
+            "id": 34
+          },
+          {
+            "type": "switch",
+            "by": "f388740e93406633c58e72b7b51747c7",
+            "slot": 2,
+            "weapon": "shotgun",
+            "building": false,
+            "id": 35
+          },
+          {
+            "type": "switch",
+            "by": "f388740e93406633c58e72b7b51747c7",
+            "slot": 3,
+            "weapon": "smg",
+            "building": false,
+            "id": 36
+          },
+          {
+            "type": "switch",
+            "by": "f388740e93406633c58e72b7b51747c7",
+            "slot": 4,
+            "weapon": "sniper",
+            "building": false,
+            "id": 37
+          },
+          {
+            "type": "switch",
+            "by": "f388740e93406633c58e72b7b51747c7",
+            "slot": 5,
+            "weapon": "ar_sentinel",
+            "building": false,
+            "id": 38
+          },
+          {
+            "type": "switch",
+            "by": "f388740e93406633c58e72b7b51747c7",
+            "slot": 4,
+            "weapon": "sniper",
+            "building": false,
+            "id": 39
+          },
+          {
+            "type": "switch",
+            "by": "f388740e93406633c58e72b7b51747c7",
+            "slot": 1,
+            "weapon": "ar",
+            "building": false,
+            "id": 40
+          },
+          {
+            "type": "shot",
+            "by": "f388740e93406633c58e72b7b51747c7",
+            "weapon": "ar",
+            "a": [
+              9.08,
+              0.8739696896670343,
+              41.37
+            ],
+            "b": [
+              9.210233435888052,
+              0.9376931658590368,
+              40.75
+            ],
+            "traces": [
+              [
+                9.210233435888052,
+                0.9376931658590368,
+                40.75
+              ]
+            ],
+            "traceHits": [
+              null
+            ],
+            "hits": [],
+            "hit": null,
+            "damage": 0,
+            "id": 41
+          }
+        ]
+      },
+      "frames": [
+        {
+          "client": 1,
+          "samples": 31,
+          "medianMs": 1083.3000000000175,
+          "p95Ms": 1133.2999999999884,
+          "maxMs": 1149.8999999999942
+        },
+        {
+          "client": 2,
+          "samples": 56,
+          "medianMs": 300.0999999999767,
+          "p95Ms": 1216.6000000000058,
+          "maxMs": 1450
+        },
+        {
+          "client": 3,
+          "samples": 26,
+          "medianMs": 1099.8999999999942,
+          "p95Ms": 1283.3000000000175,
+          "maxMs": 1299.8999999999942
+        },
+        {
+          "client": 4,
+          "samples": 30,
+          "medianMs": 1083.2999999999884,
+          "p95Ms": 1149.9000000000233,
+          "maxMs": 1216.6000000000058
+        },
+        {
+          "client": 5,
+          "samples": 31,
+          "medianMs": 1083.2000000000116,
+          "p95Ms": 1133.2000000000116,
+          "maxMs": 1150
+        },
+        {
+          "client": 6,
+          "samples": 31,
+          "medianMs": 1050,
+          "p95Ms": 1333.3000000000175,
+          "maxMs": 1533.1999999999825
+        },
+        {
+          "client": 7,
+          "samples": 29,
+          "medianMs": 1083.3000000000175,
+          "p95Ms": 1149.7999999999884,
+          "maxMs": 1266.6000000000058
+        },
+        {
+          "client": 8,
+          "samples": 208,
+          "medianMs": 100,
+          "p95Ms": 450,
+          "maxMs": 599.8999999999942
+        }
+      ],
+      "audio": [
+        {
+          "duration": 30,
+          "rate": 1
+        },
+        {
+          "duration": 0.3,
+          "rate": 1
+        },
+        {
+          "duration": 0.3,
+          "rate": 1
+        },
+        {
+          "duration": 0.3599773242630385,
+          "rate": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "rendererErrors": []
+}
