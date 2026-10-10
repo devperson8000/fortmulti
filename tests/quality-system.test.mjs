@@ -3,13 +3,12 @@ import assert from 'node:assert/strict';
 import {QUALITY_PRESETS,createAutoQuality,sampleAutoQuality} from '../public/quality-system.js';
 
 test('auto quality changes only after sustained pressure and uses hysteresis',()=>{
- let state=createAutoQuality('high');
- for(let index=0;index<60;index++)state=sampleAutoQuality(state,25,index*100);
- assert.equal(state.level,'medium');
- for(let index=0;index<20;index++)state=sampleAutoQuality(state,10,7000+index*100);
- assert.equal(state.level,'medium');
- for(let index=0;index<180;index++)state=sampleAutoQuality(state,10,10000+index*100);
- assert.equal(state.level,'high');
+ const state=createAutoQuality('high');let now=0;
+ const advance=(duration,frameMs)=>{const until=now+duration;for(;now<until;now+=frameMs)sampleAutoQuality(state,frameMs,now);};
+ advance(1800,25);assert.equal(state.level,'high');
+ advance(4200,25);assert.equal(state.level,'medium');
+ advance(2000,10);assert.equal(state.level,'medium');
+ advance(20000,10);assert.equal(state.level,'high');
 });
 
 test('every quality preset has bounded render budgets',()=>{
@@ -38,4 +37,16 @@ test('retina and ultrawide windows stay inside a finite pixel budget without str
   assert.ok(size.width*size.height<=budget+3840,`${level} wastes work rendering ${size.width*size.height} pixels`);
   assert.ok(Math.abs(size.width/size.height-16/9)<.005);
  }
+});
+
+test('auto quality responds to sustained 50 FPS before three seconds',()=>{
+ const state=createAutoQuality('high');
+ for(let now=0;now<=2600;now+=20)sampleAutoQuality(state,20,now);
+ assert.equal(state.level,'medium');
+});
+
+test('auto quality keeps stable 60 FPS and isolated loading spikes at the selected level',()=>{
+ const state=createAutoQuality('high');
+ for(let index=0;index<600;index++)sampleAutoQuality(state,index===200?80:1000/60,index*1000/60);
+ assert.equal(state.level,'high');
 });

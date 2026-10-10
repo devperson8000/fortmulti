@@ -1,0 +1,14 @@
+{
+  "stable": {
+    "mutations": {
+      "party": 0,
+      "online": 0,
+      "invites": 0
+    },
+    "snapshots": 28,
+    "sameCard": true
+  },
+  "inviteStateAndExpiry": true,
+  "changedProfileAndReady": true,
+  "errors": []
+}

@@ -18,12 +18,13 @@ export function sampleAutoQuality(state,frameMs,now=performance.now()){
  state.samples[index]=sample;state.sampleIndex=(index+1)%state.samples.length;
  if(state.sampleCount<12)return state;
  const average=state.total/state.sampleCount,time=Number(now)||0;
- if(average>21){state.fastSince=null;if(state.slowSince==null)state.slowSince=time;}
+ // Aim for a stable 60 Hz frame budget instead of accepting sustained 48–54 FPS.
+ if(average>18.5){state.fastSince=null;if(state.slowSince==null)state.slowSince=time;}
  else if(average<14){state.slowSince=null;if(state.fastSince==null)state.fastSince=time;}
  else{state.slowSince=null;state.fastSince=null;}
  if(time<state.cooldownUntil)return state;
  const position=LEVELS.indexOf(state.level);
- if(state.slowSince!=null&&time-state.slowSince>=4000&&position>0){state.level=LEVELS[position-1];state.slowSince=null;state.fastSince=null;state.cooldownUntil=time+6000;}
+ if(state.slowSince!=null&&time-state.slowSince>=2000&&position>0){state.level=LEVELS[position-1];state.slowSince=null;state.fastSince=null;state.cooldownUntil=time+6000;}
  else if(state.fastSince!=null&&time-state.fastSince>=15000&&position<LEVELS.length-1){state.level=LEVELS[position+1];state.slowSince=null;state.fastSince=null;state.cooldownUntil=time+6000;}
  return state;
 }

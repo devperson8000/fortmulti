@@ -68,8 +68,13 @@ function partyProfiles(){
  // The local player always owns the central hero platform, even when joining somebody else's party.
  return orderPartyProfiles(all);
 }
+// Presence timestamps and match snapshots do not change the lobby's displayed lists.
+let partyCardsKey=null,onlinePlayersKey=null,invitesKey=null;
 function drawPartyCards(){
- const grid=$('party-grid');grid.textContent='';const party=partyProfiles(),max=conn?.maxPlayers||8;$('party-count').textContent=`${party.length} / ${max}`;
+ const party=partyProfiles(),max=conn?.maxPlayers||8;
+ const key=JSON.stringify([!!conn,host,max,party.map(p=>[p.id,p.name,p.color,p.ready,p.self,p.host])]);
+ if(key===partyCardsKey)return;partyCardsKey=key;
+ const grid=$('party-grid');grid.textContent='';$('party-count').textContent=`${party.length} / ${max}`;
  for(let i=0;i<max;i++){
   const p=party[i],card=document.createElement('div');card.className='party-card'+(p?.ready?' ready':'')+(p?.host?' host':'')+(p?.self?' self':'')+(!p?' empty':'');
   const avatar=document.createElement('i'),copy=document.createElement('span'),name=document.createElement('b'),state=document.createElement('small');
@@ -81,12 +86,13 @@ function drawPartyCards(){
  $('party-summary').textContent=conn?(partyCount<2?'Invite at least one player to begin.':`${readyCount}/${partyCount} ready · ${host?'You are party leader':'Waiting for party leader'}`):'Create a party or invite someone who is online.';
 }
 function renderOnlinePlayers(){
+ const partyIds=new Set([conn?.id,...activePeers().map(p=>p.id)].filter(Boolean)),visible=onlinePlayers.filter(p=>p&&p.id);
+ const key=JSON.stringify([socialError,$('local').checked,!!social,validOnlineConfig(),inMatch(),busy,conn?.code,conn?.maxPlayers,partyProfiles().length,[...partyIds].sort(),visible.map(p=>[p.id,p.display_name,p.outfit_color,p.activity,p.room_code])]);
+ if(key===onlinePlayersKey)return;onlinePlayersKey=key;
  const list=$('online-list');list.textContent='';$('online-count').textContent=String(onlinePlayers.filter(p=>p&&p.id).length);
  if(socialError){list.innerHTML='<div class="empty-online"><b>Online players unavailable</b><span></span></div>';list.querySelector('span').textContent=publicOnlineError(socialError);return;}
  if($('local').checked&&social&&!onlinePlayers.length){list.innerHTML='<div class="empty-online"><b>Waiting for another tab…</b><span>Open this game in another tab with Same-browser test enabled.</span></div>';return;}
  if(!$('local').checked&&!validOnlineConfig()){list.innerHTML='<div class="empty-online"><b>Online play is unavailable right now</b><span>Please try again later.</span></div>';return;}
- const partyIds=new Set([conn?.id,...activePeers().map(p=>p.id)].filter(Boolean));
- const visible=onlinePlayers.filter(p=>p&&p.id);
  if(!visible.length){list.innerHTML='<div class="empty-online"><b>No other players online</b><span>Players appear here automatically while they have the lobby open.</span></div>';return;}
  for(const p of visible){
   const row=document.createElement('div');row.className='online-player';const avatar=document.createElement('i');avatar.style.setProperty('--outfit','#'+cleanColor(p.outfit_color));
@@ -95,7 +101,9 @@ function renderOnlinePlayers(){
  }
 }
 function renderInvites(){
- const tray=$('invite-tray'),list=$('invite-list');list.textContent='';const now=Date.now();incomingInvites=incomingInvites.filter(v=>Date.parse(v.expires_at||0)>now);
+ const now=Date.now();incomingInvites=incomingInvites.filter(v=>Date.parse(v.expires_at||0)>now);
+ const key=JSON.stringify([inMatch(),incomingInvites]);if(key===invitesKey)return;invitesKey=key;
+ const tray=$('invite-tray'),list=$('invite-list');list.textContent='';
  if(!incomingInvites.length){tray.hidden=true;return;}tray.hidden=false;
  for(const inv of incomingInvites){const card=document.createElement('div');card.className='invite-card';const top=document.createElement('div'),avatar=document.createElement('i'),text=document.createElement('span'),name=document.createElement('b'),sub=document.createElement('small'),actions=document.createElement('div'),accept=document.createElement('button'),decline=document.createElement('button');avatar.style.setProperty('--outfit','#'+cleanColor(inv.from_color));name.textContent=cleanName(inv.from_name);sub.textContent='invited you to their party';text.append(name,sub);top.append(avatar,text);accept.textContent='ACCEPT';accept.className='accept';accept.disabled=inMatch();decline.textContent='DECLINE';accept.onclick=()=>respondInvite(inv,true);decline.onclick=()=>respondInvite(inv,false);actions.append(accept,decline);card.append(top,actions);list.append(card);}
 }

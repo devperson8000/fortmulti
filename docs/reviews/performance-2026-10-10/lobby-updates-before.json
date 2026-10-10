@@ -1,0 +1,12 @@
+{
+  "stable": {
+    "mutations": {
+      "party": 270,
+      "online": 62,
+      "invites": 0
+    },
+    "snapshots": 29,
+    "sameCard": false
+  },
+  "errors": []
+}
