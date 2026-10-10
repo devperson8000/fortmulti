@@ -263,7 +263,7 @@ try {
   for (const p of landing) assert.ok(p.position.every(Number.isFinite));
   for (const row of traffic) {
     assert.ok(row.snapshots > 0);
-    assert.ok(row.minDelayMs >= 19990);
+    assert.ok(row.minDelayMs >= 20000);
     if (!Number.isFinite(row.minDelayMs)) row.minDelayMs = null;
   }
   await writeFile(

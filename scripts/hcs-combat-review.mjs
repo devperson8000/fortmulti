@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
-import { writeFile } from "node:fs/promises";
+import { writeFile, mkdir } from "node:fs/promises";
 import { WebSocket } from "ws";
 import { createHCSServer } from "../server/hcs-server.mjs";
 const ids = ["alpha", "bravo", "charlie", "delta", "echo"],
   sockets = [],
   received = [];
+const out = process.env.GAME_ARTIFACTS || "docs/reviews/hcs-2026-10-10";
+await mkdir(out, { recursive: true });
 let offset = 0;
 const now = () => Date.now() + offset;
 const server = await createHCSServer({
@@ -117,7 +119,7 @@ try {
     delayedFinalReceived: true,
   };
   await writeFile(
-    "docs/reviews/hcs-2026-10-10/hcs-combat-results.json",
+    out + "/hcs-combat-results.json",
     JSON.stringify(results, null, 2),
   );
   console.log("HCS combat and delayed champion review passed");

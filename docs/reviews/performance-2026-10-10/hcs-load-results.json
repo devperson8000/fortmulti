@@ -1,0 +1,224 @@
+{
+  "competitors": 5,
+  "renderedCompetitors": 5,
+  "spectators": 15,
+  "renderedSpectators": 3,
+  "graphics": "low",
+  "renderer": "Chromium SwiftShader software",
+  "frameStats": [
+    {
+      "client": 0,
+      "samples": 126,
+      "medianMs": 533.3000000000029,
+      "p95Ms": 1016.5999999999913,
+      "maxMs": 2633.199999999997
+    },
+    {
+      "client": 1,
+      "samples": 127,
+      "medianMs": 533.3000000000029,
+      "p95Ms": 1000,
+      "maxMs": 2999.9000000000087
+    },
+    {
+      "client": 2,
+      "samples": 122,
+      "medianMs": 549.9000000000087,
+      "p95Ms": 1033.199999999997,
+      "maxMs": 2999.9000000000015
+    },
+    {
+      "client": 3,
+      "samples": 126,
+      "medianMs": 533.3000000000029,
+      "p95Ms": 1066.5999999999985,
+      "maxMs": 2999.899999999994
+    },
+    {
+      "client": 4,
+      "samples": 126,
+      "medianMs": 533.3999999999942,
+      "p95Ms": 1000,
+      "maxMs": 2999.9000000000015
+    },
+    {
+      "client": 5,
+      "samples": 60,
+      "medianMs": 550.0999999999913,
+      "p95Ms": 850,
+      "maxMs": 12749.5
+    },
+    {
+      "client": 6,
+      "samples": 61,
+      "medianMs": 550,
+      "p95Ms": 783.2999999999884,
+      "maxMs": 12866.199999999997
+    },
+    {
+      "client": 7,
+      "samples": 65,
+      "medianMs": 550,
+      "p95Ms": 733.1999999999971,
+      "maxMs": 12766.200000000004
+    }
+  ],
+  "traffic": [
+    {
+      "id": "load-viewer-0",
+      "snapshots": 895,
+      "bytes": 7159654,
+      "minDelayMs": 20000
+    },
+    {
+      "id": "load-viewer-1",
+      "snapshots": 895,
+      "bytes": 7159654,
+      "minDelayMs": 20001
+    },
+    {
+      "id": "load-viewer-2",
+      "snapshots": 895,
+      "bytes": 7159654,
+      "minDelayMs": 20001
+    },
+    {
+      "id": "load-viewer-3",
+      "snapshots": 895,
+      "bytes": 7159654,
+      "minDelayMs": 20001
+    },
+    {
+      "id": "load-viewer-4",
+      "snapshots": 895,
+      "bytes": 7159654,
+      "minDelayMs": 20001
+    },
+    {
+      "id": "load-viewer-5",
+      "snapshots": 895,
+      "bytes": 7159654,
+      "minDelayMs": 20001
+    },
+    {
+      "id": "load-viewer-6",
+      "snapshots": 895,
+      "bytes": 7159654,
+      "minDelayMs": 20001
+    },
+    {
+      "id": "load-viewer-7",
+      "snapshots": 895,
+      "bytes": 7159654,
+      "minDelayMs": 20001
+    },
+    {
+      "id": "load-viewer-8",
+      "snapshots": 895,
+      "bytes": 7159654,
+      "minDelayMs": 20001
+    },
+    {
+      "id": "load-viewer-9",
+      "snapshots": 895,
+      "bytes": 7159654,
+      "minDelayMs": 20001
+    },
+    {
+      "id": "load-viewer-10",
+      "snapshots": 895,
+      "bytes": 7159655,
+      "minDelayMs": 20001
+    },
+    {
+      "id": "load-viewer-11",
+      "snapshots": 895,
+      "bytes": 7159655,
+      "minDelayMs": 20001
+    }
+  ],
+  "landing": [
+    {
+      "id": "alpha",
+      "position": [
+        -0.32,
+        -0.125,
+        -7.65
+      ],
+      "air": "landed",
+      "hp": 100,
+      "weapon": "ar",
+      "destination": {
+        "x": 0,
+        "z": -10,
+        "y": -0.125
+      }
+    },
+    {
+      "id": "bravo",
+      "position": [
+        0.32,
+        -0.125,
+        0.3500000000000001
+      ],
+      "air": "landed",
+      "hp": 100,
+      "weapon": "ar",
+      "destination": {
+        "x": 0,
+        "z": -2,
+        "y": -0.125
+      }
+    },
+    {
+      "id": "charlie",
+      "position": [
+        -35.32,
+        1.5000000000000002,
+        19.35
+      ],
+      "air": "landed",
+      "hp": 100,
+      "weapon": "ar",
+      "destination": {
+        "x": -35,
+        "z": 17,
+        "y": 1.5
+      }
+    },
+    {
+      "id": "delta",
+      "position": [
+        35.32,
+        1.5,
+        19.35
+      ],
+      "air": "landed",
+      "hp": 100,
+      "weapon": "ar",
+      "destination": {
+        "x": 35,
+        "z": 17,
+        "y": 1.5
+      }
+    },
+    {
+      "id": "echo",
+      "position": [
+        -74.32,
+        4,
+        -11.65
+      ],
+      "air": "landed",
+      "hp": 100,
+      "weapon": "ar",
+      "destination": {
+        "x": -74,
+        "z": -14,
+        "y": 4
+      }
+    }
+  ],
+  "errors": [],
+  "rendererErrors": []
+}

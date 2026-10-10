@@ -80,6 +80,21 @@ test("five authenticated players and eight isolated spectators receive the corre
           .every((m) => m.spectator),
       ),
     );
+    const snapshots = (client) =>
+      client.messages.filter((m) => m.type === "snapshot").length;
+    const playerBefore = snapshots(players[0]),
+      viewerBefore = snapshots(viewers[0]);
+    await new Promise((r) => setTimeout(r, 450));
+    const playerUpdates = snapshots(players[0]) - playerBefore;
+    const viewerUpdates = snapshots(viewers[0]) - viewerBefore;
+    assert.ok(
+      playerUpdates >= 8,
+      "competitors keep responsive authoritative updates",
+    );
+    assert.ok(
+      viewerUpdates > 0 && viewerUpdates <= 6,
+      `spectator bandwidth must be capped independently; received ${viewerUpdates} updates`,
+    );
     instance.referee.match.phase = "playing";
     for (const p of instance.referee.match.players.slice(1)) p.hp = 0;
     instance.referee.match.checkRoundEnd();
@@ -112,7 +127,13 @@ test("five authenticated players and eight isolated spectators receive the corre
       "a final ID cannot change when the next qualifying season opens",
     );
     clock += 60001;
-    await until(() => instance.referee === null);
+    await until(
+      () =>
+        instance.referee === null &&
+        viewers.every((v) =>
+          v.messages.some((m) => m.type === "broadcast-ended"),
+        ),
+    );
     assert.ok(viewers[0].messages.some((m) => m.type === "broadcast-ended"));
     assert.equal(
       instance.championship.state.players.a.games,

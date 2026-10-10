@@ -44,7 +44,7 @@ export async function createHCSServer({
         ws.close(1013, "Connection is too slow");
         return;
       }
-      ws.send(JSON.stringify(data));
+      ws.send(typeof data === "string" ? data : JSON.stringify(data));
     }
   };
   const server = http.createServer(async (req, res) => {
@@ -292,8 +292,12 @@ export async function createHCSServer({
       }
     });
   });
+  let broadcastTick = 0;
   const timer = setInterval(async () => {
     try {
+      // Keep authoritative physics and competitors at 30Hz. The broadcast
+      // needs only 10Hz: clients interpolate, and the 20-second feed stays intact.
+      const spectatorUpdate = broadcastTick++ % 3 === 0;
       const time = now(),
         before = JSON.stringify([
           championship.state.phase,
@@ -374,20 +378,21 @@ export async function createHCSServer({
           );
           dirty = true;
         }
+        const packet = JSON.stringify({
+          type: "snapshot",
+          tournament: false,
+          state,
+          mapId: m.mapId,
+          matchId: m.id,
+          epoch: m.epoch,
+          frame: ++m.frame,
+          profiles: m.referee.match.ids.map(
+            (id) => championship.state.players[id],
+          ),
+        });
         for (const [ws, c] of clients)
           if (!c.watching && !c.exited && m.referee.match.ids.includes(c.id))
-            send(ws, {
-              type: "snapshot",
-              tournament: false,
-              state,
-              mapId: m.mapId,
-              matchId: m.id,
-              epoch: m.epoch,
-              frame: ++m.frame,
-              profiles: m.referee.match.ids.map(
-                (id) => championship.state.players[id],
-              ),
-            });
+            send(ws, packet);
         if (m.finishedAt && time - m.finishedAt > 10000) matches.delete(room);
       }
       if (referee) {
@@ -409,7 +414,15 @@ export async function createHCSServer({
           championship.postpone();
           dirty = true;
         }
-        const delayed = referee.feed.at(time);
+        const delayed = spectatorUpdate ? referee.feed.at(time) : null;
+        const profiles = referee.match.ids.map((id) => ({
+          id,
+          name: championship.state.players[id]?.name || "Player",
+          color: championship.state.players[id]?.color || "408faf",
+        }));
+        // Encode once per audience, rather than serializing the same world
+        // separately for every spectator on the referee's simulation thread.
+        let livePacket, delayedPacket;
         for (const [ws, c] of clients) {
           const view = c.exited
             ? null
@@ -421,19 +434,23 @@ export async function createHCSServer({
                   )
                 ? state
                 : null;
-          if (view)
-            send(ws, {
-              type: "snapshot",
-              state: view,
-              mapId: "facility",
-              matchId: finalId,
-              profiles: referee.match.ids.map((id) => ({
-                id,
-                name: championship.state.players[id]?.name || "Player",
-                color: championship.state.players[id]?.color || "408faf",
-              })),
-              spectator: c.watching,
-            });
+          if (view) {
+            const encode = () =>
+              JSON.stringify({
+                type: "snapshot",
+                state: view,
+                mapId: "facility",
+                matchId: finalId,
+                profiles,
+                spectator: c.watching,
+              });
+            send(
+              ws,
+              c.watching
+                ? (delayedPacket ??= encode())
+                : (livePacket ??= encode()),
+            );
+          }
         }
       }
       if (

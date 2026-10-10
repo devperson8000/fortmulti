@@ -1,10 +1,22 @@
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 
+// A busy renderer can delay timers and the delivery of already queued heartbeats.
+// Verify silence for six more seconds before treating it as a lost connection.
+export function peerExpired(peer,now,loopGapMs=0){
+ if(loopGapMs>2000)peer.resumeGraceUntil=now+6000;
+ if(now-peer.lastSeen<=19000){peer.silentSince=null;return false;}
+ if(peer.silentSince==null)peer.silentSince=now;
+ return now>=Math.max(peer.silentSince+6000,peer.resumeGraceUntil||0);
+}
+
 // Cadence is intentionally capped below Supabase Free's 100 events/s ceiling.
 // The remaining budget covers presence hellos and host-only latency probes.
-export function networkCadence(playerCount=2){
+export function networkCadence(playerCount=2,{local=false}={}){
  const players=clamp(Math.floor(Number(playerCount)||2),2,8);
  const control={helloMs:3000,pingMs:1500};
+ // BroadcastChannel has no hosted fan-out quota; never throttle local input
+ // to the Supabase free-tier budget. Official matches use their own socket.
+ if(local)return {...control,inputMs:33,snapshotMs:66};
  if(players===2)return {...control,inputMs:33,snapshotMs:80};
  if(players===3)return {...control,inputMs:110,snapshotMs:100};
  if(players===4)return {...control,inputMs:260,snapshotMs:200};

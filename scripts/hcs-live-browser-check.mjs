@@ -142,6 +142,12 @@ try {
     { timeout: 65000 },
   );
   assert.equal(service.referee.match.players.length, 5);
+  assert.ok(
+    service.referee.match.players.every(
+      (p) => p.hp === 100 && p.air === "landed",
+    ),
+    "all five HCS players survive their natural pod walkouts",
+  );
   assert.equal(
     await player.evaluate(() => document.body.dataset.camera),
     "firstPerson",

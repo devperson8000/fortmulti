@@ -214,8 +214,12 @@ export class MatchCharacterRenderer{
  _tint(instance,value){
   instance.outfit??=createCharacterOutfit(instance.model);instance.bodyMaterials=instance.outfit.materials;applyCharacterOutfit(instance.outfit,value);instance.color=instance.outfit.color;
  }
- update(players=[],{localId='',hideId='',phase='playing',dt=.016}={}){
+ update(players=[],{localId='',hideId='',phase='playing',dt=.016,viewProjection=null}={}){
   if(!this.ready)return;
+  if(viewProjection){
+   this.characterFrustum??=new THREE.Frustum();this.characterProjection??=new THREE.Matrix4();this.characterBounds??=new THREE.Box3();
+   this.characterFrustum.setFromProjectionMatrix(this.characterProjection.fromArray(viewProjection));
+  }
   if(this.arms)applyCharacterOutfit(this.arms.outfit,players.find(p=>String(p.id)===String(localId))?.color);
   const active=new Set();
   for(const p of players){
@@ -224,6 +228,14 @@ export class MatchCharacterRenderer{
    if(!instance){instance=this._create(id,p);this.instances.set(id,instance);}
    this._tint(instance,p.color);
    const opacity=Number.isFinite(p.cinematicOpacity)?clamp(p.cinematicOpacity,0,1):1;instance.holder.visible=id!==String(hideId)&&opacity>.001;instance.holder.position.set(p.p?.[0]||0,p.p?.[1]||0,p.p?.[2]||0);instance.holder.rotation.y=Number.isFinite(p.yaw)?p.yaw:0;
+   if(instance.holder.visible&&viewProjection){
+    const position=instance.holder.position;
+    // Conservative bounds include the gun, extended arms and raised salute.
+    // Cull before animation/IK as well as before submitting skinned vertices.
+    this.characterBounds.min.set(position.x-2,position.y-.4,position.z-2);
+    this.characterBounds.max.set(position.x+2,position.y+2.5,position.z+2);
+    instance.holder.visible=this.characterFrustum.intersectsBox(this.characterBounds);
+   }
    if(!instance.holder.visible){instance.contactShadow.visible=false;continue;}
    if(instance.cinematicOpacity!==opacity){for(const material of instance.bodyMaterials){const base=material.userData.cinematicBase;material.opacity=base.opacity*opacity;material.transparent=base.transparent||opacity<.999;material.depthWrite=base.depthWrite&&opacity>.99;}instance.cinematicOpacity=opacity;}
    const animation=characterLocomotion(p),motion=stepMotionPresentation(instance.motion,p,dt);instance.model.rotation.x=motion.lean;instance.model.rotation.z=-motion.strafe-motion.turn;

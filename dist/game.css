@@ -80,6 +80,27 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .gunfight-map .wood {display:none!important}
 .gunfight-map .construction-controls{display:none!important}
 
+/* Scale the minimap's canvas with its card, including short laptop windows. */
+body:not(.in-lobby)>footer{left:14px;width:calc(100% - 336px);line-height:1.6}
+#mapbox canvas{display:block;width:100%;height:auto;aspect-ratio:1}
+@media(max-height:550px){
+ #mapbox{top:12px;right:14px;width:100px}
+ #mapbox>b{font-size:8px;letter-spacing:1px;padding:4px}
+ #mapbox>div{padding:5px;font-size:9px}
+ #inventory{bottom:48px;right:14px}
+ footer{display:none}
+ body:not(.in-lobby) #chatbox{bottom:8px;right:14px;width:200px}
+}
+@media(max-height:420px){
+ #inventory{filter:none}
+ .ammo{position:fixed;top:14px;right:130px;width:200px;min-width:0}
+ .ammo>span{font-size:30px}
+ .ammo>b{font-size:9px;letter-spacing:1px}
+}
+@media(max-width:480px){
+ #health{bottom:270px}
+}
+
 /* The compass follows the camera each frame; no easing or north-wrap animation. */
 #compass{position:absolute;left:50%;top:0;transform:translateX(-50%);width:min(300px,36vw);height:53px;overflow:hidden;text-align:center;letter-spacing:1px;contain:layout paint}
 .compass-tape{position:absolute;left:50%;top:7px;width:0;height:24px}

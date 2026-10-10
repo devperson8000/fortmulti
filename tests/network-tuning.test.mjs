@@ -4,6 +4,14 @@ import {readFile} from 'node:fs/promises';
 
 const tuning=await import('../public/network-tuning.js').catch(()=>({}));
 
+test('local party inputs stay responsive with eight players without applying hosted broadcast limits',()=>{
+ for(const players of [2,5,8]){
+  const cadence=tuning.networkCadence(players,{local:true});
+  assert.ok(cadence.inputMs<=34,'local movement must arrive every simulation tick');
+  assert.ok(cadence.snapshotMs<=67,'local presentation must update at least 15 times per second');
+ }
+});
+
 test('adaptive cadence stays under the Supabase Free Realtime event ceiling',()=>{
  assert.equal(typeof tuning.networkCadence,'function');
  for(const players of [2,3,4,5,6,7,8]){
@@ -106,4 +114,23 @@ test('sniper terminal state stays event-driven and out of continuous input paylo
  const players=4,{inputMs,snapshotMs,helloMs,pingMs}=tuning.networkCadence(players);
  const eventsPerSecond=players*(players-1)*(1000/inputMs)+players*(1000/snapshotMs)+players*players*(1000/helloMs)+2*players*(1000/pingMs);
  assert.ok(eventsPerSecond<=95);
+});
+
+test('presence timeout allows queued messages to recover after a long renderer stall',()=>{
+ assert.equal(typeof tuning.peerExpired,'function');
+ const peer={lastSeen:0};
+ assert.equal(tuning.peerExpired(peer,24000,24000),false);
+ assert.equal(tuning.peerExpired(peer,24033,33),false);
+ peer.lastSeen=24040;
+ assert.equal(tuning.peerExpired(peer,24100,67),false);
+});
+test('silent peers expire after a bounded verification grace and explicit activity resets it',()=>{
+ assert.equal(typeof tuning.peerExpired,'function');
+ const peer={lastSeen:0};
+ assert.equal(tuning.peerExpired(peer,19001,33),false);
+ assert.equal(tuning.peerExpired(peer,24999,33),false);
+ assert.equal(tuning.peerExpired(peer,25001,33),true);
+ peer.lastSeen=25002;
+ assert.equal(tuning.peerExpired(peer,25003,33),false);
+ assert.equal(tuning.peerExpired(peer,44004,33),false);
 });

@@ -1,0 +1,231 @@
+{
+  "errors": [],
+  "results": [
+    {
+      "map": "facility",
+      "players": 8,
+      "renderedBrowsers": 1,
+      "quality": "medium",
+      "samples": 26,
+      "p50ms": 249.89999999999964,
+      "p95ms": 266.60000000000036,
+      "cost": {
+        "update": {
+          "total": 2.199999749660492,
+          "calls": 27
+        },
+        "render": {
+          "total": 92.20000022649765,
+          "calls": 27
+        },
+        "renderFirstPersonWeapon": {
+          "total": 26.20000010728836,
+          "calls": 27
+        }
+      },
+      "contextLost": false,
+      "status": {
+        "id": "facility",
+        "render": {
+          "calls": 40,
+          "colorCalls": 40,
+          "triangles": 6420
+        }
+      },
+      "pixels": [
+        1088,
+        612
+      ],
+      "hot": [
+        {
+          "name": "(program)",
+          "url": "",
+          "samples": 4467
+        },
+        {
+          "name": "update",
+          "url": "http://127.0.0.1:4173/reactor-environment.js",
+          "samples": 22
+        },
+        {
+          "name": "frame",
+          "url": "http://127.0.0.1:4173/engine.js",
+          "samples": 13
+        },
+        {
+          "name": "rayCollider",
+          "url": "http://127.0.0.1:4173/collision-shapes.js",
+          "samples": 8
+        },
+        {
+          "name": "intersectsBox",
+          "url": "http://127.0.0.1:4173/vendor/three/build/three.core.js",
+          "samples": 7
+        },
+        {
+          "name": "box",
+          "url": "http://127.0.0.1:4173/engine.js",
+          "samples": 6
+        },
+        {
+          "name": "tri",
+          "url": "http://127.0.0.1:4173/engine.js",
+          "samples": 5
+        },
+        {
+          "name": "clamp",
+          "url": "http://127.0.0.1:4173/vendor/three/build/three.core.js",
+          "samples": 4
+        },
+        {
+          "name": "bindTexture",
+          "url": "",
+          "samples": 4
+        },
+        {
+          "name": "(garbage collector)",
+          "url": "",
+          "samples": 4
+        },
+        {
+          "name": "clamp",
+          "url": "http://127.0.0.1:4173/vendor/three/build/three.core.js",
+          "samples": 3
+        },
+        {
+          "name": "setProgram",
+          "url": "http://127.0.0.1:4173/vendor/three/build/three.module.js",
+          "samples": 3
+        },
+        {
+          "name": "poseSoldierArms",
+          "url": "http://127.0.0.1:4173/soldier-arms.js",
+          "samples": 3
+        },
+        {
+          "name": "texSubImage2D",
+          "url": "",
+          "samples": 3
+        },
+        {
+          "name": "countdown",
+          "url": "http://127.0.0.1:4173/hcs-client.js",
+          "samples": 3
+        }
+      ]
+    },
+    {
+      "map": "island",
+      "players": 8,
+      "renderedBrowsers": 1,
+      "quality": "medium",
+      "samples": 104,
+      "p50ms": 50.10000000000218,
+      "p95ms": 83.20000000000073,
+      "cost": {
+        "update": {
+          "total": 4.099999964237213,
+          "calls": 105
+        },
+        "render": {
+          "total": 46.699999928474426,
+          "calls": 105
+        },
+        "renderFirstPersonWeapon": {
+          "total": 95.69999939203262,
+          "calls": 105
+        }
+      },
+      "contextLost": false,
+      "status": {
+        "id": "island",
+        "render": {
+          "calls": 40,
+          "colorCalls": 40,
+          "triangles": 6420
+        }
+      },
+      "pixels": [
+        1088,
+        612
+      ],
+      "hot": [
+        {
+          "name": "(program)",
+          "url": "",
+          "samples": 4173
+        },
+        {
+          "name": "frame",
+          "url": "http://127.0.0.1:4173/engine.js",
+          "samples": 26
+        },
+        {
+          "name": "fill",
+          "url": "",
+          "samples": 19
+        },
+        {
+          "name": "box",
+          "url": "http://127.0.0.1:4173/engine.js",
+          "samples": 12
+        },
+        {
+          "name": "minimap",
+          "url": "http://127.0.0.1:4173/engine.js",
+          "samples": 11
+        },
+        {
+          "name": "arc",
+          "url": "",
+          "samples": 7
+        },
+        {
+          "name": "renderFirstPersonWeapon",
+          "url": "http://127.0.0.1:4173/match-character-renderer.js",
+          "samples": 5
+        },
+        {
+          "name": "updateMatrixWorld",
+          "url": "http://127.0.0.1:4173/vendor/three/build/three.core.js",
+          "samples": 5
+        },
+        {
+          "name": "drawArrays",
+          "url": "",
+          "samples": 5
+        },
+        {
+          "name": "tri",
+          "url": "http://127.0.0.1:4173/engine.js",
+          "samples": 4
+        },
+        {
+          "name": "",
+          "url": "",
+          "samples": 4
+        },
+        {
+          "name": "poseSoldierArms",
+          "url": "http://127.0.0.1:4173/soldier-arms.js",
+          "samples": 3
+        },
+        {
+          "name": "pixelStorei",
+          "url": "",
+          "samples": 3
+        },
+        {
+          "name": "texSubImage2D",
+          "url": "",
+          "samples": 3
+        },
+        {
+          "name": "updateMatrixWorld",
+          "url": "http://127.0.0.1:4173/vendor/three/build/three.core.js",
+          "samples": 3
+        }
+      ]
+    }
+  ]
+}

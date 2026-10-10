@@ -158,7 +158,7 @@ if(canvas){
  function frame(){
   requestAnimationFrame(frame);
   const dt=Math.min(clock.getDelta(),.05);
-  if(document.hidden||!window.Duel?.lobby)return;
+  if(document.hidden||!window.Duel?.lobby||document.body.classList.contains('hcs-open'))return;
   const party=Array.isArray(window.Duel?.party)?window.Duel.party:[];
   ensureInstances(party);
   const preview=Boolean(window.Duel?.characterPreview),[width,height]=resize();setCamera(preview,width,height,party.length);

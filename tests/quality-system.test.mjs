@@ -30,3 +30,12 @@ test('low quality reduces actual pixel work even at device pixel ratio one',asyn
 test('all presets avoid persistent MSAA cost when lowering quality during gameplay',async()=>{
  const {graphicsContextOptions}=await import('../public/quality-system.js');assert.equal(typeof graphicsContextOptions,'function');for(const level of ['auto','low','medium','high'])assert.equal(graphicsContextOptions(level).antialias,false);
 });
+
+test('retina and ultrawide windows stay inside a finite pixel budget without stretching',async()=>{
+ const {renderDimensions}=await import('../public/quality-system.js');
+ for(const [level,budget] of [['low',960*540],['medium',1600*900],['high',1920*1080]]){
+  const size=renderDimensions(3840,2160,2,QUALITY_PRESETS[level]);
+  assert.ok(size.width*size.height<=budget+3840,`${level} wastes work rendering ${size.width*size.height} pixels`);
+  assert.ok(Math.abs(size.width/size.height-16/9)<.005);
+ }
+});

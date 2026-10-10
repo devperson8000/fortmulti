@@ -284,6 +284,37 @@
 .hcs-match footer {
   visibility: hidden;
 }
+.hcs-match #inventory,
+.hcs-match #health {
+  bottom: 110px;
+}
+.hcs-match #inventory { filter: none; }
+@media (max-height: 550px) {
+  .hcs-match .ammo {
+    position: fixed;
+    top: 14px;
+    right: 132px;
+    width: 200px;
+    min-width: 0;
+  }
+}
+@media (max-width: 550px) {
+  .hcs-match #inventory { bottom: 175px; }
+  .hcs-match #health { bottom: 430px; }
+}
+@media (max-height: 420px) and (min-width: 551px) {
+  .hcs-match #inventory, .hcs-match #health { bottom: 80px; }
+  #hcs-broadcast {
+    width: calc(100vw - 24px);
+    bottom: 8px;
+    padding: 8px;
+    gap: 6px;
+    font-size: 9px;
+    flex-wrap: nowrap;
+  }
+  #hcs-broadcast select { min-width: 100px; max-width: 140px; }
+  #hcs-broadcast button, #hcs-broadcast select { padding: 6px; font-size: 9px; }
+}
 #hcs-broadcast-label {
   white-space: nowrap;
 }

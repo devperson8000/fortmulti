@@ -1,0 +1,671 @@
+[
+  {
+    "size": {
+      "width": 854,
+      "height": 480
+    },
+    "gunfight": false,
+    "hcs": false,
+    "map": {
+      "left": 738.655029296875,
+      "right": 841.344970703125,
+      "top": 11.139183044433594,
+      "bottom": 167.86080169677734
+    },
+    "ammo": {
+      "left": 484.4375,
+      "right": 840,
+      "top": 185,
+      "bottom": 275
+    },
+    "inventory": {
+      "left": 484.4375,
+      "right": 840,
+      "top": 185,
+      "bottom": 432
+    },
+    "health": {
+      "left": 32,
+      "right": 287,
+      "top": 335,
+      "bottom": 405
+    },
+    "broadcast": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "chat": {
+      "left": 555,
+      "right": 840,
+      "top": 413,
+      "bottom": 462
+    },
+    "footer": null,
+    "slot": {
+      "left": 570,
+      "right": 620,
+      "top": 287,
+      "bottom": 345
+    },
+    "slotLabel": {
+      "left": 584,
+      "right": 606,
+      "top": 326,
+      "bottom": 336
+    }
+  },
+  {
+    "size": {
+      "width": 854,
+      "height": 480
+    },
+    "gunfight": true,
+    "hcs": false,
+    "map": {
+      "left": 738.655029296875,
+      "right": 841.344970703125,
+      "top": 11.139183044433594,
+      "bottom": 167.86080169677734
+    },
+    "ammo": {
+      "left": 570,
+      "right": 840,
+      "top": 198,
+      "bottom": 288
+    },
+    "inventory": {
+      "left": 570,
+      "right": 840,
+      "top": 198,
+      "bottom": 432
+    },
+    "health": {
+      "left": 32,
+      "right": 287,
+      "top": 335,
+      "bottom": 405
+    },
+    "broadcast": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "chat": {
+      "left": 555,
+      "right": 840,
+      "top": 413,
+      "bottom": 462
+    },
+    "footer": null,
+    "slot": {
+      "left": 570,
+      "right": 620,
+      "top": 300,
+      "bottom": 358
+    },
+    "slotLabel": {
+      "left": 584,
+      "right": 606,
+      "top": 339,
+      "bottom": 349
+    }
+  },
+  {
+    "size": {
+      "width": 854,
+      "height": 480
+    },
+    "gunfight": true,
+    "hcs": true,
+    "map": {
+      "left": 738.655029296875,
+      "right": 841.344970703125,
+      "top": 11.139183044433594,
+      "bottom": 167.86080169677734
+    },
+    "ammo": {
+      "left": 522,
+      "right": 722,
+      "top": 14,
+      "bottom": 104
+    },
+    "inventory": {
+      "left": 570,
+      "right": 840,
+      "top": 238,
+      "bottom": 370
+    },
+    "health": {
+      "left": 32,
+      "right": 287,
+      "top": 300,
+      "bottom": 370
+    },
+    "broadcast": {
+      "left": 138.34375,
+      "right": 715.65625,
+      "top": 391,
+      "bottom": 458
+    },
+    "chat": {
+      "left": 555,
+      "right": 840,
+      "top": 413,
+      "bottom": 462
+    },
+    "footer": null,
+    "slot": {
+      "left": 570,
+      "right": 620,
+      "top": 238,
+      "bottom": 296
+    },
+    "slotLabel": {
+      "left": 584,
+      "right": 606,
+      "top": 277,
+      "bottom": 287
+    }
+  },
+  {
+    "size": {
+      "width": 1280,
+      "height": 720
+    },
+    "gunfight": false,
+    "hcs": false,
+    "map": {
+      "left": 1069.8582763671875,
+      "right": 1254.1417236328125,
+      "top": 22.44809341430664,
+      "bottom": 272.5519142150879
+    },
+    "ammo": {
+      "left": 896.4375,
+      "right": 1252,
+      "top": 385,
+      "bottom": 486
+    },
+    "inventory": {
+      "left": 896.4375,
+      "right": 1252,
+      "top": 385,
+      "bottom": 653
+    },
+    "health": {
+      "left": 32,
+      "right": 287,
+      "top": 575,
+      "bottom": 645
+    },
+    "broadcast": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "chat": {
+      "left": 973,
+      "right": 1258,
+      "top": 653,
+      "bottom": 702
+    },
+    "footer": {
+      "left": 14,
+      "right": 958,
+      "top": 669,
+      "bottom": 701
+    },
+    "slot": {
+      "left": 922,
+      "right": 984,
+      "top": 498,
+      "bottom": 566
+    },
+    "slotLabel": {
+      "left": 936,
+      "right": 970,
+      "top": 545,
+      "bottom": 555
+    }
+  },
+  {
+    "size": {
+      "width": 1280,
+      "height": 720
+    },
+    "gunfight": true,
+    "hcs": false,
+    "map": {
+      "left": 1069.8582763671875,
+      "right": 1254.1417236328125,
+      "top": 22.44809341430664,
+      "bottom": 272.5519142150879
+    },
+    "ammo": {
+      "left": 922,
+      "right": 1252,
+      "top": 398,
+      "bottom": 499
+    },
+    "inventory": {
+      "left": 922,
+      "right": 1252,
+      "top": 398,
+      "bottom": 653
+    },
+    "health": {
+      "left": 32,
+      "right": 287,
+      "top": 575,
+      "bottom": 645
+    },
+    "broadcast": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "chat": {
+      "left": 973,
+      "right": 1258,
+      "top": 653,
+      "bottom": 702
+    },
+    "footer": {
+      "left": 14,
+      "right": 958,
+      "top": 669,
+      "bottom": 701
+    },
+    "slot": {
+      "left": 922,
+      "right": 984,
+      "top": 511,
+      "bottom": 579
+    },
+    "slotLabel": {
+      "left": 936,
+      "right": 970,
+      "top": 558,
+      "bottom": 568
+    }
+  },
+  {
+    "size": {
+      "width": 1280,
+      "height": 720
+    },
+    "gunfight": true,
+    "hcs": true,
+    "map": {
+      "left": 1069.8582763671875,
+      "right": 1254.1417236328125,
+      "top": 22.44809341430664,
+      "bottom": 272.5519142150879
+    },
+    "ammo": {
+      "left": 922,
+      "right": 1252,
+      "top": 355,
+      "bottom": 456
+    },
+    "inventory": {
+      "left": 922,
+      "right": 1252,
+      "top": 355,
+      "bottom": 610
+    },
+    "health": {
+      "left": 32,
+      "right": 287,
+      "top": 540,
+      "bottom": 610
+    },
+    "broadcast": {
+      "left": 336.171875,
+      "right": 943.828125,
+      "top": 631,
+      "bottom": 698
+    },
+    "chat": {
+      "left": 973,
+      "right": 1258,
+      "top": 653,
+      "bottom": 702
+    },
+    "footer": {
+      "left": 14,
+      "right": 958,
+      "top": 669,
+      "bottom": 701
+    },
+    "slot": {
+      "left": 922,
+      "right": 984,
+      "top": 468,
+      "bottom": 536
+    },
+    "slotLabel": {
+      "left": 936,
+      "right": 970,
+      "top": 515,
+      "bottom": 525
+    }
+  },
+  {
+    "size": {
+      "width": 390,
+      "height": 844
+    },
+    "gunfight": false,
+    "hcs": false,
+    "map": {
+      "left": 256.4382629394531,
+      "right": 377.5617370605469,
+      "top": 12.984015464782715,
+      "bottom": 195.01599788665771
+    },
+    "ammo": {
+      "left": 53.234375,
+      "right": 376,
+      "top": 585,
+      "bottom": 675
+    },
+    "inventory": {
+      "left": 53.234375,
+      "right": 376,
+      "top": 585,
+      "bottom": 815
+    },
+    "health": {
+      "left": 18,
+      "right": 168,
+      "top": 504,
+      "bottom": 574
+    },
+    "broadcast": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "chat": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "footer": null,
+    "slot": {
+      "left": 126,
+      "right": 172,
+      "top": 687,
+      "bottom": 735
+    },
+    "slotLabel": null
+  },
+  {
+    "size": {
+      "width": 390,
+      "height": 844
+    },
+    "gunfight": true,
+    "hcs": false,
+    "map": {
+      "left": 256.4382629394531,
+      "right": 377.5617370605469,
+      "top": 12.984015464782715,
+      "bottom": 195.01599788665771
+    },
+    "ammo": {
+      "left": 126,
+      "right": 376,
+      "top": 591,
+      "bottom": 681
+    },
+    "inventory": {
+      "left": 126,
+      "right": 376,
+      "top": 591,
+      "bottom": 815
+    },
+    "health": {
+      "left": 18,
+      "right": 168,
+      "top": 504,
+      "bottom": 574
+    },
+    "broadcast": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "chat": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "footer": null,
+    "slot": {
+      "left": 126,
+      "right": 172,
+      "top": 693,
+      "bottom": 741
+    },
+    "slotLabel": null
+  },
+  {
+    "size": {
+      "width": 390,
+      "height": 844
+    },
+    "gunfight": true,
+    "hcs": true,
+    "map": {
+      "left": 256.4382629394531,
+      "right": 377.5617370605469,
+      "top": 12.984015464782715,
+      "bottom": 195.01599788665771
+    },
+    "ammo": {
+      "left": 126,
+      "right": 376,
+      "top": 445,
+      "bottom": 535
+    },
+    "inventory": {
+      "left": 126,
+      "right": 376,
+      "top": 445,
+      "bottom": 669
+    },
+    "health": {
+      "left": 18,
+      "right": 168,
+      "top": 344,
+      "bottom": 414
+    },
+    "broadcast": {
+      "left": 12,
+      "right": 378,
+      "top": 693,
+      "bottom": 822
+    },
+    "chat": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "footer": null,
+    "slot": {
+      "left": 126,
+      "right": 172,
+      "top": 547,
+      "bottom": 595
+    },
+    "slotLabel": null
+  },
+  {
+    "size": {
+      "width": 667,
+      "height": 375
+    },
+    "gunfight": false,
+    "hcs": false,
+    "map": {
+      "left": 551.655029296875,
+      "right": 654.344970703125,
+      "top": 11.139183044433594,
+      "bottom": 167.86080169677734
+    },
+    "ammo": {
+      "left": 337,
+      "right": 537,
+      "top": 14,
+      "bottom": 97
+    },
+    "inventory": {
+      "left": 330.234375,
+      "right": 653,
+      "top": 199,
+      "bottom": 327
+    },
+    "health": {
+      "left": 18,
+      "right": 168,
+      "top": 270,
+      "bottom": 340
+    },
+    "broadcast": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "chat": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "footer": null,
+    "slot": {
+      "left": 403,
+      "right": 449,
+      "top": 199,
+      "bottom": 247
+    },
+    "slotLabel": null
+  },
+  {
+    "size": {
+      "width": 667,
+      "height": 375
+    },
+    "gunfight": true,
+    "hcs": false,
+    "map": {
+      "left": 551.655029296875,
+      "right": 654.344970703125,
+      "top": 11.139183044433594,
+      "bottom": 167.86080169677734
+    },
+    "ammo": {
+      "left": 337,
+      "right": 537,
+      "top": 14,
+      "bottom": 97
+    },
+    "inventory": {
+      "left": 403,
+      "right": 653,
+      "top": 205,
+      "bottom": 327
+    },
+    "health": {
+      "left": 18,
+      "right": 168,
+      "top": 270,
+      "bottom": 340
+    },
+    "broadcast": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "chat": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "footer": null,
+    "slot": {
+      "left": 403,
+      "right": 449,
+      "top": 205,
+      "bottom": 253
+    },
+    "slotLabel": null
+  },
+  {
+    "size": {
+      "width": 667,
+      "height": 375
+    },
+    "gunfight": true,
+    "hcs": true,
+    "map": {
+      "left": 551.655029296875,
+      "right": 654.344970703125,
+      "top": 11.139183044433594,
+      "bottom": 167.86080169677734
+    },
+    "ammo": {
+      "left": 335,
+      "right": 535,
+      "top": 14,
+      "bottom": 97
+    },
+    "inventory": {
+      "left": 403,
+      "right": 653,
+      "top": 173,
+      "bottom": 295
+    },
+    "health": {
+      "left": 18,
+      "right": 168,
+      "top": 225,
+      "bottom": 295
+    },
+    "broadcast": {
+      "left": 12,
+      "right": 655,
+      "top": 320,
+      "bottom": 367
+    },
+    "chat": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "footer": null,
+    "slot": {
+      "left": 403,
+      "right": 449,
+      "top": 173,
+      "bottom": 221
+    },
+    "slotLabel": null
+  }
+]

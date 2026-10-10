@@ -1,7 +1,7 @@
 export const QUALITY_PRESETS=Object.freeze({
- low:Object.freeze({pixelRatio:1,renderScale:.65,effects:40,remoteDetail:.55,shadows:false,stormSegments:40}),
- medium:Object.freeze({pixelRatio:1.25,renderScale:.85,effects:80,remoteDetail:.78,shadows:true,stormSegments:64}),
- high:Object.freeze({pixelRatio:1.6,renderScale:1,effects:144,remoteDetail:1,shadows:true,stormSegments:96})
+ low:Object.freeze({pixelRatio:1,renderScale:.65,maxPixels:960*540,effects:40,remoteDetail:.55,shadows:false,stormSegments:40}),
+ medium:Object.freeze({pixelRatio:1.25,renderScale:.85,maxPixels:1600*900,effects:80,remoteDetail:.78,shadows:true,stormSegments:64}),
+ high:Object.freeze({pixelRatio:1.6,renderScale:1,maxPixels:1920*1080,effects:144,remoteDetail:1,shadows:true,stormSegments:96})
 });
 
 const LEVELS=['low','medium','high'];
@@ -32,7 +32,7 @@ export function qualityPreset(selection,autoState){
  return QUALITY_PRESETS[selection==='auto'?autoState.level:validLevel(selection)];
 }
 
-export function renderDimensions(width,height,deviceRatio,preset){const ratio=Math.min(Math.max(.5,Number(deviceRatio)||1),preset.pixelRatio)*preset.renderScale;return {width:Math.max(1,Math.round(width*ratio)),height:Math.max(1,Math.round(height*ratio))};}
+export function renderDimensions(width,height,deviceRatio,preset){let ratio=Math.min(Math.max(.5,Number(deviceRatio)||1),preset.pixelRatio)*preset.renderScale;const pixels=width*height*ratio*ratio;if(pixels>preset.maxPixels)ratio*=Math.sqrt(preset.maxPixels/pixels);return {width:Math.max(1,Math.round(width*ratio)),height:Math.max(1,Math.round(height*ratio))};}
 
 // Context MSAA cannot be disabled when the user lowers quality mid-session.
 export function graphicsContextOptions(){return {antialias:false,alpha:false,powerPreference:'high-performance'};}

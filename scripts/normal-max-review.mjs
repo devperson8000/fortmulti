@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
-const out = "docs/reviews/hcs-2026-10-10";
+const out = process.env.GAME_ARTIFACTS || "docs/reviews/hcs-2026-10-10";
 await mkdir(out, { recursive: true });
 const browser = await chromium.launch({
   executablePath: "/usr/bin/chromium",
@@ -88,6 +88,12 @@ async function open(index) {
     }
     requestAnimationFrame(sample);
   }, index);
+  if (index > Number(process.env.REVIEW_RENDER_LIMIT || 8))
+    await page.addInitScript(() => {
+      const raf = requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = (callback) =>
+        callback.name === "frame" ? 0 : raf(callback);
+    });
   await page.goto("http://127.0.0.1:4173/?local=1");
   await page.waitForFunction(() => window.Game && window.Duel);
   await page.evaluate(async () => {
@@ -171,6 +177,7 @@ try {
     }, map);
     assert.equal(board.length, 8);
     assert.ok(board.every((p) => p.chosen && p.boarded));
+    console.log(map, "eight pods reserved");
     await host.waitForFunction(
       () =>
         ["pod_opening", "exiting", "saluting", "match_active"].includes(
@@ -187,6 +194,13 @@ try {
       {},
       { timeout: 150000 },
     );
+    assert.ok(
+      await host.evaluate(() =>
+        window.__match.players.every((p) => p.hp === 100 && p.air === "landed"),
+      ),
+      "all eight players must survive deployment",
+    );
+    console.log(map, "all eight players alive after deployment");
     await host.evaluate(() => {
       window.__frames = [];
     });
@@ -195,13 +209,14 @@ try {
         window.__frames = [];
       });
     // Test-only loadout fixture exercises existing models; this does not alter product loot.
-    await host.evaluate(() => {
+    await host.evaluate(async () => {
+      const { WEAPON_PROFILES } = await import("/weapon-system.js");
       for (const p of window.__match.players) {
         p.inventory = ["ar", "shotgun", "smg", "sniper", "ar_sentinel"].map(
           (type, i) => ({
             id: p.id + ":review:" + i,
             type,
-            ammo: type === "shotgun" ? 6 : type === "sniper" ? 5 : 30,
+            ammo: WEAPON_PROFILES[type].magazineCapacity,
           }),
         );
         p.inventoryRevision++;
@@ -209,9 +224,19 @@ try {
       }
     });
     const guest = pages[1];
+    const guestId = await guest.evaluate(() => window.__conn.id);
     await guest.evaluate(() => window.Game.startAudio());
     await guest.waitForFunction(
       () => window.Game.inventoryState().inventory.filter(Boolean).length === 5,
+    );
+    // Native host gameplay can begin before a guest has presented its last
+    // cinematic frame. Send gameplay keys only once that guest unlocks input.
+    await guest.waitForFunction(
+      (initialSlot) =>
+        window.Game.input().slot === initialSlot &&
+        document.body.dataset.camera === "firstPerson",
+      map === "facility" ? 1 : 0,
+      { timeout: 60000 },
     );
     for (const [key, label] of [
       ["1", "ar"],
@@ -221,7 +246,26 @@ try {
       ["5", "sentinel"],
     ]) {
       await guest.keyboard.press(key);
-      await guest.waitForTimeout(650);
+      const weapon = {
+        ar: "ar",
+        shotgun: "shotgun",
+        smg: "smg",
+        sniper: "sniper",
+        sentinel: "ar_sentinel",
+      }[label];
+      await host.waitForFunction(
+        ({ id, weapon }) => {
+          const p = window.__match.players.find((p) => p.id === id);
+          return p.weapon === weapon && p.equip === 0;
+        },
+        { id: guestId, weapon },
+        { timeout: 60000 },
+      );
+      await guest.waitForFunction(
+        (weapon) => window.Game.pose().weapon === weapon,
+        weapon,
+        { timeout: 60000 },
+      );
       await guest.screenshot({
         path: out + "/normal-" + map + "-" + label + ".png",
       });
@@ -239,6 +283,14 @@ try {
     });
     await guest.mouse.up({ button: "right" });
     await guest.keyboard.press("1");
+    await host.waitForFunction(
+      (id) => {
+        const p = window.__match.players.find((p) => p.id === id);
+        return p.weapon === "ar" && p.equip === 0;
+      },
+      guestId,
+      { timeout: 60000 },
+    );
     await guest.keyboard.down("Shift");
     await guest.keyboard.down("w");
     await guest.waitForTimeout(800);
@@ -248,10 +300,32 @@ try {
     await guest.keyboard.up("Shift");
     await guest.mouse.move(430, 220);
     await guest.mouse.down();
-    await guest.waitForTimeout(600);
+    await host.waitForFunction(
+      (id) => {
+        const p = window.__match.players.find((p) => p.id === id);
+        return p.inventory[0].ammo < 30;
+      },
+      guestId,
+      { timeout: 60000 },
+    );
     await guest.mouse.up();
     await guest.keyboard.press("r");
-    await guest.waitForTimeout(2500);
+    await host.waitForFunction(
+      (id) =>
+        window.__match.events.some(
+          (e) => e.type === "reload" && e.by === id && e.weapon === "ar",
+        ),
+      guestId,
+      { timeout: 60000 },
+    );
+    await host.waitForFunction(
+      (id) => {
+        const p = window.__match.players.find((p) => p.id === id);
+        return p.reload === 0 && p.inventory[0].ammo === 30;
+      },
+      guestId,
+      { timeout: 60000 },
+    );
     await guest.screenshot({ path: out + "/normal-" + map + "-combat.png" });
     const state = await host.evaluate(() => ({
       phase: window.__match.phase,
@@ -276,18 +350,33 @@ try {
         medianMs: v[Math.floor(v.length * 0.5)] || null,
         p95Ms: v[Math.floor(v.length * 0.95)] || null,
         maxMs: v.at(-1) || null,
+        contextLost: await page.evaluate(() =>
+          document.getElementById("game").getContext("webgl2").isContextLost(),
+        ),
       });
+      assert.equal(
+        frames.at(-1).contextLost,
+        false,
+        `client ${index + 1} graphics context survives`,
+      );
     }
     results.push({
       map,
       players: 8,
-      renderedClients: 8,
+      renderedClients: Math.min(
+        8,
+        Number(process.env.REVIEW_RENDER_LIMIT || 8),
+      ),
       boarding: board,
       state,
       frames,
       audio: await guest.evaluate(() => window.__audio),
       stages: await host.evaluate(() => window.__stages),
     });
+    console.log(
+      map,
+      "weapon switching, scope, shooting, accepted reload and refill verified",
+    );
     await writeFile(
       out +
         (process.env.REVIEW_MAPS
@@ -333,6 +422,22 @@ try {
           stages: window.__stages,
           view: window.Game.deploymentView(),
           pose: window.Game.pose(),
+          input: window.Game.input(),
+          classes: document.body.className,
+          focused: document.activeElement?.id,
+          camera: document.body.dataset.camera,
+          selfId: window.__conn?.id,
+          nativePlayers: window.__match?.players.map((p) => ({
+            id: p.id,
+            hp: p.hp,
+            position: p.p,
+            air: p.air,
+            slot: p.slot,
+            weapon: p.weapon,
+            equip: p.equip,
+            input: p.input,
+            lastInput: p.lastInput,
+          })),
           phase: window.__match?.phase,
           events: window.__match?.events.slice(-30),
         })),

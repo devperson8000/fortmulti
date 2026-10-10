@@ -225,7 +225,10 @@ export class Match{
    }
    if(p.reload>0){p.reload=Math.max(0,p.reload-dt);if(!p.reload&&p.reloadWeapon){const state=p.inventory.find(w=>w?.id===p.reloadItem);if(state)state.ammo=weaponForSlot(p.inventory.indexOf(state)+1,p.inventory).magazineCapacity;p.reloadWeapon=null;p.reloadItem=null;}}
    if(i.pickupRequest&&i.pickupRequest.revision>p.lastPickupRevision){p.lastPickupRevision=i.pickupRequest.revision;this.interact(p,i);}this.advanceChestInteraction(p,i,dt);if(edgeDrop)this.dropItem(p);advanceUse(p,dt);
-   if(edgeReload)this.reloadWeapon(p);p.yaw=i.yaw;p.pitch=i.pitch;p.aim=Boolean(i.aim&&isWeaponSlot(p.slot)&&!p.reload);
+   // A released shot and the following R tap can share a delayed input packet.
+   // A full magazine cannot reload yet: consume that pulse first, then honor R.
+   const reloadAfterPulse=edgeReload&&i.firePulse&&isWeaponSlot(p.slot)&&currentAmmo(p.inventory,p.slot)===weaponForSlot(p.slot,p.inventory).magazineCapacity;
+   if(edgeReload&&!reloadAfterPulse)this.reloadWeapon(p);p.yaw=i.yaw;p.pitch=i.pitch;p.aim=Boolean(i.aim&&isWeaponSlot(p.slot)&&!p.reload);
    const inputLength=Math.hypot(i.x,i.z),len=Math.max(1,inputLength),moveX=(Math.cos(i.yaw)*i.x-Math.sin(i.yaw)*i.z)/len,moveZ=(-Math.sin(i.yaw)*i.x-Math.cos(i.yaw)*i.z)/len,currentFloor=ground(p.p[0],p.p[2],p.p[1],this.structures,this.world,this.groundGrid),groundedNow=p.p[1]<=currentFloor+.08,ramps=this.structures.filter(s=>s.type===3).map(s=>rampHeight(s,p.p[0],p.p[2])),nearWalls=nearbyColliders(this.collisionGrid,p.p[0],p.p[2],1).concat(buildWalls);
    // Ctrl owns the slide; preserve its direction/run state even when releases share a network sample.
    const slideInput=i.crouchPress||i,slideLength=Math.hypot(slideInput.x,slideInput.z),slideNorm=Math.max(1,slideLength);
@@ -243,6 +246,7 @@ export class Match{
     else if(isWeaponSlot(p.slot)){const profile=weaponForSlot(p.slot,p.inventory);if(!p.reload&&(profile.automatic||edgeFire))this.fireWeapon(p,i,Math.min(1,inputLength));}
 
    }
+   if(reloadAfterPulse)this.reloadWeapon(p);
    if(i.firePulse){p.input.fire=false;p.input.firePulse=false;}
    p.weapon=isWeaponSlot(p.slot)&&inventoryWeapon(p.inventory,p.slot)?weaponIdForSlot(p.slot,p.inventory):null;p.material=p.materials.wood;if(p.actionTime>0)p.animationState=p.action||'harvest';else if(p.use)p.animationState='consume';p.building=isBuildSlot(p.slot);p.ammo=currentAmmo(p.inventory,p.slot);recordPickupEye(p,this.elapsed);
   }
@@ -257,6 +261,22 @@ export class Match{
    }
   }
   for(const p of this.players)if(p.hp<=0&&!p.eliminated){p.eliminated=true;this.event({type:'elimination',by:null,hit:p.id,reason:'storm'});}this.checkRoundEnd();
+ }
+ tickElapsed(wallSeconds,options={}){
+  // Local host timers can be delayed by rendering. Catch up in the same small
+  // collision-safe steps used by tick(), instead of silently losing that time.
+  // Bound combat recovery after a suspension; scripted deployment follows its
+  // full wall/audio clock so music and camera cues are never capped here.
+  if(this.phase==='deployment'&&this.deployment.stage!=='landing_selection'){
+   this.tick(Number.isFinite(wallSeconds)?wallSeconds:0,options);return;
+  }
+  let remaining=clamp(Number.isFinite(wallSeconds)?wallSeconds:0,0,.25);
+  while(remaining>1e-8){
+   if(this.phase==='deployment'&&this.deployment.stage!=='landing_selection'){
+    this.tick(remaining,options);return;
+   }
+   const step=Math.min(.05,remaining);this.tick(step,options);remaining-=step;
+  }
  }
  tick(dt,{deploymentElapsed=null}={}){
   const wallStep=Number.isFinite(dt)?Math.max(0,dt):0;dt=clamp(wallStep,0,.05);if(this.phase==='done'||this.phase==='paused'||this.phase==='waiting')return;

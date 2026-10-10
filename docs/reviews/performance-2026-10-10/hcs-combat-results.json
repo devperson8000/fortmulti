@@ -1,0 +1,42 @@
+{
+  "fixture": "Controlled supported-floor positions; actual authenticated WebSocket inputs and native combat, no injected scores or elimination events",
+  "competitors": 5,
+  "shots": 16,
+  "eliminations": [
+    {
+      "type": "elimination",
+      "by": "bravo",
+      "hit": "alpha",
+      "weapon": "ar",
+      "id": 14
+    },
+    {
+      "type": "elimination",
+      "by": "bravo",
+      "hit": "charlie",
+      "weapon": "ar",
+      "id": 18
+    },
+    {
+      "type": "elimination",
+      "by": "bravo",
+      "hit": "delta",
+      "weapon": "ar",
+      "id": 24
+    },
+    {
+      "type": "elimination",
+      "by": "bravo",
+      "hit": "echo",
+      "weapon": "ar",
+      "id": 30
+    }
+  ],
+  "champion": {
+    "id": "bravo",
+    "name": "bravo",
+    "edition": 0,
+    "publishedAt": 1791666615677
+  },
+  "delayedFinalReceived": true
+}

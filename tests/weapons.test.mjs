@@ -6,6 +6,25 @@ import {Match,cameraAimOrigin} from '../public/simulation.js';
 const world={height:()=>0,obstacles:[]};
 const playing=()=>{const match=new Match(world,['a','b']);match.phase='playing';for(const p of match.players){p.air='landed';p.p[1]=0;p.deploymentState='match_active';p.slot=1;p.inventory=[...Object.entries(createLoadout()).map(([type,state])=>({id:type,type,...state})),null];p.shield=100;p.ammo=30;}match.players[0].p=[0,0,0];match.players[1].p=[0,0,-20];return match;};
 
+test('a shot followed by a reload tap coalesced into one delayed input still reloads once',async()=>{
+ const {accumulateInput}=await import('../public/network-tuning.js');
+ const m=playing(),p=m.players[0];
+ let input=accumulateInput(null,{slot:1,fire:true,reloadRevision:0});
+ input=accumulateInput(input,{slot:1,fire:false,reloadRevision:1});
+ m.input('a',input);m.tick(1/30);
+ assert.equal(m.events.filter(e=>e.type==='shot'&&e.by==='a').length,1);
+ assert.ok(p.reload>0,'reload tap must survive arriving in the same packet as the preceding shot');
+ m.tick(1/30);
+ assert.equal(m.events.filter(e=>e.type==='reload'&&e.by==='a').length,1);
+});
+
+test('a normal reload of a partially used magazine prevents simultaneous firing',()=>{
+ const m=playing(),p=m.players[0];p.inventory[0].ammo=20;
+ m.input('a',{slot:1,fire:true,firePulse:true,reloadRevision:1});m.tick(1/30);
+ assert.ok(p.reload>0);assert.equal(p.inventory[0].ammo,20);
+ assert.equal(m.events.filter(e=>e.type==='shot'&&e.by==='a').length,0);
+});
+
 test('four weapon profiles expose complete combat tuning',()=>{
  assert.deepEqual(WEAPON_ORDER,['ar','shotgun','smg','sniper']);
  for(const id of WEAPON_ORDER){const w=WEAPON_PROFILES[id];assert.ok(w.damage>0&&w.fireInterval>0&&w.reloadDuration>0&&w.magazineCapacity>0&&w.range>0);assert.equal(w.recoil.length,2);assert.ok(w.spread.ads<=w.spread.hip);}

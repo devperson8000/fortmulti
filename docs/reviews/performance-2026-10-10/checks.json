@@ -1,0 +1,23 @@
+{
+  "tests": 471,
+  "passed": 471,
+  "failed": 0,
+  "syntax": "passed",
+  "build": "passed",
+  "matchingBuiltPublicFiles": 276,
+  "hudLayouts": 12,
+  "normalRenderedClients": 8,
+  "normalMaps": [
+    "facility",
+    "island"
+  ],
+  "normalServerClients": 8,
+  "hcsCompetitors": 5,
+  "hcsSpectators": 15,
+  "minimumMeasuredSpectatorDelayMs": 20000,
+  "renderer": "Chromium SwiftShader software",
+  "liveProductionVerified": false,
+  "idleGpuDrawsBehindHcs": 0,
+  "idleGpuDrawsWhenHidden": 0,
+  "graphicsResumeVerified": true
+}

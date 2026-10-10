@@ -14,6 +14,22 @@ const loader=new GLTFLoader().register(()=>({name:'TestTextures',loadTexture:()=
 const bytes=await readFile(new URL('../public/models/Soldier.glb',import.meta.url));
 const asset=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
 const scale=1.78/new THREE.Box3().setFromObject(asset.scene).getSize(new THREE.Vector3()).y;
+test('offscreen soldiers skip skinning and IK, then recover their weapon pose when the camera turns',async()=>{
+ const {MatchCharacterRenderer}=await import('../public/match-character-renderer.js');
+ const r=Object.create(MatchCharacterRenderer.prototype);
+ Object.assign(r,{scene:new THREE.Scene(),firstPersonScene:new THREE.Scene(),instances:new Map(),weaponTemplates:new Map(),clips:new Map()});r._loaded(asset);
+ const camera=new THREE.PerspectiveCamera(75,1,.15,820);camera.position.set(0,1.7,0);
+ const projection=()=>{camera.updateMatrixWorld(true);return new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse).elements;};
+ const p={id:'behind',p:[0,0,10],hp:100,slot:1,air:'landed',animationState:'run',grounded:true};
+ camera.lookAt(0,1.7,-10);
+ r.update([p],{viewProjection:projection()});const instance=r.instances.get(p.id);
+ assert.equal(instance.holder.visible,false,'soldier behind the camera must be culled before posing');
+ const time=instance.mixer.time;r.update([p],{viewProjection:projection()});assert.equal(instance.mixer.time,time);
+ camera.lookAt(0,1.7,10);r.update([p],{viewProjection:projection()});
+ assert.equal(instance.holder.visible,true);assert.ok(instance.mixer.time>time);
+ assert.equal(instance.contactShadow.visible,true);
+ for(const bone of instance.bones.values())assert.ok(bone.quaternion.toArray().every(Number.isFinite));
+});
 test('deployment salute places the actual native fingertips at the forehead without stretching or accumulating',async()=>{
  const {MatchCharacterRenderer}=await import('../public/match-character-renderer.js');
  const {buildForeheadSaluteProbes}=await import('../public/lobby-rig.js');

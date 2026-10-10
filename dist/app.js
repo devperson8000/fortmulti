@@ -10,7 +10,7 @@ import {createHCS} from './hcs-client.js';
 restoreIdentity();
 await requireNickname();
 
-import {networkCadence,accumulateInput,acceptSnapshot} from './network-tuning.js';
+import {networkCadence,accumulateInput,acceptSnapshot,peerExpired} from './network-tuning.js';
 
 const $=id=>document.getElementById(id),game=window.Game;
 let conn=null,peers=new Map(),host=false,ready=false,match=null,snapshot=null,matchId='',seenEvent=0,lastHello=0,lastPing=0,pingCursor=0,lastSnap=0,lastInput=0,pendingInput=null,busy=false,voiceWanted=false,muted=false,showMenu=false,snapshotFrame=-1,matchEpoch=0;
@@ -27,7 +27,8 @@ $('name').value=profile.name;$('outfit').value=profile.color;
 
 const cleanName=v=>String(v||'Ranger').trim().replace(/\s+/g,' ').slice(0,20)||'Ranger';
 const cleanColor=v=>/^[0-9a-f]{6}$/i.test(v||'')?v:'408faf';
-const activePeers=()=>[...peers.values()].filter(p=>Date.now()-p.lastSeen<14000);
+// Timeout verification owns removal; retain the roster during its short grace.
+const activePeers=()=>[...peers.values()];
 const playerName=id=>id===conn?.id?profile.name:(peers.get(id)?.name||'Player');
 const colors=()=>window.HorizonHCS?.official&&officialColors?officialColors:Object.fromEntries([[conn?.id,profile.color],...activePeers().map(p=>[p.id,p.color])]);
 const participantIds=()=>{if(!conn)return[];const ids=[conn.id,...activePeers().map(p=>p.id)],leader=conn.host||conn.id;return [leader,...ids.filter(id=>id!==leader).sort()].slice(0,conn.maxPlayers||8);};
@@ -321,12 +322,12 @@ window.addEventListener('beforeunload',()=>{voice.stop();conn?.close();social?.c
 let previous=performance.now();
 setInterval(()=>{
  const now=performance.now(),dt=Math.max(0,(now-previous)/1000);previous=now;if(window.HorizonHCS?.active&&!window.HorizonHCS.official)return;if(!conn)return;
- const cadence=networkCadence(partyProfiles().length);
+ const cadence=networkCadence(partyProfiles().length,{local:conn.local});
  if(now-lastHello>=cadence.helloMs){hello();lastHello=now;}
  if(host&&now-lastPing>=cadence.pingMs){const live=activePeers();if(live.length){const peer=live[pingCursor++%live.length];conn.send('ping',{time:Date.now()},peer.id);}lastPing=now;}
- for(const p of [...peers.values()])if(Date.now()-p.lastSeen>19000){if(p.id===conn.host&&!host&&!window.HorizonHCS?.official){leave('The party leader disconnected.');return;}removePeer(p.id,'disconnected');}
+ for(const p of [...peers.values()]){const wasSilent=p.silentSince;if(peerExpired(p,Date.now(),dt*1000)){if(p.id===conn.host&&!host&&!window.HorizonHCS?.official){leave('The party leader disconnected.');return;}removePeer(p.id,'disconnected');}else if(wasSilent==null&&p.silentSince!=null)conn.send('ping',{time:Date.now()},p.id);}
  if(window.HorizonHCS?.active)return;
- if(match&&host){match.input(conn.id,showMenu?{}:game.input());match.tick(dt,{deploymentElapsed:match.phase==='deployment'?game.audioDeploymentElapsed(match.deployment.sequenceId):null});snapshot=match.snapshot();if(now-lastSnap>=cadence.snapshotMs){sendSnapshot(snapshot);lastSnap=now;}}
+ if(match&&host){match.input(conn.id,showMenu?{}:game.input());match.tickElapsed(dt,{deploymentElapsed:match.phase==='deployment'?game.audioDeploymentElapsed(match.deployment.sequenceId):null});snapshot=match.snapshot();if(now-lastSnap>=cadence.snapshotMs){sendSnapshot(snapshot);lastSnap=now;}}
  else if(snapshot&&!host){pendingInput=accumulateInput(pendingInput,showMenu?{}:game.input());if(now-lastInput>=cadence.inputMs){conn.send('input',{id:matchId,input:pendingInput},conn.host);pendingInput=null;lastInput=now;}}
 },33);
 

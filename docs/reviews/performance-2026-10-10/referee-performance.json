@@ -1,0 +1,10 @@
+{
+  "players": 5,
+  "simulationHz": 30,
+  "ticks": 600,
+  "p50Ms": 0.97486600000002,
+  "p95Ms": 7.296990000000051,
+  "maxMs": 27.17245700000001,
+  "bufferFrames": 600,
+  "note": "Local referee simulation only; client GPU and internet latency are separate."
+}
