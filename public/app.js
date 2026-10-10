@@ -6,6 +6,7 @@ import {Match,placement,validBuild} from './simulation.js';
 import {lobbyTabState,orderPartyProfiles} from './lobby-state.js';
 import {requireNickname,restoreIdentity} from './nickname.js';
 import {createHCS} from './hcs-client.js';
+import {installTestLab} from './test-lab.js';
 
 restoreIdentity();
 await requireNickname();
@@ -281,7 +282,7 @@ function receive(m){
  if(m.type==='pong'&&Number.isFinite(d.time)){latencies.set(m.from,Math.max(0,Date.now()-d.time));updateNetworkChip();}
 }
 
-window.Duel={moveInventory(operation){if(window.HorizonHCS?.active){window.HorizonHCS.moveInventory(operation);return;}if(!conn||!snapshot||snapshot.phase!=='playing')return;if(host&&match){game.ackInventory(match.moveInventory(conn.id,operation));snapshot=match.snapshot();sendSnapshot(snapshot);}else conn.send('inventory-move',{id:matchId,epoch:matchEpoch,operation},conn.host);},active:true,lobby:true,characterPreview:false,round:0,myColor:profile.color,party:partyProfiles(),peerColors:{},menu(){game.clear();if(window.HorizonHCS?.active&&!window.HorizonHCS.official){document.exitPointerLock?.();return;}if(this.lobby)return;showMenu=true;$('match-actions').hidden=false;$('resume').hidden=false;$('rematch').hidden=snapshot?.phase!=='done';$('back-lobby').hidden=false;document.exitPointerLock?.();},preview(){const p=game.pose(),i=game.input();return placement(p,i,game.world,snapshot?.structures||[]);},valid(s){return !!snapshot&&validBuild(s,snapshot.structures,snapshot.players,game.world);},render(dt){if(window.HorizonHCS?.render(dt))return;if(snapshot&&conn)game.apply(snapshot,conn.id,colors(),dt);}};
+window.Duel={moveInventory(operation){if(window.HorizonTestLab?.active){window.HorizonTestLab.moveInventory(operation);return;}if(window.HorizonHCS?.active){window.HorizonHCS.moveInventory(operation);return;}if(!conn||!snapshot||snapshot.phase!=='playing')return;if(host&&match){game.ackInventory(match.moveInventory(conn.id,operation));snapshot=match.snapshot();sendSnapshot(snapshot);}else conn.send('inventory-move',{id:matchId,epoch:matchEpoch,operation},conn.host);},active:true,lobby:true,characterPreview:false,round:0,myColor:profile.color,party:partyProfiles(),peerColors:{},menu(){game.clear();if(window.HorizonTestLab?.active){window.HorizonTestLab.openControls();return;}if(window.HorizonHCS?.active&&!window.HorizonHCS.official){document.exitPointerLock?.();return;}if(this.lobby)return;showMenu=true;$('match-actions').hidden=false;$('resume').hidden=false;$('rematch').hidden=snapshot?.phase!=='done';$('back-lobby').hidden=false;document.exitPointerLock?.();},preview(){if(window.HorizonTestLab?.active)return window.HorizonTestLab.preview();const p=game.pose(),i=game.input();return placement(p,i,game.world,snapshot?.structures||[]);},valid(s){if(window.HorizonTestLab?.active)return window.HorizonTestLab.valid(s);return !!snapshot&&validBuild(s,snapshot.structures,snapshot.players,game.world);},render(dt){if(window.HorizonTestLab?.render(dt))return;if(window.HorizonHCS?.render(dt))return;if(snapshot&&conn)game.apply(snapshot,conn.id,colors(),dt);}};
 
 $('create').onclick=()=>connect(true);
 $('join').onclick=()=>connect(false);
@@ -339,5 +340,6 @@ setInterval(()=>{
  else if(snapshot&&!host){pendingInput=accumulateInput(pendingInput,showMenu?{}:game.input());if(now-lastInput>=cadence.inputMs){conn.send('input',{id:matchId,input:pendingInput},conn.host);pendingInput=null;lastInput=now;}}
 },33);
 
-renderVoice();refresh();startSocial().finally(()=>{window.HorizonHCS=createHCS({config,session:()=>social?.session||conn?.session,profile:()=>profile,leaveParty:()=>leave('',true),returnLobby:()=>resetToLobby(false),applyOfficial:data=>{officialColors=Object.fromEntries((data.profiles||[]).map(p=>[p.id,p.color]));apply(data);}});});
+window.HorizonTestLab=installTestLab({game,profile:()=>profile,leaveParty:()=>leave('',true),returnLobby:()=>resetToLobby(false)});
+renderVoice();refresh();startSocial().finally(()=>{window.HorizonHCS=createHCS({config,session:()=>social?.session||conn?.session,profile:()=>profile,leaveParty:()=>{if(window.HorizonTestLab?.active)window.HorizonTestLab.stop(false);leave('',true);},returnLobby:()=>resetToLobby(false),applyOfficial:data=>{officialColors=Object.fromEntries((data.profiles||[]).map(p=>[p.id,p.color]));apply(data);}});});
 if(!game){const warning=document.createElement('div');warning.id='graphics-warning';warning.textContent='3D graphics are unavailable. Enable graphics acceleration in Chrome and restart it. Lobby, invites and chat are still available.';document.body.append(warning);}

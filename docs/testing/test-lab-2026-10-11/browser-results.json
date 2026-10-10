@@ -1,0 +1,19 @@
+{
+  "checks": [
+    "password gate",
+    "real HCS rule checks",
+    "responsive panel",
+    "eight native players",
+    "variant equipment",
+    "floor arsenal",
+    "five-player final",
+    "separate spectator window",
+    "20-second delay",
+    "third-person view switching",
+    "delayed champion",
+    "downloadable report",
+    "clean lobby return"
+  ],
+  "delayMs": 20298,
+  "errors": []
+}
