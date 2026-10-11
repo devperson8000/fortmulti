@@ -115,10 +115,14 @@ try {
   assert.equal(await viewer.locator("#lab-tools").isVisible(), false);
   await unlock(viewer);
   await viewer.waitForFunction(() => window.HorizonTestLab.active);
-  assert.equal(
-    await viewer.evaluate(() => window.HorizonTestLab.waiting),
-    true,
-  );
+  // A slow machine may finish loading after the host already has 20 seconds
+  // of history. Late joining may start immediately, but never show live data.
+  if (!(await viewer.evaluate(() => window.HorizonTestLab.waiting)))
+    assert.ok(
+      await viewer.evaluate(
+        () => window.HorizonTestLab.status().delayMs >= 20000,
+      ),
+    );
   await viewer.waitForFunction(
     () => !window.HorizonTestLab.waiting,
     {},

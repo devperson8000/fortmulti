@@ -150,3 +150,69 @@ test("a field test reboards its full roster for the next native round", () => {
   assert.ok(s.match.players.every((p) => p.pod && p.destination));
   assert.ok(s.latest.players.every((p) => p.pod && p.destination));
 });
+
+test("full HCS starts on the ship and waits for the human to press E before launching", () => {
+  const s = new api.LabSession(world, { kind: "hcs", full: true });
+  assert.equal(s.match.phase, "deployment");
+  assert.equal(s.match.players[0].pod, null);
+  assert.equal(s.match.players[0].air, "ship");
+  assert.ok(s.match.players.every((p) => p.destination));
+  for (let i = 0; i < 240; i++) s.tick(1 / 30, 1000 + (i * 1000) / 30, {});
+  assert.equal(s.match.players[0].pod, null);
+  assert.equal(s.match.players.slice(1).filter((p) => p.pod).length, 4);
+  assert.equal(s.match.deployment.stage, "landing_selection");
+  s.tick(1 / 30, 9100, { interact: true, interactRevision: 1 });
+  assert.ok(s.match.players[0].pod);
+  for (let i = 0; i < 120; i++) s.tick(1 / 30, 9200 + (i * 1000) / 30, {});
+  assert.ok(s.match.deployment.sequenceElapsed > 0);
+});
+
+test("a second full test ignores the previous match interaction revision and still requires a fresh E press", () => {
+  const s = new api.LabSession(world, {
+    kind: "hcs",
+    full: true,
+    inputBaseline: { interactRevision: 9 },
+  });
+  s.tick(1 / 30, 1000, { interact: false, interactRevision: 9 });
+  assert.equal(s.match.players[0].pod, null);
+  s.tick(1 / 30, 1100, { interact: true, interactRevision: 10 });
+  assert.ok(s.match.players[0].pod);
+});
+
+test("full HCS bots target the human through native combat instead of protecting them", () => {
+  const s = new api.LabSession(world, { kind: "hcs", full: true });
+  s.land();
+  const bot = s.match.players[1],
+    human = s.match.players[0];
+  bot.p = [0, world.height(0, -10), -10];
+  human.p = [0, bot.p[1], -12];
+  for (const p of s.match.players.slice(2)) p.hp = 0;
+  const input = s.botInput(bot, 1);
+  assert.ok(Math.abs(input.yaw) < 0.1);
+  assert.equal(input.aim, true);
+  assert.equal(input.slot, 1);
+  assert.ok(Number.isFinite(input.pitch));
+});
+
+test("local HCS deployment follows the audible music clock during its cinematic", () => {
+  const s = new api.LabSession(world, { kind: "hcs", full: true });
+  s.match.enterPod(s.localId);
+  for (let i = 0; i < 240; i++) s.tick(1 / 30, 1000 + (i * 1000) / 30, {});
+  assert.ok(s.match.deployment.sequenceElapsed > 0);
+  s.tick(0.01, 10000, {}, 20);
+  assert.ok(s.match.deployment.elapsed >= 19.99);
+});
+
+test("full practice bot gunfire deals native damage to a living human without scripted hits", () => {
+  const s = new api.LabSession(world, { kind: "hcs", full: true });
+  s.land();
+  const human = s.match.players[0],
+    bot = s.match.players[1];
+  human.p = [0, world.height(0, -10), -10];
+  bot.p = [0, human.p[1], -6];
+  // Other operators remain alive, but they are absent and cannot fire.
+  for (const p of s.match.players.slice(2)) s.disconnect(p.id, 1000);
+  for (let i = 0; i < 180; i++) s.tick(1 / 30, 1000 + (i * 1000) / 30, {});
+  assert.ok(human.hp < 100);
+  assert.ok(s.match.events.some((e) => e.type === "shot" && e.by === bot.id));
+});

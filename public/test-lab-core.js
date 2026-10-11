@@ -6,6 +6,8 @@ import { safeLandingPoint } from "./deployment-sequence.js";
 import { SHIP_PODS, shipWorld } from "./deployment-ship.js";
 import { createWeaponItem } from "./weapon-inventory.js";
 import { WEAPON_TYPES } from "./weapon-system.js";
+import { rayBox } from "./simulation.js";
+import { createLabNavigation } from "./lab-navigation.js";
 
 // A temporary UI gate for isolated practice, never an administrative credential.
 export const labPasswordMatches = (value) => value === "12345";
@@ -40,6 +42,8 @@ export class LabSession {
       count = 8,
       name = "Test Ranger",
       pods = false,
+      full = false,
+      inputBaseline = {},
     } = {},
   ) {
     if (
@@ -50,11 +54,14 @@ export class LabSession {
     this.kind = kind;
     this.map = map;
     this.hcs = kind === "hcs";
+    this.full = this.hcs && full;
+    this.shipElapsed = 0;
+    this.botRoutes = new Map();
     this.localId = "lab-player";
     this.count = this.hcs
       ? 5
       : Math.max(2, Math.min(8, Math.floor(count) || 8));
-    this.fire = false;
+    this.fire = this.full;
     this.profiles = Array.from({ length: this.count }, (_, i) => ({
       id: i ? "lab-bot-" + i : this.localId,
       name: i ? "TEST OPERATOR " + (i + 1) : nickname(name),
@@ -78,7 +85,15 @@ export class LabSession {
         this.championship.register(p.id, p.name, p.color);
       Object.assign(this.championship.state, { phase: "live", finalists: ids });
     }
-    if (kind === "pods" || pods) {
+    if (this.full) {
+      this.navigation = createLabNavigation(world, this.match.collisionGrid);
+      this.prepareShip();
+      for (const p of this.match.players)
+        this.navigation.route(
+          [p.destination.x, p.destination.y, p.destination.z],
+          [0, world.height(0, -10), -10],
+        );
+    } else if (kind === "pods" || pods) {
       if (this.referee) this.referee.board();
       else {
         this.match.beginDeployment();
@@ -86,7 +101,29 @@ export class LabSession {
       }
     } else this.land();
     this.equipKit("standard", false);
+    const interaction = inputBaseline.interactRevision;
+    this.match.players[0].lastInteractRevision =
+      Number.isSafeInteger(interaction) && interaction >= 0 ? interaction : 0;
     this.latest = this.match.snapshot();
+  }
+  prepareShip() {
+    // The normal match handles E, boarding, waiting, launch and the whole edit.
+    // Position the roster at separate pod entrances, without reserving them.
+    const reserved = [];
+    for (const [i, p] of this.match.players.entries()) {
+      const point = this.match.world.pois[i],
+        safe = safeLandingPoint(point, this.match.world, reserved),
+        pod = SHIP_PODS[i];
+      if (!safe || !this.match.chooseLanding(p.id, safe))
+        throw Error("No safe championship landing zone.");
+      reserved.push(safe);
+      p.shipLocal = [pod.x, 0, pod.z + pod.entryOffset];
+      p.p = shipWorld(p.shipLocal);
+      p.yaw = 0;
+    }
+  }
+  chooseLanding(point) {
+    return this.match.chooseLanding(this.localId, point);
   }
   board() {
     const reserved = [];
@@ -148,6 +185,13 @@ export class LabSession {
     }
   }
   botInput(p, index) {
+    if (this.full && this.match.phase === "deployment")
+      return {
+        yaw: 0,
+        interact: this.shipElapsed > 1.2 + index * 0.65,
+        interactRevision: this.shipElapsed > 1.2 + index * 0.65 ? 1 : 0,
+      };
+    if (this.full) return this.combatBotInput(p, index);
     const t = this.match.elapsed + index * 1.13,
       target =
         this.match.players.filter(
@@ -171,8 +215,74 @@ export class LabSession {
       reload: p.ammo === 0,
     };
   }
+  combatBotInput(p, index) {
+    const t = this.match.elapsed,
+      alive = this.match.players.filter(
+        (other) => other.id !== p.id && other.hp > 0,
+      ),
+      target = alive.sort(
+        (a, b) =>
+          Math.hypot(a.p[0] - p.p[0], a.p[2] - p.p[2]) -
+          Math.hypot(b.p[0] - p.p[0], b.p[2] - p.p[2]),
+      )[0];
+    if (!target || p.hp <= 0) return {};
+    const dx = target.p[0] - p.p[0],
+      dz = target.p[2] - p.p[2],
+      distance = Math.hypot(dx, dz),
+      yaw = Math.atan2(-dx, -dz),
+      origin = [p.p[0], p.p[1] + 1.72 - (p.crouching ? 0.62 : 0), p.p[2]],
+      dy = target.p[1] + 1.35 - (target.crouching ? 0.62 : 0) - origin[1],
+      length = Math.hypot(dx, dy, dz) || 1,
+      direction = [dx / length, dy / length, dz / length],
+      visible = !(this.match.world.obstacles || []).some(
+        (box) => rayBox(origin, direction, box) < length - 0.5,
+      ),
+      moving = distance > 14 || !visible,
+      cycle = (t + index * 1.5) % 12;
+    let moveYaw = yaw;
+    if (moving && this.navigation) {
+      let plan = this.botRoutes.get(p.id);
+      if (!plan || t - plan.at > 1.5 || plan.target !== target.id) {
+        plan = {
+          at: t,
+          target: target.id,
+          path: this.navigation.route(p.p, target.p),
+        };
+        this.botRoutes.set(p.id, plan);
+      }
+      while (
+        plan.path.length > 1 &&
+        Math.hypot(plan.path[0][0] - p.p[0], plan.path[0][2] - p.p[2]) < 0.35
+      )
+        plan.path.shift();
+      const next = plan.path[0];
+      if (next) moveYaw = Math.atan2(-(next[0] - p.p[0]), -(next[2] - p.p[2]));
+    }
+    const delta = moveYaw - yaw;
+    // All damage comes from the normal gun simulation, never scripted hits.
+    // If cover interrupts sight, move laterally to work around it.
+    return {
+      yaw: yaw + 0.025 * Math.sin(t * 3 + index),
+      pitch: Math.atan2(dy, distance) + 0.02 * Math.sin(t * 2 + index),
+      slot: 1,
+      aim: visible,
+      fire:
+        this.fire &&
+        visible &&
+        distance < 130 &&
+        t > 2 + index * 0.3 &&
+        cycle % 2 < 0.35,
+      z: moving ? Math.cos(delta) : 0,
+      x: moving ? -Math.sin(delta) : Math.sin(t + index) * 0.35,
+      sprint: moving && distance > 28,
+      crouch: (cycle > 2 && cycle < 2.12) || (cycle > 4 && cycle < 4.12),
+      reload: p.inventory?.[0]?.ammo === 0,
+    };
+  }
   tick(dt, now, input = {}, audioElapsed = null) {
     const round = this.match.round;
+    if (this.match.phase === "deployment")
+      this.shipElapsed += Math.min(0.25, Math.max(0, dt));
     this.match.input(
       this.localId,
       this.botLocal ? this.botInput(this.match.players[0], 0) : input,
@@ -187,7 +297,9 @@ export class LabSession {
       let remaining = Math.min(0.25, Math.max(0, dt));
       while (remaining > 1e-8) {
         const step = Math.min(0.05, remaining);
-        this.latest = this.referee.tick(step, now);
+        this.latest = this.referee.tick(step, now, {
+          deploymentElapsed: audioElapsed,
+        });
         remaining -= step;
       }
     } else {
@@ -195,7 +307,10 @@ export class LabSession {
       this.latest = this.match.snapshot();
     }
     if (this.match.round !== round) {
-      if (this.referee) this.referee.board();
+      if (this.full) {
+        this.shipElapsed = 0;
+        this.prepareShip();
+      } else if (this.referee) this.referee.board();
       else this.board();
       this.equipKit(this.kit, false);
       this.latest = {
@@ -227,6 +342,7 @@ export class LabSession {
     return {
       testOnly: true,
       kind: this.kind,
+      full: this.full,
       map: this.map,
       spectator,
       sampleAt,

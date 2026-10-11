@@ -6,6 +6,11 @@ import {
 } from "./test-lab-core.js";
 import { validBuild, placement } from "./simulation.js";
 import { safeLandingPoint } from "./deployment-sequence.js";
+import {
+  createHCSCelebration,
+  hcsResult,
+  hcsHeroState,
+} from "./hcs-presentation.js";
 
 const $ = (id) => document.getElementById(id);
 const manualChecks = [
@@ -29,7 +34,7 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
  <form id="lab-lock-form"><label for="lab-password">Test password</label><input id="lab-password" type="password" autocomplete="off" required><button id="lab-unlock" type="submit">UNLOCK TESTS</button><p id="lab-lock-error" role="status"></p></form>
  <div id="lab-tools" hidden><div class="lab-config"><label>Map<select id="lab-map"><option value="facility">Platform 23</option><option value="island">Ironwood Island</option></select></label><label>Ironwood rules<select id="lab-mode"><option value="town">Town royale · chests + storm</option><option value="build">Build skirmish</option></select></label><label>Test graphics<select id="lab-quality"><option value="auto">Auto</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label><label>Operators<select id="lab-count"><option value="8">8 · maximum lobby</option><option value="5">5</option><option value="2">2</option></select></label></div>
  <div class="lab-grid"><article class="lab-card"><small>RENDERING + GAMEPLAY</small><h3>Full squad field test</h3><p>You and up to seven moving bots use the actual map, collision, weapons and animations. Bots fire into the air until combat is enabled.</p><div class="lab-buttons"><button id="lab-combat" class="lab-primary" type="button">PLAY FIELD TEST</button><button id="lab-pods" type="button">POD DEPLOYMENT</button></div><label class="lab-switch"><input id="lab-bot-fire" type="checkbox">Bots fight each other</label></article>
- <article class="lab-card"><small>FIVE COMPETITORS · ONE SURVIVOR</small><h3>HCS practice final</h3><p>Platform 23 and the real final rules. Play in first person or follow five bots in third person, twenty seconds behind.</p><label class="lab-switch"><input id="lab-hcs-pods" type="checkbox">Include the full pod intro</label><div class="lab-buttons"><button id="lab-hcs-play" class="lab-primary" type="button">PLAY HCS TEST</button><button id="lab-hcs-watch" type="button">WATCH HCS TEST</button></div></article>
+ <article class="lab-card"><small>FIVE COMPETITORS · ONE SURVIVOR</small><h3>HCS practice final</h3><p>Platform 23 and the real final rules. Play in first person or follow five bots in third person, twenty seconds behind.</p><button id="lab-hcs-full" class="lab-primary" type="button">FULL HCS · SHIP TO CHAMPION</button><label class="lab-switch"><input id="lab-full-viewer" type="checkbox" checked>Open a spectator window with the full test</label><p class="lab-note">You + four combat bots. Start aboard the ship, press E to board, deploy, fight and celebrate. Enter 12345 in the audience window. Add more with Open viewer; each follows the whole run 20 seconds behind.</p><label class="lab-switch"><input id="lab-hcs-pods" type="checkbox">Include the full pod intro in quick tests</label><div class="lab-buttons"><button id="lab-hcs-play" type="button">QUICK HCS TEST</button><button id="lab-hcs-watch" type="button">WATCH HCS TEST</button></div></article>
  <article class="lab-card"><small>WEAPONS + MAP INSPECTION</small><h3>Check every detail</h3><p>Use 1–5 for guns, Tab to arrange your loadout, E on the exact floor weapon, Shift to run and Ctrl to crouch or knee-slide.</p><label for="lab-kit">Weapon kit</label><select id="lab-kit"><option value="standard">Originals + Sentinel</option><option value="variants">New variants</option></select><div class="lab-buttons"><button id="lab-equip" type="button">EQUIP KIT</button><button id="lab-arsenal" type="button">PLACE ALL GUNS</button><button id="lab-chest" type="button">GO TO A CHEST</button></div><p class="lab-note">Inspection buttons affect only the current practice session.</p></article>
  <article class="lab-card"><small>QUALIFICATION + TOURNAMENT RULES</small><h3>HCS systems check</h3><p>Exercise rankings, nickname validation, check-in, reserve substitutions, postponement, the Sydney schedule, delayed results and reconnect deadlines.</p><button id="lab-rules" class="lab-primary" type="button">RUN HCS RULE CHECKS</button><ul id="lab-check-results" aria-live="polite"></ul><div class="lab-buttons"><button id="lab-disconnect" type="button">DISCONNECT OPERATOR 2</button><button id="lab-reconnect" type="button">RECONNECT OPERATOR 2</button><button id="lab-finish" type="button">END TEST FINAL</button></div></article></div>
  <p class="lab-note"><b>Audience test:</b> in a field test or HCS final, choose “Open viewer” to add a password-gated spectator window on this Mac. Open several to compare FPS. These are real local windows, not remote internet players. For internet load testing, have your friends join a normal private party on their Macs; this lab does not write HCS standings or start the official tournament. The host also runs the bots and referee on this Mac, so this is a heavier CPU test than a server-hosted match.</p>
@@ -49,6 +54,19 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
   waiting.innerHTML =
     '<small>LOCAL HCS BROADCAST</small><h2>Waiting for the delayed feed</h2><b id="lab-wait-time">20s</b><p>No live frames are shown. You will follow the operators in third person.</p>';
   document.body.append(waiting);
+  const briefing = document.createElement("section");
+  briefing.id = "lab-ship-briefing";
+  briefing.hidden = true;
+  briefing.innerHTML =
+    '<small>HCS · DEPLOYMENT SHIP</small><h2>Choose your drop. Board your pod.</h2><label>Landing zone<select id="lab-landing-zone"></select></label><p>Press <b>E</b> at the pod in front of you. Launch waits until all five operators are sealed.</p><p id="lab-ship-roster"></p><button id="lab-ship-viewer" type="button">OPEN SPECTATOR WINDOW</button>';
+  document.body.append(briefing);
+  const celebration = createHCSCelebration({
+    onControls: show,
+    onExit: () => {
+      stop();
+      dialog.close();
+    },
+  });
   for (const text of manualChecks) {
     const label = document.createElement("label"),
       input = document.createElement("input");
@@ -83,6 +101,7 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
     version = 0,
     hostSeen = 0,
     receivedFrames = 0;
+  let finaleKey = "";
   const clients = new Map(),
     viewerId = crypto.randomUUID();
   const requestedRoom = new URLSearchParams(location.search).get(
@@ -145,7 +164,13 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
   }
   function close() {
     dialog.close();
-    if (active && !waitingForFeed && !watching) game.capture();
+    if (
+      active &&
+      !waitingForFeed &&
+      !watching &&
+      packet?.state.phase !== "done"
+    )
+      game.capture();
   }
   function fillRoster(profiles) {
     $("lab-target").replaceChildren(
@@ -160,6 +185,7 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
   }
   function activate() {
     active = true;
+    finaleKey = "";
     startedAt = Date.now();
     metrics = new FrameMetrics();
     simMetrics = new FrameMetrics();
@@ -190,6 +216,7 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
       "lab-pods",
       "lab-hcs-play",
       "lab-hcs-watch",
+      "lab-hcs-full",
     ])
       $(id).disabled = isViewer;
     meterTimer = setInterval(updateMeter, 1000);
@@ -229,7 +256,7 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
       }
     };
   }
-  async function start(kind, spectator = false) {
+  async function start(kind, spectator = false, full = false) {
     if (loading) return;
     if (!game) {
       panelStatus(
@@ -251,10 +278,11 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
       stop(false);
       request = version;
       leaveParty();
+      game.clear({ resetInventory: true });
       const map = kind === "hcs" ? "facility" : $("lab-map").value;
       panelStatus("Loading the test map…");
       await game.startAudio({
-        deployment: kind === "pods" || $("lab-hcs-pods").checked,
+        deployment: full || kind === "pods" || $("lab-hcs-pods").checked,
       });
       await game.setMap(map);
       if (request !== version) return;
@@ -265,8 +293,12 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
         count: Number($("lab-count").value),
         name: profile().name,
         pods: kind === "hcs" && $("lab-hcs-pods").checked,
+        full,
+        inputBaseline: game.input(),
       });
-      session.fire = $("lab-bot-fire").checked;
+      if (full) $("lab-bot-fire").checked = true;
+      session.fire = full || $("lab-bot-fire").checked;
+      if (full) $("lab-rules").click();
       session.botLocal = spectator;
       watching = spectator;
       isViewer = false;
@@ -277,9 +309,19 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
       attachRoom(room, false);
       activate();
       fillRoster(session.profiles);
+      if (full) {
+        $("lab-landing-zone").replaceChildren(
+          ...game.world.pois.map((poi, i) => {
+            const option = document.createElement("option");
+            option.value = i;
+            option.textContent = poi.name;
+            return option;
+          }),
+        );
+      }
       $("lab-target").hidden = !watching;
       markWaiting(watching);
-      game.look(Math.PI, -0.03);
+      game.look(full ? 0 : Math.PI, -0.03);
       lastTick = performance.now();
       lastPublish = 0;
       timer = setInterval(tick, 33);
@@ -308,6 +350,8 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
       stop(false);
       request = version;
       leaveParty();
+      game.clear({ resetInventory: true });
+      await game.startAudio({ deployment: true });
       await game.setMap("facility");
       if (request !== version) return;
       isViewer = true;
@@ -379,6 +423,13 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
         session?.match.pickups.length || packet?.state.pickups.length || 0,
       delayMs: watching && packet ? Date.now() - packet.sampleAt : null,
       champion: packet?.champion || null,
+      result: hcsResult(
+        packet?.state,
+        packet?.profiles,
+        session?.localId,
+        watching || isViewer,
+      ),
+      full: Boolean(session?.full || packet?.full),
       spectators: [...clients.values()].filter((at) => Date.now() - at < 10000)
         .length,
     };
@@ -431,6 +482,22 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
     if (!active) return;
     const s = status(),
       r = metrics.report();
+    const me = session?.match.players[0],
+      ship = Boolean(
+        session?.full &&
+        !watching &&
+        !isViewer &&
+        session.match.phase === "deployment" &&
+        !me.pod,
+      );
+    briefing.hidden = !ship;
+    if (ship)
+      $("lab-ship-roster").textContent = session.match.players
+        .map(
+          (p) =>
+            `${p.id === session.localId ? "YOU" : p.name || session.profiles.find((profile) => profile.id === p.id)?.name}: ${p.pod ? "BOARDING / READY" : "STANDING BY"}`,
+        )
+        .join(" · ");
     $("lab-metrics").textContent = r.samples
       ? `${r.fps.toFixed(0)} FPS · p95 ${r.p95Ms.toFixed(1)} ms`
       : "Collecting frames…";
@@ -458,6 +525,8 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
     channel = null;
     clients.clear();
     active = false;
+    briefing.hidden = true;
+    celebration.reset();
     session = null;
     packet = null;
     markWaiting(false);
@@ -473,6 +542,7 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
       "lab-pods",
       "lab-hcs-play",
       "lab-hcs-watch",
+      "lab-hcs-full",
     ])
       $(id).disabled = false;
     if (restore) returnLobby();
@@ -538,6 +608,30 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
   $("lab-combat").onclick = () => start("combat");
   $("lab-pods").onclick = () => start("pods");
   $("lab-hcs-play").onclick = () => start("hcs");
+  const viewerURL = () => {
+    const url = new URL(location.href);
+    url.hash = "";
+    url.search = "";
+    url.searchParams.set("horizon-test-view", room);
+    return url.toString();
+  };
+  $("lab-hcs-full").onclick = async () => {
+    if (loading) return;
+    const audience = $("lab-full-viewer").checked
+      ? window.open("about:blank", "_blank", "popup,width=1000,height=700")
+      : null;
+    await start("hcs", false, true);
+    if (active && session?.full) {
+      if (audience) audience.location = viewerURL();
+      else if ($("lab-full-viewer").checked) {
+        panelStatus(
+          "Chrome blocked the audience window. Allow pop-ups, then choose Open local viewer.",
+          true,
+        );
+        show();
+      }
+    } else audience?.close();
+  };
   $("lab-hcs-watch").onclick = () => start("hcs", true);
   $("lab-controls").onclick = show;
   $("lab-resume").onclick = close;
@@ -620,26 +714,37 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
     });
   $("lab-finish").onclick = () =>
     inspection(() => {
-      if (session.hcs) session.finish(Date.now());
+      if (session.hcs && !session.finish(Date.now()))
+        throw Error(
+          "A scripted player win requires your operator to be alive in active gameplay. Start a new test to inspect a win.",
+        );
     });
   $("lab-target").onchange = () => {
     viewed = $("lab-target").value;
     game.clear();
   };
-  $("lab-viewer").onclick = $("lab-viewer-panel").onclick = () => {
-    if (!active || isViewer) return;
-    const url = new URL(location.href);
-    url.hash = "";
-    url.search = "";
-    url.searchParams.set("horizon-test-view", room);
-    if (!window.open(url.toString(), "_blank", "popup,width=1000,height=700")) {
-      panelStatus(
-        "Chrome blocked the viewer window. Allow pop-ups for Horizon, then try again.",
-        true,
-      );
-      show();
-    }
+  $("lab-landing-zone").onchange = () => {
+    const poi = session?.match.world.pois[Number($("lab-landing-zone").value)];
+    if (poi && session.chooseLanding(poi)) {
+      game.setLanding(poi.x, poi.z);
+      tick();
+    } else panelStatus("That landing zone is reserved. Choose another.", true);
   };
+  $("lab-viewer").onclick =
+    $("lab-viewer-panel").onclick =
+    $("lab-ship-viewer").onclick =
+      () => {
+        if (!active || isViewer) return;
+        if (
+          !window.open(viewerURL(), "_blank", "popup,width=1000,height=700")
+        ) {
+          panelStatus(
+            "Chrome blocked the viewer window. Allow pop-ups for Horizon, then try again.",
+            true,
+          );
+          show();
+        }
+      };
   window.addEventListener("beforeunload", () => {
     channel?.postMessage({
       testOnly: true,
@@ -650,6 +755,9 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
   });
   if (pendingRoom) show();
   return {
+    get championship() {
+      return active && Boolean(session?.hcs || packet?.kind === "hcs");
+    },
     get active() {
       return active;
     },
@@ -692,10 +800,29 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
         }
       }
       if (!p) return true;
-      const spectator = watching || viewed !== session?.localId;
+      const final =
+        packet.kind === "hcs"
+          ? celebration.update(
+              packet.state,
+              packet.profiles,
+              session?.localId,
+              { spectator: watching || isViewer, testOnly: true },
+            )
+          : null;
+      if (final) {
+        viewed = final.id;
+        p = packet.state.players.find((p) => p.id === viewed);
+        if (finaleKey !== final.key) {
+          finaleKey = final.key;
+          game.clear();
+          document.exitPointerLock?.();
+        }
+      }
+      const spectator =
+        Boolean(final) || watching || viewed !== session?.localId;
       if (spectator) game.look(p.yaw, p.pitch || 0);
       game.apply(
-        packet.state,
+        final ? hcsHeroState(packet.state) : packet.state,
         viewed,
         Object.fromEntries(packet.profiles.map((p) => [p.id, p.color])),
         dt,

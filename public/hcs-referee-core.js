@@ -89,7 +89,7 @@ export class Referee {
     this.absent.delete(id);
     return true;
   }
-  tick(dt, now = Date.now()) {
+  tick(dt, now = Date.now(), { deploymentElapsed = null } = {}) {
     const expired = [...this.absent].filter(
       ([, since]) => now - since >= HCS.reconnect,
     );
@@ -107,7 +107,8 @@ export class Referee {
       } else this.match.checkRoundEnd();
     }
     const round = this.match.round;
-    if (this.match.phase !== "abandoned") this.match.tick(dt);
+    if (this.match.phase !== "abandoned")
+      this.match.tick(dt, { deploymentElapsed });
     if (this.autoBoard && round !== this.match.round) this.board();
     const snapshot = this.match.snapshot();
     for (const e of snapshot.events) {

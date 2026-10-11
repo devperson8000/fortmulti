@@ -1,0 +1,241 @@
+#deployment-cinematic.hcs-deployment .cinematic-mark {
+  width: clamp(280px, 43vw, 560px);
+  max-height: 75vh;
+}
+#deployment-cinematic.hcs-deployment .cinematic-mark::before {
+  background: radial-gradient(ellipse, #ff8a262b, transparent 65%);
+}
+#deployment-cinematic.hcs-deployment img {
+  filter: drop-shadow(0 0 28px #ff9f2022);
+  mix-blend-mode: screen;
+}
+.hcs-finale[hidden],
+#lab-ship-briefing[hidden],
+.hcs-finale [hidden] {
+  display: none !important;
+}
+.hcs-finale {
+  position: fixed;
+  inset: 0;
+  z-index: 62;
+  overflow: hidden;
+  pointer-events: none;
+  color: #fff2c5;
+  font: 14px system-ui;
+  background: linear-gradient(
+    90deg,
+    #060b13f5 0%,
+    #070e17dc 36%,
+    #070b1433 65%,
+    transparent
+  );
+}
+.hcs-finale-copy {
+  position: absolute;
+  left: 7vw;
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(520px, 46vw);
+  pointer-events: auto;
+  text-shadow: 0 2px 12px #0008;
+}
+.hcs-finale-copy > small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  color: #e6b574;
+  line-height: 1.7;
+}
+.hcs-victory-crest {
+  width: 175px;
+  height: 175px;
+  margin: 5px 0 -9px;
+}
+.hcs-victory-crest img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.hcs-finale h1 {
+  font-size: clamp(32px, 4.8vw, 68px);
+  font-weight: 950;
+  font-style: italic;
+  line-height: 0.98;
+  letter-spacing: -2px;
+  margin: 12px 0;
+  color: #ffdc78;
+}
+.hcs-finale h2 {
+  font-size: clamp(20px, 2.5vw, 34px);
+  margin: 18px 0 14px;
+  overflow-wrap: anywhere;
+  color: #fff3d5;
+}
+.hcs-finale p {
+  line-height: 1.65;
+  color: #cfccc1;
+  font-size: 12px;
+}
+.hcs-finale [data-finale="stats"] {
+  color: #ffcf89;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.hcs-finale-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+.hcs-finale button {
+  background: #eaca83;
+  color: #172125;
+  border: 1px solid #fbe7b9;
+  border-radius: 5px;
+  box-shadow: none;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-size: 10px;
+}
+.hcs-finale button:first-child {
+  background: #152631;
+  color: #fbe3b0;
+  border-color: #f5d89566;
+}
+.hcs-finale button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+.hcs-celebrating #round-banner,
+.hcs-celebrating #crosshair,
+.hcs-celebrating #resume-control,
+.hcs-celebrating #health,
+.hcs-celebrating #inventory,
+.hcs-celebrating #interact-prompt {
+  visibility: hidden !important;
+}
+body.hcs-celebrating > header,
+body.hcs-celebrating > #mapbox,
+body.hcs-celebrating > #mission,
+body.hcs-celebrating > #notice,
+body.hcs-celebrating > #chatbox,
+body.hcs-celebrating > footer {
+  visibility: hidden !important;
+}
+.hcs-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.hcs-confetti i {
+  position: absolute;
+  left: var(--x);
+  top: -20px;
+  width: 7px;
+  height: 15px;
+  background: var(--color);
+  opacity: 0;
+  animation: hcs-confetti var(--duration) ease-in var(--wait) 1 both;
+}
+@keyframes hcs-confetti {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -20px, 0) rotate(0);
+  }
+  10% {
+    opacity: 0.95;
+  }
+  85% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--drift), 110vh, 0) rotate(var(--spin));
+  }
+}
+#lab-ship-briefing {
+  position: fixed;
+  left: 24px;
+  top: 115px;
+  z-index: 61;
+  width: min(330px, calc(100vw - 48px));
+  box-sizing: border-box;
+  padding: 20px;
+  border: 1px solid #d8ad6966;
+  background: #07141be8;
+  border-radius: 10px;
+  color: #ecdbb1;
+  font: 12px system-ui;
+  box-shadow: 0 8px 28px #0005;
+}
+#lab-ship-briefing small {
+  font-size: 10px;
+  letter-spacing: 1.8px;
+  color: #d8b47d;
+}
+#lab-ship-briefing h2 {
+  font-size: 23px;
+  line-height: 1.15;
+  margin: 12px 0 18px;
+}
+#lab-ship-briefing label {
+  display: grid;
+  gap: 8px;
+  font-size: 10px;
+}
+#lab-ship-briefing select {
+  background: #142831;
+  color: #ffebbc;
+  padding: 10px;
+  border: 1px solid #aebe9866;
+  border-radius: 5px;
+  width: 100%;
+}
+#lab-ship-briefing p {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #c3cdc6;
+}
+#lab-ship-briefing button {
+  font-size: 10px;
+  border: 1px solid #d1bb7766;
+  border-radius: 5px;
+  background: #314039;
+  color: #f1d99e;
+  padding: 10px;
+  cursor: pointer;
+}
+body.deployment-cinematic #lab-ship-briefing {
+  display: none !important;
+}
+@media (max-width: 600px) {
+  .hcs-finale {
+    background: linear-gradient(0deg, #060e16f5, #071016cc 55%, #07101644);
+  }
+  .hcs-finale-copy {
+    left: 7vw;
+    top: auto;
+    bottom: 30px;
+    transform: none;
+    width: 86vw;
+  }
+  .hcs-victory-crest {
+    width: 100px;
+    height: 100px;
+  }
+  .hcs-finale h1 {
+    font-size: 38px;
+  }
+  #lab-ship-briefing {
+    top: 190px;
+    padding: 15px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hcs-confetti i {
+    animation: none;
+    display: none;
+  }
+}

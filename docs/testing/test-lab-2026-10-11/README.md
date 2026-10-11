@@ -2,6 +2,8 @@
 
 Open **TEST LAB** near the bottom-right of the lobby and enter **12345**. The gate unlocks for that page only; reloading locks it again. This is a local practice gate, not administrator access.
 
+For the complete championship run with ship boarding, combat bots, audience windows and a victory celebration, use **FULL HCS · SHIP TO CHAMPION**. See the [full HCS instructions and screenshots](../hcs-full-2026-10-11/README.md).
+
 ## Test on your M3 MacBook Air
 
 1. Enable Chrome **Settings → System → Use graphics acceleration when available**. Relaunch Chrome if you change that setting.

@@ -130,6 +130,32 @@ try {
     "camera and stats follow the same competitor",
   );
   assert.match(eliminated.stats, /100 HP/);
+  const final = await page.evaluate(async () => {
+    window.__snapshot.state.phase = "done";
+    window.__snapshot.state.winner = 0;
+    window.__snapshot.state.tournamentKills = { a: 4 };
+    await window.__socket.onmessage({
+      data: JSON.stringify(window.__snapshot),
+    });
+    window.__client.render(0.033);
+    const root = document.getElementById("hcs-official-finale");
+    const result = {
+      hidden: root.hidden,
+      title: root.querySelector("[data-finale=title]").textContent,
+      name: root.querySelector("[data-finale=name]").textContent,
+      viewed: window.Duel.spectating,
+    };
+    window.__client.stop();
+    result.cleaned =
+      root.hidden && !document.body.classList.contains("hcs-celebrating");
+    window.__snapshot.state.phase = "playing";
+    return result;
+  });
+  assert.equal(final.hidden, false);
+  assert.equal(final.title, "CHAMPION CROWNED");
+  assert.equal(final.name, "Alpha");
+  assert.equal(final.viewed, "a");
+  assert.equal(final.cleaned, true);
   const inputs = await page.evaluate(async () => {
     window.__client.stop();
     await window.__socket.onmessage({

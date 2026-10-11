@@ -1,5 +1,6 @@
 import { HCS, nextEdition } from "./hcs-rules.js";
 import { rememberIdentity } from "./nickname.js";
+import { createHCSCelebration, hcsHeroState } from "./hcs-presentation.js";
 const $ = (id) => document.getElementById(id);
 export function createHCS({
   config,
@@ -27,6 +28,11 @@ export function createHCS({
     disconnected = false,
     checkingIn = false;
   const base = String(config.hcsUrl || "").replace(/\/$/, "");
+  const celebration = createHCSCelebration({
+    id: "hcs-official-finale",
+    onExit: () => stop(),
+  });
+  let finaleKey = "";
   const valid =
     /^https:\/\/[^/]+$/.test(base) ||
     (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(base) &&
@@ -342,6 +348,8 @@ export function createHCS({
   };
   const stop = () => {
     transition++;
+    celebration.reset();
+    finaleKey = "";
     window.Duel.spectating = null;
     declined = frame?.matchId;
     active = false;
@@ -362,6 +370,9 @@ export function createHCS({
   poll();
   connect();
   return {
+    get championship() {
+      return active && !official;
+    },
     get active() {
       return active || official;
     },
@@ -385,6 +396,17 @@ export function createHCS({
       if (official) return false;
       if (!active || !frame) return false;
       const s = frame.state;
+      const final = celebration.update(s, frame.profiles, identity, {
+        spectator: watching,
+      });
+      if (final) {
+        viewed = final.id;
+        if (finaleKey !== final.key) {
+          finaleKey = final.key;
+          window.Game.clear();
+          document.exitPointerLock?.();
+        }
+      }
       let p = s.players.find((p) => p.id === viewed);
       if ((!p || p.hp <= 0) && s.phase === "playing") {
         const living = s.players.find((p) => p.hp > 0);
@@ -401,8 +423,9 @@ export function createHCS({
       );
       if (watching || viewed !== identity)
         window.Game.look(p.yaw, p.pitch || 0);
-      window.Game.apply(s, viewed, colors, dt);
-      window.Duel.spectating = watching || viewed !== identity ? viewed : null;
+      window.Game.apply(final ? hcsHeroState(s) : s, viewed, colors, dt);
+      window.Duel.spectating =
+        final || watching || viewed !== identity ? viewed : null;
       if (!disconnected)
         $("hcs-broadcast-label").textContent = watching
           ? "20 SECOND DELAY"
@@ -428,6 +451,7 @@ export function createHCS({
     },
     stop,
     close() {
+      celebration.reset();
       closed = true;
       clearInterval(timer);
       clearInterval(poller);
