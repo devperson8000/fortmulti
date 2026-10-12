@@ -56,7 +56,7 @@ test("cinematic hero is unarmed and grounded while authoritative players remain 
     assert.equal(winner.grounded, true);
     assert.equal(winner.vy, 0);
     assert.equal(hero.players[1], state.players[1]);
-    if (frame.scene === "bay") assert.deepEqual(winner.p, frame.actor);
+    assert.deepEqual(winner.p, frame.actor);
     assert.deepEqual(state, original);
   }
 });

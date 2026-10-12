@@ -1,5 +1,7 @@
 # HCS victory and weapon presentation — 12 October 2026
 
+Superseded by the corrected wrist poses, full-hand salutes and map-to-spaceship rescue: [latest verification](../hcs-pickup-grips-2026-10-12/README.md).
+
 The champion sequence now fades immediately from the finished match to black, reveals an unarmed operator facing the pod, moves the camera closer, boards and seals the operator, launches the capsule through a retracting roof hatch, brings it back down, opens the doors, and shows the champion walking out into a held salute. The championship card, bounded confetti and fanfare follow the salute. Official matches and the full local HCS test use the same presentation.
 
 The supplied song plays forward from 20.835 seconds, fading in over 0.2 seconds. Launch occurs on the 25.285-second drop. The return touches down on the 27.956-second bass onset. Lighting and pod accents pulse at the following measured onsets: 25.285, 26.415, 26.789, 27.956, 29.124 and 29.578 seconds. These were measured from the unchanged 30-second `deployment-intro.mp3` using its 40–160 Hz bass band; the existing deployment drop cue was preserved. The final 0.5 seconds fade out during the salute. There is one forward-playing source, without looping or cutting back to the start.

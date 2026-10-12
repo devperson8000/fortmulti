@@ -6,7 +6,7 @@ import {clone as cloneSkinned} from 'three/addons/utils/SkeletonUtils.js';
 import {resolveLobbyRig,sampleRightHandFingerPose} from './lobby-rig.js';
 import {firstPersonCalibration} from './first-person-calibration.js';
 import {poseLobbyRifle} from './lobby-rifle.js';
-import {poseNativeSalute} from './match-character-renderer.js';
+import {poseNativeSalute,restoreSaluteHandPositions} from './match-character-renderer.js';
 
 export const lobbyDiagnostics={snapshot:()=>[]};
 const canvas=document.getElementById('lobby-characters');
@@ -61,7 +61,7 @@ if(canvas){
   const model=cloneSkinned(template),holder=new THREE.Group(),rig=findRig(model);
   const bones=new Map();
   model.traverse(object=>{if(object.isBone)bones.set(normBone(object.name),object);});
-  const fingerRest=new Map([...bones].filter(([name])=>/hand.*[1234]$/.test(name)).map(([,bone])=>[bone,bone.quaternion.clone()]));for(const {name,quaternion}of saluteFingerPose){const bone=bones.get(normBone(name));if(bone)fingerRest.set(bone,quaternion.clone());}
+  const fingerRest=new Map([...bones].filter(([name])=>/hand($|.*[1234]$)/.test(name)).map(([,bone])=>[bone,bone.quaternion.clone()]));for(const {name,quaternion}of saluteFingerPose){const bone=bones.get(normBone(name));if(bone)fingerRest.set(bone,quaternion.clone());}
   if(!rigWarningShown){
    const missing=['rightShoulder','rightArm','rightForeArm','rightHand',...['Thumb','Index','Middle','Ring','Pinky'].flatMap(digit=>[1,2,3,4].map(joint=>`right${digit}${joint}`))].filter(name=>!rig[name]);
    if(missing.length){console.error('Horizon lobby Soldier rig is missing runtime bones:',missing);rigWarningShown=true;}
@@ -163,7 +163,7 @@ if(canvas){
   ensureInstances(party);
   const preview=Boolean(window.Duel?.characterPreview),[width,height]=resize();setCamera(preview,width,height,party.length);
   const time=performance.now()/1000;
-  for(const instance of instances.values()){for(const [bone,q] of instance.animatedPose)bone.quaternion.copy(q);instance.mixer.update(dt);for(const [bone,q] of instance.animatedPose)q.copy(bone.quaternion);}
+  for(const instance of instances.values()){restoreSaluteHandPositions(instance);for(const [bone,q] of instance.animatedPose)bone.quaternion.copy(q);instance.mixer.update(dt);for(const [bone,q] of instance.animatedPose)q.copy(bone.quaternion);}
   poseInstances(party,preview,time);
   renderer.render(scene,camera);
  }

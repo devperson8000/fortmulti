@@ -24,7 +24,7 @@ for(const id of Object.keys(FIRST_PERSON_CALIBRATION)){
    stepViewModel(state,{weapon:profile,aiming:ads,moving:frame>30&&frame<180?1:0,sprinting:frame>=90&&frame<150,strafe:frame<90?1:-1,mouseX:frame%60<10?18:0,mouseY:frame%80<10?-14:0,grounded:!(frame>=150&&frame<170),verticalVelocity:frame>=150&&frame<170?8:0,landing:frame===170?1:0,shotImpulse:frame>=280&&frame<350&&frame%7===0?1:0,reloading:remaining},1/60);
    stepWeaponParts(parts,profile,remaining);r.renderFirstPersonWeapon(id,profile,state,parts);
    const item=r.firstPersonInstances.get(id),expected=item.root.localToWorld(new THREE.Vector3(...c.rightPalm).sub(new THREE.Vector3(...c.grip)).multiplyScalar(c.scale));
-   assert.ok(palm('right').distanceTo(expected)<.002,'shooting palm slipped');
+   assert.ok(palm('right').distanceTo(expected)<.002,`${id} frame ${frame} shooting palm slipped ${palm('right').distanceTo(expected)*1000} mm`);
    if(parts.stage==='idle'){
     const node=item.nodes.get(c.supportNode),local=node?item.root.worldToLocal(node.getWorldPosition(new THREE.Vector3())).addScaledVector(item.supportOffset,c.scale):new THREE.Vector3(...c.support).sub(new THREE.Vector3(...c.grip)).multiplyScalar(c.scale);
     assert.ok(palm('left').distanceTo(item.root.localToWorld(local))<.002,'support palm slipped');
@@ -175,13 +175,13 @@ test('ADS preserves the viewmodel field of view so world zoom does not magnify s
  }
 });
 
-test('weapon carry elbows stay below the hands instead of folding sleeve armor into the sightline',()=>{
+test('weapon carry elbows stay below the eye while short-gun grips remain reachable',()=>{
  for(const id of Object.keys(FIRST_PERSON_CALIBRATION))for(const mode of ['idle','walking','running','ads']){
   const state=createViewModelState();for(let n=0;n<180;n++)stepViewModel(state,{weapon:WEAPON_PROFILES[id],aiming:mode==='ads',moving:mode==='walking'?.55:mode==='running'?1:0,sprinting:mode==='running',grounded:true},1/60);
   r.renderFirstPersonWeapon(id,WEAPON_PROFILES[id],state,createWeaponPartState());
   for(const side of ['right','left']){
    const wrist=r.arms.bones.get('mixamorig'+side+'hand').getWorldPosition(new THREE.Vector3()),elbow=r.arms.bones.get('mixamorig'+side+'forearm').getWorldPosition(new THREE.Vector3());
-   assert.ok(elbow.y<wrist.y-.015,`${id} ${mode} ${side} elbow rises into the weapon view`);
+   assert.ok(elbow.y<-.08,`${id} ${mode} ${side} elbow rises into the weapon view`);
   }
  }
 });
@@ -193,5 +193,19 @@ test('ADS leaves the centre sight ray clear of the native sleeves for every weap
   const meshes=[];r.arms.model.traverse(mesh=>{if(mesh.isSkinnedMesh){mesh.skeleton.update();mesh.computeBoundingSphere();mesh.computeBoundingBox();meshes.push(mesh);}});
   const ray=new THREE.Raycaster(new THREE.Vector3(),new THREE.Vector3(0,0,-1),.15,2);
   assert.equal(ray.intersectObjects(meshes,false).length,0,`${id}: sleeve blocks the crosshair`);
+ }
+});
+
+test('native wrist roll follows the forearm instead of twisting glove skin around the joint',()=>{
+ for(const id of Object.keys(FIRST_PERSON_CALIBRATION))for(const mode of ['idle','walking','running','ads','reload']){
+  const state=createViewModelState(),parts=createWeaponPartState(),profile=WEAPON_PROFILES[id];
+  for(let n=0;n<180;n++)stepViewModel(state,{weapon:profile,aiming:mode==='ads',moving:mode==='walking'?.55:mode==='running'?1:0,sprinting:mode==='running'},1/60);
+  stepWeaponParts(parts,profile,mode==='reload'?profile.reloadDuration*.7:0);for(let n=0;n<30;n++)r.renderFirstPersonWeapon(id,profile,state,parts);
+  for(const side of ['right','left']){
+   const hand=r.arms.bones.get('mixamorig'+side+'hand'),fore=r.arms.bones.get('mixamorig'+side+'forearm'),axis=hand.getWorldPosition(new THREE.Vector3()).sub(fore.getWorldPosition(new THREE.Vector3())).normalize();
+   const actual=new THREE.Vector3(1,0,0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion())),natural=new THREE.Vector3(1,0,0).applyQuaternion(fore.getWorldQuaternion(new THREE.Quaternion()).multiply(r.arms.rest.get(hand)));
+   actual.addScaledVector(axis,-actual.dot(axis)).normalize();natural.addScaledVector(axis,-natural.dot(axis)).normalize();
+   assert.ok(actual.dot(natural)>.96,`${id} ${mode} ${side}: axial wrist twist ${(actual.angleTo(natural)*180/Math.PI).toFixed(1)} degrees`);
+  }
  }
 });

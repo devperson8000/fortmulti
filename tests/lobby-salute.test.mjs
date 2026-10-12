@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
  buildForeheadSaluteProbes,
- SALUTE_FINGER_CURLS,
+ SALUTE_FINGER_ADDUCTION,
  resolveLobbyRig,
  sampleSaluteFingerPose,
  sampleRightHandFingerPose,
@@ -66,7 +66,7 @@ test('resolves the actual sanitized Soldier rig names and right-hand hierarchy',
  assert.equal(rig.rightPinky4.parent,rig.rightPinky3);
 });
 
-test('selects the sanitized index and middle finger tracks for the salute layer',()=>{
+test('selects every sanitized finger track for the full-hand salute layer',()=>{
  const tracks=[
   {name:'mixamorigRightHandMiddle1.position'},
   {name:'mixamorigRightHandMiddle1.quaternion'},
@@ -90,10 +90,10 @@ test('selects the sanitized index and middle finger tracks for the salute layer'
   {name:'mixamorigRightHandPinky1.quaternion'},
   {name:'mixamorig:RightHandIndex1.quaternion'}
  ];
- assert.deepEqual(selectSaluteFingerTracks({tracks}),tracks.slice(0,18));
+ assert.deepEqual(selectSaluteFingerTracks({tracks}),tracks.slice(0,20));
 });
 
-test('samples only actual index and middle quaternion tracks from the T-pose clip',()=>{
+test('samples all actual full-hand quaternion tracks from the T-pose clip',()=>{
  const sampled=[];
  const makeTrack=(name,value)=>({name,createInterpolant(){return {evaluate(time){sampled.push([name,time]);return value;}};}});
  const clip={tracks:[
@@ -106,11 +106,13 @@ test('samples only actual index and middle quaternion tracks from the T-pose cli
  const pose=sampleSaluteFingerPose(clip,.0083);
  assert.deepEqual(pose,[
   {name:'mixamorigRightHandIndex1',quaternion:[0,0,0,1]},
-  {name:'mixamorigRightHandMiddle2',quaternion:[.2,.3,.4,.8]}
+  {name:'mixamorigRightHandMiddle2',quaternion:[.2,.3,.4,.8]},
+  {name:'mixamorigRightHandRing1',quaternion:[0,0,0,1]}
  ]);
  assert.deepEqual(sampled,[
   ['mixamorigRightHandIndex1.quaternion',.0083],
-  ['mixamorigRightHandMiddle2.quaternion',.0083]
+  ['mixamorigRightHandMiddle2.quaternion',.0083],
+  ['mixamorigRightHandRing1.quaternion',.0083]
  ]);
 });
 
@@ -145,13 +147,8 @@ test('samples the entire right hand so closed fingers can override Idle at every
  assert.ok(pose.some(target=>target.name==='mixamorigRightHandThumb4'));
 });
 
-test('curls every thumb, ring and pinky joint while leaving the index and middle free',()=>{
- const targets=SALUTE_FINGER_CURLS;
- assert.deepEqual([...new Set(targets.map(target=>target.name.match(/RightHand(Thumb|Ring|Pinky)/)?.[1]))].sort(),['Pinky','Ring','Thumb']);
- for(const digit of ['Thumb','Ring','Pinky']){
-  const joints=targets.filter(target=>target.name.includes(`RightHand${digit}`)).map(target=>Number(target.name.match(/(\d)$/)?.[1]));
-  assert.deepEqual(joints,[1,2,3,4]);
- }
- assert.ok(targets.every(target=>Number.isFinite(target.angle)&&target.axis.length===3));
- assert.ok(!targets.some(target=>/RightHand(Index|Middle)/.test(target.name)));
+test('full-hand adduction packs proximal fingers without curling the ring or pinky phalanges',()=>{
+ const targets=SALUTE_FINGER_ADDUCTION;assert.equal(targets.length,3);
+ assert.ok(targets.every(p=>p.name.endsWith('1')&&Math.abs(p.angle)<=.15&&Math.abs(p.offsetZ)<=1.2));
+ assert.deepEqual(targets.map(p=>p.name),['mixamorigRightHandIndex1','mixamorigRightHandRing1','mixamorigRightHandPinky1']);
 });

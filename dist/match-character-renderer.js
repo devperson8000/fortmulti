@@ -1,3 +1,4 @@
+import {SALUTE_FINGER_ADDUCTION} from './lobby-rig.js';
 import {PICKUP_RANGE,pickupPose,pickupBounds,rayPickup} from './pickup-targeting.js';
 import {createCharacterOutfit,applyCharacterOutfit} from './character-outfit.js';
 import {WEAPON_PROFILES} from './weapon-system.js';
@@ -5,9 +6,8 @@ import {inventoryWeapon} from './weapon-inventory.js';
 import {WEAPON_FILES,createGroundWeapon,groundWeaponPose,disposeWeaponSkeletons} from './weapon-assets.js';
 import {firstPersonCalibration,PICKAXE_GRIP} from './first-person-calibration.js';
 import {createContactShadow} from './character-lighting.js';
-import {SALUTE_FINGER_CURLS} from './lobby-rig.js';
 import {createMotionPresentation,stepMotionPresentation} from './visual-presentation.js';
-import {createSoldierArms,poseSoldierArms,poseWeaponHand,supportHandPose,poseArmChain,poseLegChain} from './soldier-arms.js';
+import {createSoldierArms,poseSoldierArms,poseWeaponHand,supportHandPose,poseArmChain,poseLegChain,alignForearmToPalm} from './soldier-arms.js';
 import {createHeldItem} from './held-items.js';
 import {handAttachmentScale} from './view-model.js';
 import * as THREE from 'three';
@@ -22,26 +22,38 @@ const clipState=name=>String(name||'').toLowerCase().replace(/[^a-z]/g,'');
 const normBone=name=>String(name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 
-// Measured on the shipped Soldier mesh: helmet surface in head-bone space,
-// and the actual terminal skin vertices of its two extended fingers.
+// Full-hand military salute: native fingers stay extended and adducted,
+// the thumb rests against the index web, and the palm faces the operator's front.
 const saluteForehead=[-5.12026438883,17.57254662871,11.46768078850];
-const saluteTips=[['index3',[-.0972724658,3.7575946381,-.0024291103]],['middle3',[-.8392463825,3.7000995029,.0195624377]]];
 const saluteHandRotation=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(0,0,1),new THREE.Vector3(-.866,.5,0).normalize(),new THREE.Vector3(-.5,-.866,0).normalize()));
+export function restoreSaluteHandPositions(instance){
+ for(const [bone,position]of instance.saluteFingerOrigins||[])bone.position.copy(position);
+}
 export function poseNativeSalute(instance,amount){
  const {model,holder,bones,fingerRest}=instance,arm=bones.get('mixamorigrightarm'),fore=bones.get('mixamorigrightforearm'),hand=bones.get('mixamorigrighthand'),head=bones.get('mixamorighead');
  if(!arm||!fore||!hand||!head)return;
+ restoreSaluteHandPositions(instance);
+ // Fitted from the real glove cross-section: adduct the metacarpals, while
+ // retaining all phalanx lengths, so the extended fingers meet edge to edge.
+ instance.saluteFingerOrigins??=new Map(SALUTE_FINGER_ADDUCTION.map(p=>{const b=bones.get(normBone(p.name));return [b,b.position.clone()];}));
+ for(const p of SALUTE_FINGER_ADDUCTION){const b=bones.get(normBone(p.name));b.position.z+=p.offsetZ*amount;}
  const base=[arm,fore,hand].map(b=>b.quaternion.clone()),fingers=[];
- for(const [bone,rest] of fingerRest)if(/righthand(index|middle)/.test(normBone(bone.name))){fingers.push([bone,bone.quaternion.clone(),rest]);bone.quaternion.copy(rest);}
+ for(const [bone,rest]of fingerRest)if(/righthand(thumb|index|middle|ring|pinky)[1234]$/.test(normBone(bone.name))){fingers.push([bone,bone.quaternion.clone()]);bone.quaternion.copy(rest);}
+ for(const p of SALUTE_FINGER_ADDUCTION){const bone=bones.get(normBone(p.name));if(bone)bone.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),p.angle));}
+ holder.updateMatrixWorld(true);
+ const thumb=bones.get('mixamorigrighthandthumb1'),tip=bones.get('mixamorigrighthandthumb3'),index=bones.get('mixamorigrighthandindex1');
+ if(thumb&&tip&&index){
+  const from=hand.worldToLocal(tip.localToWorld(new THREE.Vector3(-.9,2.6,1))),root=hand.worldToLocal(thumb.getWorldPosition(new THREE.Vector3())),web=hand.worldToLocal(index.getWorldPosition(new THREE.Vector3())).add(new THREE.Vector3(-1,-.3,1.45));
+  thumb.quaternion.premultiply(new THREE.Quaternion().setFromUnitVectors(from.sub(root).normalize(),web.sub(root).normalize()));
+ }
  holder.updateMatrixWorld(true);
  const target=head.localToWorld(new THREE.Vector3(...saluteForehead)),orientation=holder.getWorldQuaternion(new THREE.Quaternion()).multiply(saluteHandRotation);
- const orient=()=>{hand.quaternion.copy(hand.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(orientation));hand.updateWorldMatrix(false,true);};
- orient();
- const midpoint=saluteTips.map(([name,offset])=>bones.get('mixamorigrighthand'+name).localToWorld(new THREE.Vector3(...offset))).reduce((a,b)=>a.add(b),new THREE.Vector3()).multiplyScalar(.5);
- const wrist=target.clone().sub(midpoint.sub(hand.getWorldPosition(new THREE.Vector3())));
- poseArmChain(model,bones,'right',wrist,holder.localToWorld(new THREE.Vector3(.55,1.3,-.02)));orient();
- for(const [index,bone] of [arm,fore,hand].entries())bone.quaternion.copy(base[index].slerp(bone.quaternion.clone(),amount));
- for(const [bone,base,rest] of fingers)bone.quaternion.copy(base.slerp(rest,amount));
- for(const curl of SALUTE_FINGER_CURLS){const bone=bones.get(normBone(curl.name));if(bone)bone.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(...curl.axis),curl.angle*amount));}
+ const orient=()=>{hand.quaternion.copy(hand.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(orientation));hand.updateWorldMatrix(false,true);};orient();
+ const finger=bones.get('mixamorigrighthandindex3'),offset=finger.localToWorld(new THREE.Vector3(-.0972724658,3.7575946381,-.0024291103)).sub(hand.getWorldPosition(new THREE.Vector3())),wrist=target.clone().sub(offset);
+ poseArmChain(model,bones,'right',wrist,holder.localToWorld(new THREE.Vector3(.55,1.3,-.02)));alignForearmToPalm(fore,hand,orientation,fingerRest.get(hand)||new THREE.Quaternion());orient();
+ for(const [n,bone]of [arm,fore,hand].entries())bone.quaternion.copy(base[n].slerp(bone.quaternion.clone(),amount));
+ for(const [bone,rest]of fingers)bone.quaternion.copy(rest.slerp(bone.quaternion.clone(),amount));
+ holder.updateMatrixWorld(true);
 }
 
 export class MatchCharacterRenderer{
@@ -207,7 +219,7 @@ export class MatchCharacterRenderer{
   rightArm=bones.get('mixamorigrightarm');rightForeArm=bones.get('mixamorigrightforearm');leftArm=bones.get('mixamorigleftarm');leftForeArm=bones.get('mixamorigleftforearm');
   model.scale.setScalar(this.modelScale);model.traverse(object=>{if(object.isMesh){object.castShadow=false;object.receiveShadow=true;object.frustumCulled=false;}});
   holder.add(model);this.scene.add(holder);const contactShadow=createContactShadow();this.scene.add(contactShadow);
-  const animatedPose=new Map([...bones.values()].map(bone=>[bone,bone.quaternion.clone()])),fingerRest=new Map([...bones].filter(([name])=>/hand.*[123]$/.test(name)).map(([,bone])=>[bone,bone.quaternion.clone()]));
+  const animatedPose=new Map([...bones.values()].map(bone=>[bone,bone.quaternion.clone()])),fingerRest=new Map([...bones].filter(([name])=>/hand($|.*[123]$)/.test(name)).map(([,bone])=>[bone,bone.quaternion.clone()]));
   const instance={id,holder,model,contactShadow,motion:createMotionPresentation(),mixer,actions,bones,animatedPose,fingerRest,hand,rightArm,rightForeArm,leftArm,leftForeArm,weaponId:'',weaponMount:null,weaponMounts:new Map(),utilityCache:new Map(),blend:createAnimationBlend('idle'),sequenceState:'',fireTime:0,crouchBlend:0,slideBlend:0,color:source.color||'#6f8470'};
   this._tint(instance,instance.color);return instance;
  }
@@ -226,6 +238,7 @@ export class MatchCharacterRenderer{
    if(!p?.id||p.hp<=0)continue;
    const id=String(p.id);active.add(id);let instance=this.instances.get(id);
    if(!instance){instance=this._create(id,p);this.instances.set(id,instance);}
+   restoreSaluteHandPositions(instance);
    this._tint(instance,p.color);
    const opacity=Number.isFinite(p.cinematicOpacity)?clamp(p.cinematicOpacity,0,1):1;instance.holder.visible=id!==String(hideId)&&opacity>.001;instance.holder.position.set(p.p?.[0]||0,p.p?.[1]||0,p.p?.[2]||0);instance.holder.rotation.y=Number.isFinite(p.yaw)?p.yaw:0;
    if(instance.holder.visible&&viewProjection){

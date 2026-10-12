@@ -66,14 +66,11 @@ export function hcsHeroState(state, cinematic = null) {
             moveSpeed: 0,
             ...(cinematic
               ? {
-                  p:
-                    cinematic.scene === "bay"
-                      ? cinematic.actor.slice()
-                      : p.p.slice(),
-                  air: cinematic.scene === "bay" ? "ship" : p.air,
+                  p: cinematic.actor.slice(),
+                  air: cinematic.scene === "ship" ? "ship" : "landed",
                   shipLocal: null,
                   pod: null,
-                  yaw: cinematic.scene === "bay" ? cinematic.yaw : p.yaw,
+                  yaw: cinematic.yaw,
                   saluteProgress: cinematic.salute,
                   animationState: cinematic.animationState,
                   moveSpeed: cinematic.moveSpeed,
@@ -128,6 +125,7 @@ export function createHCSCelebration({
   onControls,
   onExit,
   id = "hcs-finale",
+  clock = () => performance.now(),
 }) {
   const root = document.createElement("section");
   root.id = id;
@@ -154,7 +152,8 @@ export function createHCSCelebration({
     started = 0,
     lastAge = -1,
     lastSample = 0,
-    celebrated = false;
+    celebrated = false,
+    pickupContext = null;
   return {
     update(
       state,
@@ -168,10 +167,15 @@ export function createHCSCelebration({
         return null;
       }
       const token = result.key + ":" + testOnly + ":" + result.won;
-      const now = performance.now();
+      const now = clock();
       if (token !== key) {
         cancelFanfare();
         key = token;
+        const winner = state.players[state.winner];
+        pickupContext = window.Game?.victoryPickup?.(winner) || {
+          winner: winner.p.slice(),
+          yaw: Number(winner.yaw) || 0,
+        };
         started = now;
         lastAge = -1;
         celebrated = false;
@@ -207,7 +211,7 @@ export function createHCSCelebration({
       if (reduced && elapsed >= 0.85) elapsed = HCS_VICTORY_DURATION;
       else
         elapsed = window.Game?.victoryElapsed?.(result.key, elapsed) ?? elapsed;
-      victoryFrame = hcsVictoryCinematic(elapsed);
+      victoryFrame = hcsVictoryCinematic(elapsed, pickupContext);
       victoryFrame.sampledAt = now;
       victoryOwner = id;
       fadeLayer.style.opacity = String(victoryFrame.fade);

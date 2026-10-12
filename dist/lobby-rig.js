@@ -2,15 +2,11 @@
 // reserved colon, so Object3D names are "mixamorigRightArm" at runtime.
 const runtimeBoneName=name=>`mixamorig${name}`;
 
-export const SALUTE_FINGER_CURLS=Object.freeze([
- {name:'mixamorigRightHandThumb1',axis:[0,1,0],angle:-.8},
- {name:'mixamorigRightHandThumb2',axis:[1,0,0],angle:-.85},
- {name:'mixamorigRightHandThumb3',axis:[1,0,0],angle:-.85},
- {name:'mixamorigRightHandThumb4',axis:[1,0,0],angle:-.65},
- ...['Ring','Pinky'].flatMap(digit=>[1,2,3,4].map(joint=>({
-  name:`mixamorigRightHand${digit}${joint}`,axis:[1,0,0],angle:.72
- })))
-].map(curl=>Object.freeze({...curl,axis:Object.freeze(curl.axis)})));
+export const SALUTE_FINGER_ADDUCTION=Object.freeze([
+ {name:'mixamorigRightHandIndex1',angle:-.06,offsetZ:-.4},
+ {name:'mixamorigRightHandRing1',angle:.03,offsetZ:.38},
+ {name:'mixamorigRightHandPinky1',angle:.1,offsetZ:1.11}
+].map(p=>Object.freeze(p)));
 
 export function buildForeheadSaluteProbes(headPosition,shoulderPosition,cameraPosition,modelScale=1.78){
  const scale=Math.max(.1,modelScale)/1.78;
@@ -53,9 +49,7 @@ export function resolveLobbyRig(model){
 }
 
 export function selectSaluteFingerTracks(clip){
- return clip.tracks.filter(track=>
-  track.name.startsWith('mixamorigRightHandIndex')||track.name.startsWith('mixamorigRightHandMiddle')
- );
+ return clip.tracks.filter(track=>/^mixamorigRightHand(?:Thumb|Index|Middle|Ring|Pinky)[1-4]\.(?:quaternion|position|scale)$/.test(track.name));
 }
 
 export function sampleSaluteFingerPose(clip,time){

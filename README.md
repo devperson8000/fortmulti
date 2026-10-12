@@ -207,3 +207,5 @@ Run `npm run test:pickup-browser` against the running app to verify exact displa
 HCS adds nickname onboarding, official qualification, three-week Sydney finals and a delayed spectator broadcast. See [HCS rules and deployment](docs/HCS.md) for service setup and verification. Live rankings require the separately hosted referee and Supabase migration.
 
 Weapon-state and beat-synced HCS victory captures: [12 October verification](docs/testing/hcs-weapons-2026-10-12/README.md).
+
+Latest grip corrections, full-hand salutes and HCS rescue sequence: [rendered verification](docs/testing/hcs-pickup-grips-2026-10-12/README.md).

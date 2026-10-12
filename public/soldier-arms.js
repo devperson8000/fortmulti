@@ -20,6 +20,21 @@ export function supportHandPose(c,reach=0){
  return {rotation:[rotation.x,rotation.y,rotation.z],fingers,splay,thumbOpposition:normal.thumbOpposition+(reload.thumbOpposition-normal.thumbOpposition)*t};
 }
 function aimBone(bone,child,target){bone.updateWorldMatrix(true,true);const origin=bone.getWorldPosition(v()),direction=child.getWorldPosition(v()).sub(origin).normalize(),desired=target.clone().sub(origin).normalize(),delta=new THREE.Quaternion().setFromUnitVectors(direction,desired),world=bone.getWorldQuaternion(new THREE.Quaternion()).premultiply(delta),parent=bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert();bone.quaternion.copy(parent.multiply(world));bone.updateWorldMatrix(false,true);}
+// Reach alone leaves an arbitrary axial roll from the bind pose. Align the
+// forearm's native palm frame to the desired hand frame around the limb axis.
+// This changes pronation, not the elbow/wrist position or any bone length.
+export function alignForearmToPalm(fore,hand,orientation,handRest){
+ if(!fore||!hand||!handRest)return;
+ fore.updateWorldMatrix(true,true);
+ const axis=hand.getWorldPosition(v()).sub(fore.getWorldPosition(v())).normalize(),world=fore.getWorldQuaternion(new THREE.Quaternion());
+ const native=v().set(1,0,0).applyQuaternion(world.clone().multiply(handRest)),desired=v().set(1,0,0).applyQuaternion(orientation);
+ native.addScaledVector(axis,-native.dot(axis));desired.addScaledVector(axis,-desired.dot(axis));
+ if(native.lengthSq()<1e-8||desired.lengthSq()<1e-8)return;
+ native.normalize();desired.normalize();
+ const angle=Math.atan2(axis.dot(native.clone().cross(desired)),native.dot(desired)),delta=new THREE.Quaternion().setFromAxisAngle(axis,angle);
+ fore.quaternion.copy(fore.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(world.premultiply(delta)));
+ fore.updateWorldMatrix(false,true);
+}
 export function poseArmChain(model,bones,side,wrist,pole){const prefix=`mixamorig${side}`;poseLimbChain(model,bones.get(prefix+'arm'),bones.get(prefix+'forearm'),bones.get(prefix+'hand'),wrist,pole);}
 export function poseLegChain(model,bones,side,foot,pole){const prefix=`mixamorig${side}`;poseLimbChain(model,bones.get(prefix+'upleg'),bones.get(prefix+'leg'),bones.get(prefix+'foot'),foot,pole);}
 function poseLimbChain(model,arm,fore,hand,wrist,pole){if(!arm||!fore||!hand)return;model.updateMatrixWorld(true);const shoulder=arm.getWorldPosition(v()),elbow=fore.getWorldPosition(v()),end=hand.getWorldPosition(v()),a=shoulder.distanceTo(elbow),b=elbow.distanceTo(end),direction=wrist.clone().sub(shoulder),distance=Math.max(Math.abs(a-b)+.0001,Math.min(direction.length(),a+b-.0001));direction.normalize();const sideVector=pole.clone().sub(shoulder).addScaledVector(direction,-pole.clone().sub(shoulder).dot(direction)).normalize(),along=(a*a-b*b+distance*distance)/(2*distance),bend=Math.sqrt(Math.max(0,a*a-along*along)),joint=shoulder.clone().addScaledVector(direction,along).addScaledVector(sideVector,bend);aimBone(arm,fore,joint);aimBone(fore,hand,wrist);}
@@ -27,16 +42,19 @@ export function poseSoldierArms(rig,{right,left,origin=[0,0,0],rotation=[0,0,0],
  for(const [bone,q] of rig.rest){bone.quaternion.copy(q);bone.position.copy(rig.restPositions.get(bone));}
  rig.model.position.set(hands?origin[0]-.05:0,hands?origin[1]-1.65:-1.45,hands?origin[2]-.11:0);rig.model.rotation.set(0,hands?0:Math.PI,0);rig.model.updateMatrixWorld(true);
  const itemRotation=new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation,'YXZ'));
+ const reachBlend=hands&&!utility?Math.max(0,Math.min(1,ads)):0;
  const transform=new THREE.Matrix4().compose(new THREE.Vector3(...origin),itemRotation,new THREE.Vector3(scale,scale,scale));
- {const wrists=['right','left'].map(side=>{if(!hands){const target=new THREE.Vector3(...(side==='right'?right:left)).applyMatrix4(transform);if(utility){const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(-.8,0,side==='right'?.2:-.2)).premultiply(itemRotation);target.sub(new THREE.Vector3(0,.09*rig.model.scale.x,0).applyQuaternion(q));}return target;}const spec=hands[side],q=new THREE.Quaternion().setFromEuler(new THREE.Euler(...spec.rotation,'XYZ')).premultiply(itemRotation);return new THREE.Vector3(...spec.palm).applyMatrix4(transform).sub(new THREE.Vector3(0,.09*rig.model.scale.x,0).applyQuaternion(q));});const center=wrists[0].clone().add(wrists[1]).multiplyScalar(.5);rig.model.rotation.y=hands&&!utility?-1.4:-.65;rig.model.position.set(center.x,center.y-1.65,center.z+(hands?.19:0));rig.model.updateMatrixWorld(true);
+ {const wrists=['right','left'].map(side=>{if(!hands){const target=new THREE.Vector3(...(side==='right'?right:left)).applyMatrix4(transform);if(utility){const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(-.8,0,side==='right'?.2:-.2)).premultiply(itemRotation);target.sub(new THREE.Vector3(0,.09*rig.model.scale.x,0).applyQuaternion(q));}return target;}const spec=hands[side],q=new THREE.Quaternion().setFromEuler(new THREE.Euler(...spec.rotation,'XYZ')).premultiply(itemRotation);return new THREE.Vector3(...spec.palm).applyMatrix4(transform).sub(new THREE.Vector3(0,.09*rig.model.scale.x,0).applyQuaternion(q));});const center=wrists[0].clone().add(wrists[1]).multiplyScalar(.5);rig.model.rotation.y=-.65;rig.model.position.set(center.x,center.y-1.65,center.z+(hands?.19:0));rig.model.updateMatrixWorld(true);
  // Move the whole shoulder frame into the reachable region of both wrists.
+ // Reserve elbow flexion for firearms instead of locking the support arm
+ // at full extension. Utilities retain their existing shaft contact pose.
  // Long ADS fore-ends otherwise exceed horizontal reach before the vertical
  // adjustment can help. Preserve every native bone attachment and length.
  for(let pass=0;pass<3;pass++)for(const [index,side]of ['right','left'].entries()){
-  const arm=rig.bones.get(`mixamorig${side}arm`),fore=rig.bones.get(`mixamorig${side}forearm`),hand=rig.bones.get(`mixamorig${side}hand`),shoulder=arm.getWorldPosition(v()),a=shoulder.distanceTo(fore.getWorldPosition(v())),b=fore.getWorldPosition(v()).distanceTo(hand.getWorldPosition(v())),dx=wrists[index].x-shoulder.x,dz=wrists[index].z-shoulder.z,horizontal=Math.hypot(dx,dz),excess=horizontal-(a+b-.018);
+  const arm=rig.bones.get(`mixamorig${side}arm`),fore=rig.bones.get(`mixamorig${side}forearm`),hand=rig.bones.get(`mixamorig${side}hand`),shoulder=arm.getWorldPosition(v()),a=shoulder.distanceTo(fore.getWorldPosition(v())),b=fore.getWorldPosition(v()).distanceTo(hand.getWorldPosition(v())),dx=wrists[index].x-shoulder.x,dz=wrists[index].z-shoulder.z,horizontal=Math.hypot(dx,dz),excess=horizontal-((a+b-.018)*(1-reachBlend)+(a+b)*.95*reachBlend);
   if(excess>0){rig.model.position.x+=dx/horizontal*excess;rig.model.position.z+=dz/horizontal*excess;rig.model.updateMatrixWorld(true);}
  }
- let raise=0;for(const [index,side]of ['right','left'].entries()){const arm=rig.bones.get(`mixamorig${side}arm`),fore=rig.bones.get(`mixamorig${side}forearm`),hand=rig.bones.get(`mixamorig${side}hand`);const shoulder=arm.getWorldPosition(new THREE.Vector3()),a=shoulder.distanceTo(fore.getWorldPosition(new THREE.Vector3())),b=fore.getWorldPosition(new THREE.Vector3()).distanceTo(hand.getWorldPosition(new THREE.Vector3())),horizontal=Math.hypot(wrists[index].x-shoulder.x,wrists[index].z-shoulder.z),vertical=Math.sqrt(Math.max(0,(a+b-.001)**2-horizontal**2))*.995;raise=Math.max(raise,wrists[index].y-shoulder.y-vertical);}rig.model.position.y+=raise;rig.model.updateMatrixWorld(true);}
+ let raise=0;for(const [index,side]of ['right','left'].entries()){const arm=rig.bones.get(`mixamorig${side}arm`),fore=rig.bones.get(`mixamorig${side}forearm`),hand=rig.bones.get(`mixamorig${side}hand`);const shoulder=arm.getWorldPosition(new THREE.Vector3()),a=shoulder.distanceTo(fore.getWorldPosition(new THREE.Vector3())),b=fore.getWorldPosition(new THREE.Vector3()).distanceTo(hand.getWorldPosition(new THREE.Vector3())),horizontal=Math.hypot(wrists[index].x-shoulder.x,wrists[index].z-shoulder.z),vertical=Math.sqrt(Math.max(0,((a+b-.001)*(1-reachBlend)+(a+b)*.95*reachBlend)**2-horizontal**2))*.995;raise=Math.max(raise,wrists[index].y-shoulder.y-vertical);}rig.model.position.y+=raise;rig.model.updateMatrixWorld(true);}
  for(const [side,target,sign] of [['right',right,1],['left',left,-1]]){
   const arm=rig.bones.get(`mixamorig${side}arm`),fore=rig.bones.get(`mixamorig${side}forearm`),hand=rig.bones.get(`mixamorig${side}hand`);
   if(!arm||!fore||!hand)continue;
@@ -52,6 +70,7 @@ export function poseSoldierArms(rig,{right,left,origin=[0,0,0],rotation=[0,0,0],
   // Move the IK pole, retaining the exact palm anchor and native bone lengths.
   pole.y-=(spec?.adsElbowDrop||0)*Math.max(0,Math.min(1,ads));
   poseArmChain(rig.model,rig.bones,side,wrist,pole);
+  alignForearmToPalm(fore,hand,orientation,rig.rest.get(hand));
   hand.quaternion.copy(hand.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(orientation));
   for(const [name,bone] of rig.bones){
    if(!name.startsWith(`mixamorig${side}hand`)||!/[123]$/.test(name))continue;
@@ -69,10 +88,11 @@ export function poseSoldierArms(rig,{right,left,origin=[0,0,0],rotation=[0,0,0],
 // Solve against the weapon's world-space palm contact, then orient/curl the
 // original hand bones. The weapon is independent of the hand hierarchy.
 export function poseWeaponHand(model,bones,side,palm,orientation,spec,pole){
- const hand=bones.get(`mixamorig${side}hand`);if(!hand)return;
+ const hand=bones.get(`mixamorig${side}hand`);if(!hand)return;const handRest=spec.rest?.get(hand)||hand.quaternion.clone();
  const wrist=palm.clone().sub(new THREE.Vector3(0,.09*model.getWorldScale(new THREE.Vector3()).x,0).applyQuaternion(orientation));
  const natural=pole.clone().sub(wrist).normalize().multiplyScalar(.12),aligned=wrist.clone().addScaledVector(new THREE.Vector3(0,1,0).applyQuaternion(orientation),-.45).add(natural);
  poseArmChain(model,bones,side,wrist,aligned);
+ alignForearmToPalm(bones.get(`mixamorig${side}forearm`),hand,orientation,handRest);
  hand.quaternion.copy(hand.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(orientation));
  for(const [name,bone]of bones){if(!name.startsWith(`mixamorig${side}hand`)||!/[123]$/.test(name))continue;if(spec.rest?.has(bone))bone.quaternion.copy(spec.rest.get(bone));const finger=['index','middle','ring','pinky','thumb'].find(f=>name.includes(f)),joint=Number(name.at(-1))-1;
   bone.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),spec.fingers[finger][joint]));const splay=spec.splay?.[finger]?.[joint]||0;if(splay)bone.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),splay));if(finger==='thumb'&&joint===0)bone.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),spec.thumbOpposition??(side==='right'?-1.05:1.05)));

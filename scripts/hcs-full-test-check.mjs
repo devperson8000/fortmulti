@@ -163,7 +163,7 @@ try {
       audible - (now - frame.sampledAt) / 1000 - voice.when + voice.offset;
     return {
       voice: voice && { offset: voice.offset, loop: voice.loop },
-      difference: Math.abs(atFrame - (20.835 + frame.time - 0.85)),
+      difference: Math.abs(atFrame - (20.835 + frame.time - 6.5)),
       atFrame,
       frame,
       stamp,

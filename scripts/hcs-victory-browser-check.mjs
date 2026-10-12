@@ -3,7 +3,7 @@ import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
 const out =
   process.env.GAME_ARTIFACTS ||
-  "/workspace/fortmulti-artifacts/hcs-victory-2026-10-12";
+  "/workspace/fortmulti-artifacts/hcs-pickup-2026-10-12";
 await mkdir(out, { recursive: true });
 const browser = await chromium.launch({
   executablePath: "/usr/bin/chromium",
@@ -52,6 +52,7 @@ try {
       await import("/hcs-presentation.js");
     window.__celebration = createHCSCelebration({
       id: "hcs-review-finale",
+      clock: () => 0,
       onExit: () => {
         window.__celebration.reset();
         window.Duel.render = () => {};
@@ -86,14 +87,15 @@ try {
     window.__renderFixture = window.Duel.render;
   });
   for (const [stage, filename, at] of [
-    ["black", "01-black", 0.6],
-    ["reveal", "02-pod-reveal", 1.6],
-    ["boarding", "03-walk-in", 3.2],
-    ["launch", "04-boost", 5.8],
-    ["return", "05-return", 6.95],
-    ["opening", "06-hatch-open", 8.3],
-    ["exit", "07-walk-out", 9.1],
-    ["salute", "08-salute", 10.4],
+    ["pickup", "01-rescue-arrival", 0.3],
+    ["landed", "02-pod-landed", 2.65],
+    ["boarding", "03-walk-in", 4.3],
+    ["launch", "04-boost", 6.8],
+    ["launch", "05-black-transit", 7.7],
+    ["docking", "06-ship-docking", 10.5],
+    ["opening", "07-doors-open", 11.25],
+    ["exit", "08-walk-out", 12.1],
+    ["salute", "09-salute", 13.5],
   ]) {
     await page.evaluate((at) => (window.__state.victoryElapsed = at), at);
     await page.waitForFunction(
@@ -108,7 +110,7 @@ try {
     }));
     assert.equal(v.pose.weapon, null);
     assert.equal(v.pose.slot, 0);
-    if (["launch", "return"].includes(stage))
+    if (["launch", "docking"].includes(stage))
       assert.equal(v.frame.actorVisible, 0);
     await page.screenshot({ path: out + "/" + filename + ".png" });
     checks.push({
@@ -120,7 +122,7 @@ try {
   }
   await page.evaluate(() => (window.__state.victoryElapsed = 18));
   await page.locator("#hcs-review-finale").waitFor({ state: "visible" });
-  await page.screenshot({ path: out + "/09-champion.png" });
+  await page.screenshot({ path: out + "/10-champion.png" });
   assert.equal(
     await page.locator("#hcs-review-finale [data-finale=title]").textContent(),
     "HCS VICTORY",
@@ -133,12 +135,13 @@ try {
   await page.evaluate(async () => {
     await window.Game.startAudio();
     window.Duel.lobby = false;
-    window.__state.victoryElapsed = 2;
+    window.__state.victoryElapsed = 8.8;
     window.Duel.render = window.__renderFixture;
   });
   await page.waitForFunction(
     () =>
-      window.__musicStarts.length === 1 && window.Game.victoryView()?.time >= 2,
+      window.__musicStarts.length === 1 &&
+      window.Game.victoryView()?.time >= 8.8,
   );
   const before = await page.evaluate(() => {
     const t = window.Game.victoryView().time;

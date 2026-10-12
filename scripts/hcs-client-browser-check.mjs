@@ -68,8 +68,8 @@ try {
       mapId: "facility",
       state: {
         players: [
-          { id: "a", hp: 100, yaw: 0 },
-          { id: "b", hp: 100, yaw: 1 },
+          { id: "a", hp: 100, yaw: 0, p:[0,0,0] },
+          { id: "b", hp: 100, yaw: 1, p:[2,0,2] },
         ],
         events: [],
         phase: "playing",
