@@ -209,3 +209,5 @@ HCS adds nickname onboarding, official qualification, three-week Sydney finals a
 Weapon-state and beat-synced HCS victory captures: [12 October verification](docs/testing/hcs-weapons-2026-10-12/README.md).
 
 Latest grip corrections, full-hand salutes and HCS rescue sequence: [rendered verification](docs/testing/hcs-pickup-grips-2026-10-12/README.md).
+
+Platform 23 two-player loading recovery, retry tests and native captures: [13 October verification](docs/testing/platform23-loading-2026-10-13/README.md).

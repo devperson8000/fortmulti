@@ -1,4 +1,5 @@
 import {nativeSupportHeight,boundsIntersectCollider,patchColliders} from './collision-shapes.js';
+import {retryMapAsset} from './map-asset-loading.js';
 export const PLATFORM_SOURCE=Object.freeze({id:'facility',name:'Platform 23',author:'EmperorJack / Unvanquished',license:'CC BY-SA 3.0',url:'https://github.com/UnvanquishedAssets/map-plat23_src.dpkdir'});
 export const PLATFORM_CINEMATIC_RADIUS=3.3;
 export const PLATFORM_POIS=Object.freeze([
@@ -8,7 +9,13 @@ let data=null,loading=null,layout=null,nativeColliders=[];const supportCells=new
 function index(entry){for(let x=Math.floor(entry.min[0]/size);x<=Math.floor(entry.max[0]/size);x++)for(let z=Math.floor(entry.min[2]/size);z<=Math.floor(entry.max[2]/size);z++){const k=`${x},${z}`;if(!supportCells.has(k))supportCells.set(k,[]);supportCells.get(k).push(entry);}}
 function triangleHeight(p,x,z){const ax=p[0],az=p[2],bx=p[3],bz=p[5],cx=p[6],cz=p[8],den=(bz-cz)*(ax-cx)+(cx-bx)*(az-cz);if(Math.abs(den)<1e-10)return null;const a=((bz-cz)*(x-cx)+(cx-bx)*(z-cz))/den,b=((cz-az)*(x-cx)+(ax-cx)*(z-cz))/den,c=1-a-b;return a>=-1e-6&&b>=-1e-6&&c>=-1e-6?a*p[1]+b*p[4]+c*p[7]:null;}
 export function initializePlatformMap(collision){if(data)return;data=collision;nativeColliders=[...data.brushes.filter(b=>b.type==='solid'),...patchColliders(data.patches),...patchColliders(data.foundation?[data.foundation]:[]),...(data.foundationRails||[])];for(const brush of nativeColliders)if(brush.type==='solid')index(brush);const p=data.walkable.positions;for(let i=0;i<p.length;i+=9){const triangle=p.slice(i,i+9),min=[0,1,2].map(k=>Math.min(triangle[k],triangle[k+3],triangle[k+6])),max=[0,1,2].map(k=>Math.max(triangle[k],triangle[k+3],triangle[k+6]));index({triangle,min,max});}}
-export async function loadPlatformMap(){if(!loading)loading=import('./maps/platform23/collision-data.js').then(({PLATFORM_COLLISION})=>{initializePlatformMap(PLATFORM_COLLISION);return platformLayout();}).catch(error=>{loading=null;throw error;});return loading;}
+let collisionAttempt=0;
+export async function loadPlatformMap(){if(!loading)loading=retryMapAsset(()=>{
+ // Chrome remembers failed module imports. A retry must have a fresh URL;
+ // clearing the promise alone otherwise returns the same rejection forever.
+ const attempt=collisionAttempt++;
+ return import('./maps/platform23/collision-data.js'+(attempt?'?retry='+attempt:''));
+}).then(({PLATFORM_COLLISION})=>{initializePlatformMap(PLATFORM_COLLISION);return platformLayout();}).catch(error=>{loading=null;throw error;});return loading;}
 export function platformSupportHeight(x,z,footY,maxRise=.38){let best=-50;for(const entry of supportCells.get(key(x,z))||[]){const y=entry.triangle?triangleHeight(entry.triangle,x,z):nativeSupportHeight(entry,x,z,footY,maxRise);if(y!==null&&y<=footY+maxRise+.001&&y>best)best=y;}return best;}
 export function platformHeight(x,z){return platformSupportHeight(x,z,4.05,0);}
 export function isPlatformLandingAllowed(x,z){return PLATFORM_POIS.some(p=>Math.hypot(x-p.x,z-p.z)<=p.radius);}

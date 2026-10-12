@@ -16,7 +16,7 @@ import {networkCadence,accumulateInput,acceptSnapshot,peerExpired} from './netwo
 const $=id=>document.getElementById(id),game=window.Game;
 let conn=null,peers=new Map(),host=false,ready=false,match=null,snapshot=null,matchId='',seenEvent=0,lastHello=0,lastPing=0,pingCursor=0,lastSnap=0,lastInput=0,pendingInput=null,busy=false,voiceWanted=false,muted=false,showMenu=false,snapshotFrame=-1,matchEpoch=0;
 let officialColors=null;
-let selectedMap='island',startingMatch=false,mapGeneration=0,pendingSnapshot=null,loadingSnapshot=false;
+let selectedMap='island',startingMatch=false,preparingMap=false,mapGeneration=0,pendingSnapshot=null,loadingSnapshot=false,failedSnapshot=null;
 const validMap=id=>id==='island'||id==='facility';
 const mapName=id=>id==='facility'?'PLATFORM 23':'IRONWOOD ISLAND';
 let social=null,onlinePlayers=[],incomingInvites=[],socialBusy=false,socialTimer=null,socialError='',lastStatusAt=0,latencies=new Map();
@@ -114,7 +114,7 @@ function updateNetworkChip(){
 function refresh(){
  const party=partyProfiles();window.Duel.myColor=profile.color;window.Duel.party=party;window.Duel.peerColors=colors();
  $('hero-name').textContent=profile.name;$('character-preview-name').textContent=profile.name+' · CURRENT OUTFIT';$('hero-state').textContent=ready?'READY':'NOT READY';$('hero-state').classList.toggle('ready',ready);
- $('ready').textContent=startingMatch?'LOADING MAP…':ready?'CANCEL READY':'READY UP';$('ready').disabled=!conn||party.length<2||!game||!!match||startingMatch;
+ $('ready').textContent=preparingMap||startingMatch?'PREPARING MATCH…':failedSnapshot?'RETRY MAP':ready?'CANCEL READY':'READY UP';$('ready').disabled=!conn||party.length<2||!game||!!match||startingMatch||preparingMap||loadingSnapshot;
  $('map-choice').value=selectedMap;$('map-choice').disabled=(!!conn&&!host)||inMatch()||startingMatch;$('map-description').textContent=selectedMap==='facility'?'Military platform · eight landing zones':'Open terrain · six military outposts';$('mode').disabled=(!!conn&&!host)||!!match||startingMatch;$('room-actions').hidden=!conn;$('connect').hidden=!!conn;
  if(conn){$('room-code').textContent=host?'PRIVATE PARTY · YOU ARE LEADER':'PRIVATE PARTY · MEMBER';$('invite-more').disabled=inMatch()||party.length>=(conn.maxPlayers||8);}
  $('outfit').disabled=inMatch();$('name').disabled=inMatch();$('local').disabled=!!conn;drawPartyCards();renderOnlinePlayers();renderInvites();updateNetworkChip();
@@ -168,20 +168,21 @@ async function respondInvite(inv,accept){
  finally{renderInvites();refresh();}
 }
 
-function resetMatchState(){officialColors=null;mapGeneration++;pendingSnapshot=null;startingMatch=false;match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';$('deployment-ui').hidden=true;window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('deployment','dropping','deployment-cinematic');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear({resetInventory:true});document.exitPointerLock?.();}
+function resetMatchState(){officialColors=null;mapGeneration++;pendingSnapshot=null;failedSnapshot=null;startingMatch=false;match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';$('deployment-ui').hidden=true;window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('deployment','dropping','deployment-cinematic');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear({resetInventory:true});document.exitPointerLock?.();}
 function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
 async function start(){
  if(!game||!host||match||startingMatch||!everyoneReady())return;
- const connection=conn,generation=mapGeneration,mapId=selectedMap;startingMatch=true;refresh();
+ const connection=conn,generation=mapGeneration,mapId=selectedMap;let stage='map';startingMatch=true;refresh();
  try{
   status('Loading '+mapName(mapId)+' · preparing the map…');
   await game.setMap(mapId);
   if(conn!==connection||generation!==mapGeneration||!host||selectedMap!==mapId||!everyoneReady())return;
   const ids=participantIds();if(ids.length<2)return;
+  stage='server';
   if(!conn.local&&await window.HorizonHCS?.startParty(conn.room,mapId,$('mode').value)){ready=false;status('Official qualifying game · preparing deployment.','success');return;}
   match=new Match(game.world,ids,$('mode').value);match.beginDeployment();matchId=uid();matchEpoch=Math.max(Date.now(),matchEpoch+1);snapshotFrame=-1;seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;sendSnapshot();updatePresence();status('Deployment ship secured · choose a landing zone and enter a pod.','success');
- }catch(e){ready=false;hello();status('Map could not load. Please ready up to try again.','error');}
+ }catch(e){ready=false;hello();console.error('Horizon match preparation failed ('+stage+').',e);status(stage==='map'?'Map could not load. Please ready up to try again.':publicOnlineError(e),'error');}
  finally{startingMatch=false;refresh();}
 }
 function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;const data={id:matchId,epoch:matchEpoch,frame:snapshotFrame+1,mapId:selectedMap,state};conn.send('snapshot',data);apply(data);}
@@ -226,6 +227,7 @@ function roundBanner(s){
 }
 function apply(data){
  if(!validMap(data?.mapId)||!conn||!acceptSnapshot(matchId,snapshotFrame,data.id,data.frame,matchEpoch,data.epoch))return;
+ if(failedSnapshot){if(acceptSnapshot(failedSnapshot.id,failedSnapshot.frame,data.id,data.frame,failedSnapshot.epoch,data.epoch))failedSnapshot=data;return;}
  if(game.mapId()!==data.mapId||loadingSnapshot){
   if(!pendingSnapshot||acceptSnapshot(pendingSnapshot.id,pendingSnapshot.frame,data.id,data.frame,pendingSnapshot.epoch,data.epoch))pendingSnapshot=data;
   if(!loadingSnapshot)loadSnapshotMap();return;
@@ -233,15 +235,15 @@ function apply(data){
  selectedMap=data.mapId;applyReadySnapshot(data);
 }
 async function loadSnapshotMap(){
- loadingSnapshot=true;status('Loading the party’s map · preparing deployment…');const connection=conn,generation=mapGeneration;
+ loadingSnapshot=true;refresh();status('Loading the party’s map · preparing deployment…');const connection=conn,generation=mapGeneration;let attempted=null;
  try{
   while(pendingSnapshot&&conn===connection&&generation===mapGeneration){
-   const data=pendingSnapshot;pendingSnapshot=null;await game.setMap(data.mapId);
+   const data=pendingSnapshot;attempted=data;pendingSnapshot=null;await game.setMap(data.mapId);
    if(conn!==connection||generation!==mapGeneration)return;
    if(pendingSnapshot)continue;selectedMap=data.mapId;applyReadySnapshot(data);
   }
- }catch(e){pendingSnapshot=null;ready=false;status('Map could not load. Return to the lobby and try again.','error');}
- finally{loadingSnapshot=false;if(pendingSnapshot)loadSnapshotMap();}
+ }catch(e){if(conn===connection&&generation===mapGeneration){failedSnapshot=pendingSnapshot||attempted;pendingSnapshot=null;ready=false;hello();console.error('Horizon party map preparation failed.',e);status('Map could not load. Press Retry Map to reconnect to this match.','error');}}
+ finally{loadingSnapshot=false;refresh();if(pendingSnapshot)loadSnapshotMap();}
 }
 function applyReadySnapshot(data){
  if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn||!acceptSnapshot(matchId,snapshotFrame,data.id,data.frame,matchEpoch,data.epoch))return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;matchEpoch=data.epoch;snapshotFrame=data.frame;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('deployment',s.phase==='deployment');document.body.classList.toggle('dropping',s.phase==='deployment'&&['pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(s.deployment?.stage));$('lobby').hidden=true;updateDeploymentUI(s,localPlayer);
@@ -293,7 +295,22 @@ $('social-close').onclick=$('social-scrim').onclick=closeOnline;
 $('hcs-toggle').onclick=$('hcs-promo').onclick=()=>selectLobbyTab('hcs');
 $('lobby-play-toggle').onclick=()=>selectLobbyTab('play');$('profile-toggle').onclick=()=>toggleProfile();$('profile-close').onclick=()=>toggleProfile(false);$('character-preview-toggle').onclick=()=>selectLobbyTab('character');
 $('online-refresh').onclick=()=>social?pollSocial():startSocial();
-$('ready').onclick=()=>{if(!conn||match)return;ready=!ready;game?.startAudio({deployment:true});hello();refresh();if(host)start();};
+$('ready').onclick=async()=>{
+ if(!conn||match||preparingMap||startingMatch||loadingSnapshot)return;
+ game?.startAudio({deployment:true});
+ if(failedSnapshot){pendingSnapshot=failedSnapshot;failedSnapshot=null;await loadSnapshotMap();return;}
+ if(ready){ready=false;hello();refresh();return;}
+ // Both players finish their own download and GPU warm-up before advertising
+ // readiness. The leader cannot start a pod sequence while a teammate loads.
+ const connection=conn,generation=mapGeneration,mapId=selectedMap,mode=$('mode').value;
+ preparingMap=true;refresh();status('Loading '+mapName(mapId)+' · preparing the map…');
+ try{
+  const selected=await game.setMap(mapId);
+  if(!selected||conn!==connection||generation!==mapGeneration||selectedMap!==mapId||$('mode').value!==mode)return;
+  ready=true;hello();status('Map ready · waiting for the party.','success');
+ }catch(e){if(conn===connection&&generation===mapGeneration){ready=false;hello();console.error('Horizon map preparation failed.',e);status('Map could not load. Please ready up to try again.','error');}}
+ finally{preparingMap=false;refresh();if(host)start();}
+};
 function chooseLanding(x,z){if(!game?.setLanding(x,z))return;const me=snapshot?.players.find(player=>player.id===conn?.id);if(snapshot&&me)updateDeploymentUI(snapshot,{...me,destination:{x,z}});}
 $('landing-map').onclick=e=>{const rect=e.currentTarget.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width,z=(e.clientY-rect.top)/rect.height;if(x<.058||x>.942||z<.088||z>.912)return;const extent=selectedMap==='facility'?230:584;chooseLanding(((x-.058)/.884-.5)*extent,((z-.088)/.824-.5)*extent);};
 let quickPickMap='';

@@ -1,4 +1,5 @@
 import {SALUTE_FINGER_ADDUCTION} from './lobby-rig.js';
+import {retryMapAsset} from './map-asset-loading.js';
 import {PICKUP_RANGE,pickupPose,pickupBounds,rayPickup} from './pickup-targeting.js';
 import {createCharacterOutfit,applyCharacterOutfit} from './character-outfit.js';
 import {WEAPON_PROFILES} from './weapon-system.js';
@@ -77,7 +78,7 @@ export class MatchCharacterRenderer{
  async loadFacilityEnvironment(quality='medium'){
   if(this.facilityLoading)return this.facilityLoading;
   this.facilityLoading=(async()=>{
-   const {createReactorEnvironment}=await import('./reactor-environment.js');
+   const {createReactorEnvironment}=await retryMapAsset(()=>{const attempt=this.facilityModuleAttempt||0;this.facilityModuleAttempt=attempt+1;return import('./reactor-environment.js'+(attempt?'?retry='+attempt:''));});
    this.facilityScene=new THREE.Scene();
    const room=new RoomEnvironment(),pmrem=new THREE.PMREMGenerator(this.renderer);this.renderer.resetState();this.facilityReflection=pmrem.fromScene(room,.04);this.facilityScene.environment=this.facilityReflection.texture;this.facilityScene.environmentIntensity=.7;room.dispose();pmrem.dispose();this.restoreRawState();
    this.facilityScene.fog=new THREE.FogExp2(0x17242c,.0025);
