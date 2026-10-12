@@ -1,5 +1,7 @@
 # Full HCS practice: ship to champion
 
+Updated victory sequence and weapon-state captures: [12 October verification](../hcs-weapons-2026-10-12/README.md).
+
 In the lobby, open **TEST LAB**, enter **12345**, and choose **FULL HCS · SHIP TO CHAMPION**.
 
 The full run uses you and four combat bots, Platform 23, the native five-player final, actual guns and damage, and the normal deployment sequence. The bots can shoot you. This practice session cannot award an official title or change qualification standings.

@@ -1,0 +1,430 @@
+[
+  {
+    "sampleRate": 44100,
+    "offset": 20.835,
+    "loaded": true,
+    "decodedDuration": 30,
+    "end": 30,
+    "fade": 0.5,
+    "sources": [
+      {
+        "start": [
+          0,
+          20.835
+        ],
+        "loop": false,
+        "duration": 30,
+        "stop": [
+          9.165
+        ]
+      }
+    ],
+    "gains": [
+      [
+        {
+          "method": "setValueAtTime",
+          "args": [
+            0,
+            0
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0.5,
+            0.2
+          ]
+        },
+        {
+          "method": "setValueAtTime",
+          "args": [
+            0.5,
+            8.665
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0,
+            9.165
+          ]
+        }
+      ]
+    ],
+    "peak": 0.5,
+    "tailPeak": 0,
+    "lastPeak": 0.0003493889525998384,
+    "maxForwardDifference": 0
+  },
+  {
+    "sampleRate": 44100,
+    "offset": 27.956,
+    "loaded": true,
+    "decodedDuration": 30,
+    "end": 30,
+    "fade": 0.5,
+    "sources": [
+      {
+        "start": [
+          0,
+          27.956
+        ],
+        "loop": false,
+        "duration": 30,
+        "stop": [
+          2.0440000000000005
+        ]
+      }
+    ],
+    "gains": [
+      [
+        {
+          "method": "setValueAtTime",
+          "args": [
+            0,
+            0
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0.5,
+            0.2
+          ]
+        },
+        {
+          "method": "setValueAtTime",
+          "args": [
+            0.5,
+            1.5440000000000005
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0,
+            2.0440000000000005
+          ]
+        }
+      ]
+    ],
+    "peak": 0.5,
+    "tailPeak": 0,
+    "lastPeak": 0.0003484032640699297,
+    "maxForwardDifference": 0
+  },
+  {
+    "sampleRate": 44100,
+    "offset": 29.75,
+    "loaded": true,
+    "decodedDuration": 30,
+    "end": 30,
+    "fade": 0.5,
+    "sources": [
+      {
+        "start": [
+          0,
+          29.75
+        ],
+        "loop": false,
+        "duration": 30,
+        "stop": [
+          0.25
+        ]
+      }
+    ],
+    "gains": [
+      [
+        {
+          "method": "setValueAtTime",
+          "args": [
+            0,
+            0
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0.23,
+            0.02
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0,
+            0.25
+          ]
+        }
+      ]
+    ],
+    "peak": 0.2148716002702713,
+    "tailPeak": 0,
+    "lastPeak": 0.0004675427044276148,
+    "maxForwardDifference": 0
+  },
+  {
+    "sampleRate": 44100,
+    "offset": 29.99,
+    "loaded": true,
+    "decodedDuration": 30,
+    "end": 30,
+    "fade": 0.5,
+    "sources": [
+      {
+        "start": [
+          0,
+          29.99
+        ],
+        "loop": false,
+        "duration": 30,
+        "stop": [
+          0.010000000000001563
+        ]
+      }
+    ],
+    "gains": [
+      [
+        {
+          "method": "setValueAtTime",
+          "args": [
+            0,
+            0
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0.008000000000001251,
+            0.0020000000000003127
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0,
+            0.010000000000001563
+          ]
+        }
+      ]
+    ],
+    "peak": 0.006582192145287991,
+    "tailPeak": 0,
+    "lastPeak": 0.00046754226787015796,
+    "maxForwardDifference": 0
+  },
+  {
+    "sampleRate": 48000,
+    "offset": 20.835,
+    "loaded": true,
+    "decodedDuration": 30,
+    "end": 30,
+    "fade": 0.5,
+    "sources": [
+      {
+        "start": [
+          0,
+          20.835
+        ],
+        "loop": false,
+        "duration": 30,
+        "stop": [
+          9.165
+        ]
+      }
+    ],
+    "gains": [
+      [
+        {
+          "method": "setValueAtTime",
+          "args": [
+            0,
+            0
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0.5,
+            0.2
+          ]
+        },
+        {
+          "method": "setValueAtTime",
+          "args": [
+            0.5,
+            8.665
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0,
+            9.165
+          ]
+        }
+      ]
+    ],
+    "peak": 0.5387778878211975,
+    "tailPeak": 0,
+    "lastPeak": 0.00048688295646570623,
+    "maxForwardDifference": 0
+  },
+  {
+    "sampleRate": 48000,
+    "offset": 27.956,
+    "loaded": true,
+    "decodedDuration": 30,
+    "end": 30,
+    "fade": 0.5,
+    "sources": [
+      {
+        "start": [
+          0,
+          27.956
+        ],
+        "loop": false,
+        "duration": 30,
+        "stop": [
+          2.0440000000000005
+        ]
+      }
+    ],
+    "gains": [
+      [
+        {
+          "method": "setValueAtTime",
+          "args": [
+            0,
+            0
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0.5,
+            0.2
+          ]
+        },
+        {
+          "method": "setValueAtTime",
+          "args": [
+            0.5,
+            1.5440000000000005
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0,
+            2.0440000000000005
+          ]
+        }
+      ]
+    ],
+    "peak": 0.5387778878211975,
+    "tailPeak": 0,
+    "lastPeak": 0.0003603529476094991,
+    "maxForwardDifference": 0
+  },
+  {
+    "sampleRate": 48000,
+    "offset": 29.75,
+    "loaded": true,
+    "decodedDuration": 30,
+    "end": 30,
+    "fade": 0.5,
+    "sources": [
+      {
+        "start": [
+          0,
+          29.75
+        ],
+        "loop": false,
+        "duration": 30,
+        "stop": [
+          0.25
+        ]
+      }
+    ],
+    "gains": [
+      [
+        {
+          "method": "setValueAtTime",
+          "args": [
+            0,
+            0
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0.23,
+            0.02
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0,
+            0.25
+          ]
+        }
+      ]
+    ],
+    "peak": 0.2148180603981018,
+    "tailPeak": 0,
+    "lastPeak": 0.0004868802207056433,
+    "maxForwardDifference": 0
+  },
+  {
+    "sampleRate": 48000,
+    "offset": 29.99,
+    "loaded": true,
+    "decodedDuration": 30,
+    "end": 30,
+    "fade": 0.5,
+    "sources": [
+      {
+        "start": [
+          0,
+          29.99
+        ],
+        "loop": false,
+        "duration": 30,
+        "stop": [
+          0.010000000000001563
+        ]
+      }
+    ],
+    "gains": [
+      [
+        {
+          "method": "setValueAtTime",
+          "args": [
+            0,
+            0
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0.008000000000001251,
+            0.0020000000000003127
+          ]
+        },
+        {
+          "method": "linearRampToValueAtTime",
+          "args": [
+            0,
+            0.010000000000001563
+          ]
+        }
+      ]
+    ],
+    "peak": 0.006314598489552736,
+    "tailPeak": 0,
+    "lastPeak": 0.00036035507218912244,
+    "maxForwardDifference": 0
+  }
+]

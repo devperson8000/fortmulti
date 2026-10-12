@@ -132,6 +132,7 @@ try {
   assert.match(eliminated.stats, /100 HP/);
   const final = await page.evaluate(async () => {
     window.__snapshot.state.phase = "done";
+    window.__snapshot.state.victoryElapsed = 20;
     window.__snapshot.state.winner = 0;
     window.__snapshot.state.tournamentKills = { a: 4 };
     await window.__socket.onmessage({

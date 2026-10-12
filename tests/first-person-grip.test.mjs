@@ -85,7 +85,7 @@ test('measured index fingertips contact each real GLB trigger instead of floatin
 
 test('utility camera framing is independent of the previously aimed weapon',()=>{
  const state=createViewModelState();for(let n=0;n<180;n++)stepViewModel(state,{weapon:WEAPON_PROFILES.ar,aiming:true},1/60);
- r.renderFirstPersonWeapon('ar',WEAPON_PROFILES.ar,state,createWeaponPartState());assert.ok(r.firstPersonCamera.fov<51);
+ r.renderFirstPersonWeapon('ar',WEAPON_PROFILES.ar,state,createWeaponPartState());assert.equal(r.firstPersonCamera.fov,FIRST_PERSON_CALIBRATION.ar.fov);
  for(const id of ['pickaxe','shield','health','shockwave']){r.renderFirstPersonItem(id,state,{moveSpeed:0});assert.equal(r.firstPersonCamera.fov,62);for(const [bone,position]of r.arms.restPositions)assert.ok(bone.position.distanceTo(position)<1e-6,'utility posing detached a native skin attachment');}
 });
 
@@ -163,5 +163,35 @@ test('reload hands turn inward and close around the actual magazines',()=>{
    for(const t of triangles)distance=Math.min(distance,t.closestPointToPoint(point,near).distanceTo(point));
    assert.ok(distance<.024,`${id} reload ${finger} floats ${(distance*1000).toFixed(1)} mm from its magazine`);
   }
+ }
+});
+
+test('ADS preserves the viewmodel field of view so world zoom does not magnify sleeves twice',()=>{
+ for(const id of Object.keys(FIRST_PERSON_CALIBRATION)){
+  const c=FIRST_PERSON_CALIBRATION[id],profile=WEAPON_PROFILES[id],state=createViewModelState();
+  for(let n=0;n<180;n++)stepViewModel(state,{weapon:profile,aiming:true,ads:1},1/60);
+  r.renderFirstPersonWeapon(id,profile,state,createWeaponPartState());
+  assert.equal(r.firstPersonCamera.fov,c.fov,`${id} enlarged the arm mesh during ADS`);
+ }
+});
+
+test('weapon carry elbows stay below the hands instead of folding sleeve armor into the sightline',()=>{
+ for(const id of Object.keys(FIRST_PERSON_CALIBRATION))for(const mode of ['idle','walking','running','ads']){
+  const state=createViewModelState();for(let n=0;n<180;n++)stepViewModel(state,{weapon:WEAPON_PROFILES[id],aiming:mode==='ads',moving:mode==='walking'?.55:mode==='running'?1:0,sprinting:mode==='running',grounded:true},1/60);
+  r.renderFirstPersonWeapon(id,WEAPON_PROFILES[id],state,createWeaponPartState());
+  for(const side of ['right','left']){
+   const wrist=r.arms.bones.get('mixamorig'+side+'hand').getWorldPosition(new THREE.Vector3()),elbow=r.arms.bones.get('mixamorig'+side+'forearm').getWorldPosition(new THREE.Vector3());
+   assert.ok(elbow.y<wrist.y-.015,`${id} ${mode} ${side} elbow rises into the weapon view`);
+  }
+ }
+});
+
+test('ADS leaves the centre sight ray clear of the native sleeves for every weapon',()=>{
+ for(const id of Object.keys(FIRST_PERSON_CALIBRATION)){
+  const state=createViewModelState();for(let n=0;n<180;n++)stepViewModel(state,{weapon:WEAPON_PROFILES[id],aiming:true},1/60);
+  r.renderFirstPersonWeapon(id,WEAPON_PROFILES[id],state,createWeaponPartState());r.arms.model.updateMatrixWorld(true);
+  const meshes=[];r.arms.model.traverse(mesh=>{if(mesh.isSkinnedMesh){mesh.skeleton.update();mesh.computeBoundingSphere();mesh.computeBoundingBox();meshes.push(mesh);}});
+  const ray=new THREE.Raycaster(new THREE.Vector3(),new THREE.Vector3(0,0,-1),.15,2);
+  assert.equal(ray.intersectObjects(meshes,false).length,0,`${id}: sleeve blocks the crosshair`);
  }
 });

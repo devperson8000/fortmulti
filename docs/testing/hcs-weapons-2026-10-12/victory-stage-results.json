@@ -1,0 +1,56 @@
+{
+  "checks": [
+    {
+      "stage": "black",
+      "time": 0.814199999988079,
+      "actorVisible": 1,
+      "weapon": null
+    },
+    {
+      "stage": "reveal",
+      "time": 1.6810999999642373,
+      "actorVisible": 1,
+      "weapon": null
+    },
+    {
+      "stage": "boarding",
+      "time": 3.2715,
+      "actorVisible": 1,
+      "weapon": null
+    },
+    {
+      "stage": "launch",
+      "time": 5.843200000047683,
+      "actorVisible": 0,
+      "weapon": null
+    },
+    {
+      "stage": "return",
+      "time": 6.986399999976158,
+      "actorVisible": 0,
+      "weapon": null
+    },
+    {
+      "stage": "opening",
+      "time": 8.359600000023843,
+      "actorVisible": 0,
+      "weapon": null
+    },
+    {
+      "stage": "exit",
+      "time": 9.175599999964238,
+      "actorVisible": 1,
+      "weapon": null
+    },
+    {
+      "stage": "salute",
+      "time": 10.469099999964238,
+      "actorVisible": 1,
+      "weapon": null
+    },
+    {
+      "audio": "late result seeks into the verse; clearing inputs preserves one playing voice; lobby exit cancels it"
+    }
+  ],
+  "errors": []
+}

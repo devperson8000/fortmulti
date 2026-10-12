@@ -28,7 +28,7 @@ export function poseSoldierArms(rig,{right,left,origin=[0,0,0],rotation=[0,0,0],
  rig.model.position.set(hands?origin[0]-.05:0,hands?origin[1]-1.65:-1.45,hands?origin[2]-.11:0);rig.model.rotation.set(0,hands?0:Math.PI,0);rig.model.updateMatrixWorld(true);
  const itemRotation=new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation,'YXZ'));
  const transform=new THREE.Matrix4().compose(new THREE.Vector3(...origin),itemRotation,new THREE.Vector3(scale,scale,scale));
- {const wrists=['right','left'].map(side=>{if(!hands){const target=new THREE.Vector3(...(side==='right'?right:left)).applyMatrix4(transform);if(utility){const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(-.8,0,side==='right'?.2:-.2)).premultiply(itemRotation);target.sub(new THREE.Vector3(0,.09*rig.model.scale.x,0).applyQuaternion(q));}return target;}const spec=hands[side],q=new THREE.Quaternion().setFromEuler(new THREE.Euler(...spec.rotation,'XYZ')).premultiply(itemRotation);return new THREE.Vector3(...spec.palm).applyMatrix4(transform).sub(new THREE.Vector3(0,.09*rig.model.scale.x,0).applyQuaternion(q));});const center=wrists[0].clone().add(wrists[1]).multiplyScalar(.5);rig.model.rotation.y=-.65;rig.model.position.set(center.x,center.y-1.65,center.z+(hands?.19:0));rig.model.updateMatrixWorld(true);
+ {const wrists=['right','left'].map(side=>{if(!hands){const target=new THREE.Vector3(...(side==='right'?right:left)).applyMatrix4(transform);if(utility){const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(-.8,0,side==='right'?.2:-.2)).premultiply(itemRotation);target.sub(new THREE.Vector3(0,.09*rig.model.scale.x,0).applyQuaternion(q));}return target;}const spec=hands[side],q=new THREE.Quaternion().setFromEuler(new THREE.Euler(...spec.rotation,'XYZ')).premultiply(itemRotation);return new THREE.Vector3(...spec.palm).applyMatrix4(transform).sub(new THREE.Vector3(0,.09*rig.model.scale.x,0).applyQuaternion(q));});const center=wrists[0].clone().add(wrists[1]).multiplyScalar(.5);rig.model.rotation.y=hands&&!utility?-1.4:-.65;rig.model.position.set(center.x,center.y-1.65,center.z+(hands?.19:0));rig.model.updateMatrixWorld(true);
  // Move the whole shoulder frame into the reachable region of both wrists.
  // Long ADS fore-ends otherwise exceed horizontal reach before the vertical
  // adjustment can help. Preserve every native bone attachment and length.
@@ -48,6 +48,9 @@ export function poseSoldierArms(rig,{right,left,origin=[0,0,0],rotation=[0,0,0],
   // Elbows trail the held item. A fixed camera-space pole in front of the
   // wrist made the forearm approach backward, folding the wrist past 120°.
   const pole=wrist.clone().addScaledVector(new THREE.Vector3(0,1,0).applyQuaternion(orientation),-.45).add(new THREE.Vector3(sign*.08,-.12,0).applyQuaternion(itemRotation));
+  // A stock-grip shotgun needs a lower ADS elbow to clear its rear sight.
+  // Move the IK pole, retaining the exact palm anchor and native bone lengths.
+  pole.y-=(spec?.adsElbowDrop||0)*Math.max(0,Math.min(1,ads));
   poseArmChain(rig.model,rig.bones,side,wrist,pole);
   hand.quaternion.copy(hand.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(orientation));
   for(const [name,bone] of rig.bones){

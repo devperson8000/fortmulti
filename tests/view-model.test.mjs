@@ -49,7 +49,7 @@ test('aim and sprint converge toward different stable poses',()=>{
  }
  assert.ok(Math.abs(ads.position[0])<.01);
  assert.ok(sprint.position[0]>.2);
- assert.ok(sprint.rotation[0]<-.25);
+ assert.ok(sprint.rotation[0]<-.06&&sprint.rotation[0]>-.2,'sprint uses a mild low carry');assert.ok(Math.abs(sprint.rotation[2])<.16,'sprint must not roll the sleeves into the sightline');
 });
 
 test('reload parts eject the magazine and cycle the weapon action',()=>{

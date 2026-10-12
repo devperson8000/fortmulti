@@ -42,6 +42,7 @@ export class Referee {
     this.autoBoard = autoBoard;
     this.kills = Object.fromEntries(match.ids.map((id) => [id, 0]));
     this.seen = 0;
+    this.finishedAt = null;
     this.absent = new Map();
     this.feed = new DelayedFeed();
     this.match.beginDeployment();
@@ -110,7 +111,12 @@ export class Referee {
     if (this.match.phase !== "abandoned")
       this.match.tick(dt, { deploymentElapsed });
     if (this.autoBoard && round !== this.match.round) this.board();
+    if (round !== this.match.round) this.finishedAt = null;
     const snapshot = this.match.snapshot();
+    if (snapshot.phase === "done") {
+      this.finishedAt ??= now;
+      snapshot.victoryElapsed = Math.max(0, (now - this.finishedAt) / 1000);
+    }
     for (const e of snapshot.events) {
       if (
         e.id > this.seen &&

@@ -173,7 +173,7 @@ export class MatchCharacterRenderer{
    const reach=phase==='idle'?0:phase==='release'?smooth(progress/.16):phase==='eject'?1:phase==='insert'?1-smooth((progress-.58)/.12):0;
    const reloadNode=instance.nodes.get(c.reloadNode),magazine=reloadNode?instance.root.worldToLocal(reloadNode.getWorldPosition(new THREE.Vector3())).add(new THREE.Vector3(...c.reloadPalmOffset).multiplyScalar(c.scale)).toArray():relative(c.grip);
    support=support.map((v,i)=>v+(magazine[i]-v)*reach);
-   poseSoldierArms(this.arms,{origin:pose.position,rotation:pose.rotation,ads:state.ads||0,hands:{right:{palm:relative(c.rightPalm),rotation:c.rightRotation,fingers:c.rightFingers,splay:c.rightSplay,thumbOpposition:c.rightThumbOpposition},left:{palm:support,...supportHandPose(c,reach)}}});
+   poseSoldierArms(this.arms,{origin:pose.position,rotation:pose.rotation,ads:state.ads||0,hands:{right:{adsElbowDrop:c.adsElbowDrop||0,palm:relative(c.rightPalm),rotation:c.rightRotation,fingers:c.rightFingers,splay:c.rightSplay,thumbOpposition:c.rightThumbOpposition},left:{palm:support,...supportHandPose(c,reach)}}});
   }
   this.activeFirstPerson=instance;
   instance.flashGroup.visible=flash>0;

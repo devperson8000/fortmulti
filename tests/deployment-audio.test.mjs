@@ -189,3 +189,16 @@ test('a finished render source retains its clock until the ending reaches the sp
  assert.ok(player.update(c.ctx,'tail',0)>=DEPLOYMENT_MUSIC_END);assert.equal(c.starts.length,1);
  assert.equal(player.time(c.ctx,'tail'),null);
 });
+
+test('victory excerpt seeks into the supplied verse, respects its own fade and never loops',async()=>{
+ const c=context(),events=[];
+ c.ctx.createGain=()=>({connect(){},disconnect(){},gain:{value:0,cancelScheduledValues(){},setValueAtTime(value,time){events.push({value,time});},linearRampToValueAtTime(value,time){events.push({value,time});}}});
+ const player=createDeploymentAudio({fetchAudio,endAt:30,fadeSeconds:.5,level:.5,attackSeconds:.2});await player.load(c.ctx);
+ const offset=20.835;assert.equal(player.update(c.ctx,'champion:1',offset),offset);
+ assert.deepEqual(c.starts,[[10,offset]]);assert.ok(!c.sources[0].loop);
+ assert.ok(events.some(e=>e.value===.5&&e.time===10.2));
+ const end=10+30-offset;assert.ok(Math.abs(c.stops[0][0]-end)<1e-9);
+ assert.ok(events.some(e=>e.value===.5&&Math.abs(e.time-(end-.5))<1e-9));
+ c.ctx.currentTime=end;c.sources[0].onended();player.update(c.ctx,'champion:1',30);
+ assert.equal(player.update(c.ctx,'champion:1',offset),null);assert.equal(c.starts.length,1);
+});

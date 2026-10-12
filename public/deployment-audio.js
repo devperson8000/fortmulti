@@ -2,7 +2,7 @@ import {DEPLOYMENT_MUSIC_END,DEPLOYMENT_MUSIC_FADE} from './deployment-cinematic
 
 // The decoded song is shared by rounds. Scheduling and camera timing use the
 // same AudioContext clock, including when a recovering client needs to seek.
-export function createDeploymentAudio({fetchAudio=fetch}={}){
+export function createDeploymentAudio({fetchAudio=fetch,endAt=DEPLOYMENT_MUSIC_END,fadeSeconds=DEPLOYMENT_MUSIC_FADE,level=.65,attackSeconds=null}={}){
  const contexts=new WeakMap();
  const encoded=fetchAudio(new URL('./audio/deployment-intro.mp3',import.meta.url)).then(r=>{
   if(!r.ok)throw Error('Deployment music unavailable');return r.arrayBuffer();
@@ -56,14 +56,14 @@ export function createDeploymentAudio({fetchAudio=fetch}={}){
    if(state.sequence!==sequence){stop(context);state.sequence=sequence;state.finished=false;}
    if(state.voice){
     const current=musicClock(context,state.voice);
-    if(state.voice.ended&&current>=DEPLOYMENT_MUSIC_END){state.voice=null;state.finished=true;return current;}
+    if(state.voice.ended&&current>=endAt){state.voice=null;state.finished=true;return current;}
     return current;
    }
    if(state.finished)return null;
-   if(musicTime>=DEPLOYMENT_MUSIC_END){state.finished=true;return null;}
+   if(musicTime>=endAt){state.finished=true;return null;}
    const now=context.currentTime,anchor=now-musicTime,source=context.createBufferSource(),gain=context.createGain();
-   const voice={layers:[{source,gain}],anchor},start=Math.max(now,anchor),offset=Math.max(0,musicTime),level=.65;
-   const end=anchor+DEPLOYMENT_MUSIC_END,fadeAt=end-DEPLOYMENT_MUSIC_FADE;
+   const voice={layers:[{source,gain}],anchor},start=Math.max(now,anchor),offset=Math.max(0,musicTime);
+   const end=anchor+endAt,fadeAt=end-fadeSeconds;
    state.voice=voice;
    // One forward-playing voice: the provided verse continues through the
    // walkout and salute, then fades before the gameplay handoff.
@@ -71,9 +71,9 @@ export function createDeploymentAudio({fetchAudio=fetch}={}){
    gain.gain.setValueAtTime(0,start);
    if(start>=fadeAt){
     const attackEnd=Math.min(end,start+Math.min(.02,(end-start)*.2));
-    gain.gain.linearRampToValueAtTime(level*Math.max(0,(end-attackEnd)/DEPLOYMENT_MUSIC_FADE),attackEnd);
+    gain.gain.linearRampToValueAtTime(level*Math.max(0,(end-attackEnd)/fadeSeconds),attackEnd);
    }else{
-    gain.gain.linearRampToValueAtTime(level,Math.min(fadeAt,start+Math.max(.02,.65-offset)));
+    gain.gain.linearRampToValueAtTime(level,Math.min(fadeAt,start+Math.max(.02,attackSeconds??(.65-offset))));
     gain.gain.setValueAtTime(level,fadeAt);
    }
    gain.gain.linearRampToValueAtTime(0,end);
@@ -81,7 +81,7 @@ export function createDeploymentAudio({fetchAudio=fetch}={}){
     source.disconnect();gain.disconnect();
     if(state.voice!==voice)return;
     // Keep the clock through output-device latency after the scheduled stop.
-    if(context.currentTime-anchor>=DEPLOYMENT_MUSIC_END-.05)voice.ended=true;
+    if(context.currentTime-anchor>=endAt-.05)voice.ended=true;
     else{state.voice=null;state.finished=true;}
    };
    source.start(start,offset);source.stop(end);

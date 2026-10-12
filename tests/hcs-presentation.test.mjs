@@ -41,3 +41,22 @@ test("celebration hero pose preserves the real match and cannot raise a dead pla
     undefined,
   );
 });
+
+test("cinematic hero is unarmed and grounded while authoritative players remain unchanged", async () => {
+  const { hcsVictoryCinematic } =
+    await import("../public/hcs-victory-cinematic.js");
+  const original = structuredClone(state);
+  for (const time of [0, 1.6, 3.2, 5.8, 6.95, 9.1, 10.4]) {
+    const frame = hcsVictoryCinematic(time),
+      hero = api.hcsHeroState(state, frame),
+      winner = hero.players[0];
+    assert.equal(winner.weapon, null);
+    assert.equal(winner.slot, 0);
+    assert.equal(winner.aim, false);
+    assert.equal(winner.grounded, true);
+    assert.equal(winner.vy, 0);
+    assert.equal(hero.players[1], state.players[1]);
+    if (frame.scene === "bay") assert.deepEqual(winner.p, frame.actor);
+    assert.deepEqual(state, original);
+  }
+});

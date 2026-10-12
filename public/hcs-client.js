@@ -423,7 +423,7 @@ export function createHCS({
       );
       if (watching || viewed !== identity)
         window.Game.look(p.yaw, p.pitch || 0);
-      window.Game.apply(final ? hcsHeroState(s) : s, viewed, colors, dt);
+      window.Game.apply(final ? hcsHeroState(s,final.cinematic) : s, viewed, colors, dt);
       window.Duel.spectating =
         final || watching || viewed !== identity ? viewed : null;
       if (!disconnected)

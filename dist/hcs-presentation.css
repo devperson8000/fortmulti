@@ -14,6 +14,9 @@
 .hcs-finale [hidden] {
   display: none !important;
 }
+.hcs-victory-fade[hidden]{display:none!important}
+.hcs-victory-fade{position:fixed;inset:0;z-index:75;background:#000;pointer-events:none;opacity:0}
+body.hcs-victory-running #lab-bar,body.hcs-victory-running #hcs-broadcast{visibility:hidden!important}
 .hcs-finale {
   position: fixed;
   inset: 0;

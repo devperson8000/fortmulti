@@ -1,5 +1,12 @@
 // Presentation consumes the snapshot it is given. Spectator snapshots have
 // already passed through DelayedFeed; no live winner lookup is allowed here.
+import {
+  hcsVictoryCinematic,
+  HCS_VICTORY_DURATION,
+} from "./hcs-victory-cinematic.js";
+let victoryFrame = null,
+  victoryOwner = null;
+export const getHCSVictoryFrame = () => victoryFrame;
 let deploymentBrand = null;
 export function setDeploymentBrand(hcs) {
   if (deploymentBrand === hcs) return;
@@ -36,7 +43,7 @@ export function hcsResult(
   };
 }
 
-export function hcsHeroState(state) {
+export function hcsHeroState(state, cinematic = null) {
   const result = hcsResult(state);
   if (!result) return state;
   return {
@@ -50,11 +57,28 @@ export function hcsHeroState(state) {
             slot: 0,
             aim: false,
             reload: 0,
+            grounded: true,
+            vy: 0,
             crouching: false,
             sliding: false,
             sprinting: false,
             animationState: "idle",
             moveSpeed: 0,
+            ...(cinematic
+              ? {
+                  p:
+                    cinematic.scene === "bay"
+                      ? cinematic.actor.slice()
+                      : p.p.slice(),
+                  air: cinematic.scene === "bay" ? "ship" : p.air,
+                  shipLocal: null,
+                  pod: null,
+                  yaw: cinematic.scene === "bay" ? cinematic.yaw : p.yaw,
+                  saluteProgress: cinematic.salute,
+                  animationState: cinematic.animationState,
+                  moveSpeed: cinematic.moveSpeed,
+                }
+              : {}),
           }
         : p,
     ),
@@ -112,6 +136,12 @@ export function createHCSCelebration({
   root.setAttribute("aria-labelledby", id + "-title");
   root.innerHTML = `<div class="hcs-confetti" aria-hidden="true"></div><div class="hcs-finale-copy"><small data-finale="eyebrow">HORIZON CHAMPIONSHIP SERIES</small><div class="hcs-victory-crest" aria-hidden="true"><img src="hcs-logo.png" alt=""></div><h1 data-finale="title">CHAMPION CROWNED</h1><h2 data-finale="name"></h2><p data-finale="stats"></p><p data-finale="note"></p><div class="hcs-finale-actions"><button data-finale="controls" type="button">TEST CONTROLS / REPORT</button><button data-finale="exit" type="button">RETURN TO LOBBY</button></div></div>`;
   document.body.append(root);
+  const fadeLayer = document.createElement("div");
+  fadeLayer.className = "hcs-victory-fade";
+  fadeLayer.id = id + "-fade";
+  fadeLayer.hidden = true;
+  fadeLayer.setAttribute("aria-hidden", "true");
+  document.body.append(fadeLayer);
   root.querySelector("h1").id = id + "-title";
   const $ = (name) =>
     root.querySelector(
@@ -120,7 +150,11 @@ export function createHCSCelebration({
   $("hcs-finale-controls").onclick = onControls;
   $("hcs-finale-exit").onclick = onExit;
   let key = "",
-    cancelFanfare = () => {};
+    cancelFanfare = () => {},
+    started = 0,
+    lastAge = -1,
+    lastSample = 0,
+    celebrated = false;
   return {
     update(
       state,
@@ -134,11 +168,15 @@ export function createHCSCelebration({
         return null;
       }
       const token = result.key + ":" + testOnly + ":" + result.won;
+      const now = performance.now();
       if (token !== key) {
         cancelFanfare();
-        cancelFanfare = window.Game?.celebrateHCS?.() || (() => {});
         key = token;
-        root.hidden = false;
+        started = now;
+        lastAge = -1;
+        celebrated = false;
+        root.hidden = true;
+        fadeLayer.hidden = false;
         document.body.classList.add("hcs-celebrating");
         root.dataset.won = String(result.won);
         $("hcs-finale-eyebrow").textContent = testOnly
@@ -156,8 +194,32 @@ export function createHCSCelebration({
             ? "20-second delayed championship broadcast."
             : "The Horizon Championship Series final is complete.";
         $("hcs-finale-controls").hidden = !testOnly;
-        const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches,
-          count = reduced
+      }
+      const age = Number.isFinite(state.victoryElapsed)
+        ? state.victoryElapsed
+        : (now - started) / 1000;
+      if (age !== lastAge) {
+        lastAge = age;
+        lastSample = now;
+      }
+      let elapsed = age + (now - lastSample) / 1000;
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduced && elapsed >= 0.85) elapsed = HCS_VICTORY_DURATION;
+      else
+        elapsed = window.Game?.victoryElapsed?.(result.key, elapsed) ?? elapsed;
+      victoryFrame = hcsVictoryCinematic(elapsed);
+      victoryFrame.sampledAt = now;
+      victoryOwner = id;
+      fadeLayer.style.opacity = String(victoryFrame.fade);
+      document.body.classList.toggle(
+        "hcs-victory-running",
+        !victoryFrame.showResults,
+      );
+      if (victoryFrame.showResults && !celebrated) {
+        celebrated = true;
+        root.hidden = false;
+        cancelFanfare = window.Game?.celebrateHCS?.() || (() => {});
+        const count = reduced
             ? 0
             : document.body.dataset.quality === "low"
               ? 16
@@ -171,13 +233,19 @@ export function createHCSCelebration({
           }),
         );
       }
-      return result;
+      return { ...result, cinematic: victoryFrame };
     },
     reset() {
       if (!key) return;
       key = "";
       cancelFanfare();
       root.hidden = true;
+      fadeLayer.hidden = true;
+      if (victoryOwner === id) {
+        victoryOwner = null;
+        victoryFrame = null;
+        document.body.classList.remove("hcs-victory-running");
+      }
       root.querySelector(".hcs-confetti").replaceChildren();
       document.body.classList.remove("hcs-celebrating");
     },

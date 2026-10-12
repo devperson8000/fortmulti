@@ -21,6 +21,22 @@ const context = await browser.newContext({
 async function setup(page) {
   page.on("pageerror", (e) => errors.push(e.message));
   await page.addInitScript(() => {
+    window.__songVoices = [];
+    const start = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (
+      when = 0,
+      offset = 0,
+      ...rest
+    ) {
+      if (this.buffer?.duration === 30)
+        window.__songVoices.push({
+          offset,
+          when,
+          loop: this.loop,
+          context: this.context,
+        });
+      return start.call(this, when, offset, ...rest);
+    };
     localStorage.setItem(
       "duel-profile",
       JSON.stringify({ name: "HCS Test Ranger", color: "408faf" }),
@@ -127,6 +143,47 @@ try {
   await p.locator("#lab-bot-fire").uncheck();
   await p.locator("#lab-finish").click();
   await p.locator("#lab-resume").click();
+  await p.waitForFunction(
+    () => window.Game.victoryView()?.stage === "launch",
+    {},
+    { timeout: 30000 },
+  );
+  const beatSync = await p.evaluate(() => {
+    const voice = window.__songVoices.at(-1),
+      frame = window.Game.victoryView(),
+      now = performance.now(),
+      stamp = voice?.context.getOutputTimestamp();
+    let audible = voice?.context.currentTime;
+    if (stamp?.performanceTime > 0)
+      audible = Math.min(
+        audible,
+        stamp.contextTime + Math.max(0, now - stamp.performanceTime) / 1000,
+      );
+    const atFrame =
+      audible - (now - frame.sampledAt) / 1000 - voice.when + voice.offset;
+    return {
+      voice: voice && { offset: voice.offset, loop: voice.loop },
+      difference: Math.abs(atFrame - (20.835 + frame.time - 0.85)),
+      atFrame,
+      frame,
+      stamp,
+    };
+  });
+  await writeFile(out + "/beat-sync.json", JSON.stringify(beatSync, null, 2));
+  assert.ok(beatSync.voice.offset >= 20.835 && beatSync.voice.offset < 23);
+  assert.equal(beatSync.voice.loop, false);
+  assert.ok(beatSync.difference < 0.3);
+  assert.equal(beatSync.frame.actorVisible, 0);
+  await p.screenshot({ path: out + "/05a-victory-launch.png" });
+  checks.push(
+    "native AudioContext output drives the champion launch and camera; one forward-playing victory excerpt",
+  );
+  await p.waitForFunction(
+    () => window.Game.victoryView()?.stage === "salute",
+    {},
+    { timeout: 30000 },
+  );
+  await p.screenshot({ path: out + "/05b-victory-salute.png" });
   await p.locator("#hcs-finale").waitFor({ state: "visible" });
   assert.equal(
     await p.locator("#hcs-finale [data-finale=title]").textContent(),
@@ -144,6 +201,9 @@ try {
       {},
       { timeout: 90000 },
     );
+    await v
+      .locator("#hcs-finale")
+      .waitFor({ state: "visible", timeout: 30000 });
     assert.equal(
       await v.locator("#hcs-finale [data-finale=title]").textContent(),
       "CHAMPION CROWNED",

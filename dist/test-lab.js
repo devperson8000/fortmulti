@@ -822,7 +822,7 @@ export function installTestLab({ game, profile, leaveParty, returnLobby }) {
         Boolean(final) || watching || viewed !== session?.localId;
       if (spectator) game.look(p.yaw, p.pitch || 0);
       game.apply(
-        final ? hcsHeroState(packet.state) : packet.state,
+        final ? hcsHeroState(packet.state,final.cinematic) : packet.state,
         viewed,
         Object.fromEntries(packet.profiles.map((p) => [p.id, p.color])),
         dt,
