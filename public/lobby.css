@@ -474,3 +474,10 @@ body.in-lobby #vignette{background:radial-gradient(ellipse at 51% 43%,transparen
 
 @media(max-width:760px){#hero-label{top:275px}}
 @media(max-width:760px) and (max-height:780px){#hero-label{display:none}}
+
+/* Keep match preparation readable without shifting the lobby controls. */
+#ready.is-preparing{position:relative;overflow:hidden;opacity:1;filter:none}
+#ready.is-preparing::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:35%;background:#485335;animation:readyPreparation 1.2s linear infinite;pointer-events:none}
+@keyframes readyPreparation{from{transform:translateX(-100%)}to{transform:translateX(300%)}}
+.mode-card #connection[data-tone="loading"]{border-color:#d9dc91;color:#e7e9bd!important}
+@media(prefers-reduced-motion:reduce){#ready.is-preparing::after{animation:none;transform:none;width:100%;opacity:.5}}

@@ -11,15 +11,18 @@ export async function retryMapAsset(
   for (let attempt = 0; attempt < attempts; attempt++) {
     let timer;
     try {
-      return await Promise.race([
-        Promise.resolve().then(() => load(attempt)),
-        new Promise((_, reject) => {
-          timer = setTimeout(
-            () => reject(new Error("Map asset loading timed out")),
-            timeoutMs,
-          );
-        }),
-      ]);
+      const operation = Promise.resolve().then(() => load(attempt));
+      return await (timeoutMs === null
+        ? operation
+        : Promise.race([
+            operation,
+            new Promise((_, reject) => {
+              timer = setTimeout(
+                () => reject(new Error("Map asset loading timed out")),
+                timeoutMs,
+              );
+            }),
+          ]));
     } catch (error) {
       if (attempt === attempts - 1 || !shouldRetry(error)) throw error;
       await new Promise((resolve) =>
@@ -50,7 +53,11 @@ export function fetchMapAsset(
       }
       return decode(response);
     },
-    { ...options, timeoutMs, shouldRetry: (error) => error.retryable !== false },
+    {
+      ...options,
+      timeoutMs,
+      shouldRetry: (error) => error.retryable !== false,
+    },
   );
 }
 
@@ -80,6 +87,8 @@ export function loadMapTexture(
           },
         );
       }),
-    options,
+    // Texture timeouts own disposal of late results. A second deadline could
+    // abandon a successful texture before the disposal handler has timed out.
+    { ...options, timeoutMs: null },
   );
 }

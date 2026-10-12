@@ -134,3 +134,23 @@ test("a stalled collision module is bounded even though imports cannot be aborte
   );
   assert.equal(calls, 3);
 });
+
+test("texture loading honors its configured deadline without a competing earlier timeout", async (t) => {
+  const { loadMapTexture } = await import("../public/map-asset-loading.js");
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let resolve;
+  const texture = {
+    dispose() {
+      throw Error("successful texture must not be disposed");
+    },
+  };
+  const pending = loadMapTexture(
+    { loadAsync: () => new Promise((r) => (resolve = r)) },
+    "/slow-texture",
+    { timeoutMs: 20000, attempts: 1 },
+  );
+  await Promise.resolve();
+  t.mock.timers.tick(16000);
+  resolve(texture);
+  assert.equal(await pending, texture);
+});

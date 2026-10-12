@@ -113,11 +113,12 @@ function updateNetworkChip(){
 }
 function refresh(){
  const party=partyProfiles();window.Duel.myColor=profile.color;window.Duel.party=party;window.Duel.peerColors=colors();
+ const preparing=preparingMap||startingMatch||loadingSnapshot,locked=inMatch()||preparing||!!failedSnapshot;
  $('hero-name').textContent=profile.name;$('character-preview-name').textContent=profile.name+' · CURRENT OUTFIT';$('hero-state').textContent=ready?'READY':'NOT READY';$('hero-state').classList.toggle('ready',ready);
- $('ready').textContent=preparingMap||startingMatch?'PREPARING MATCH…':failedSnapshot?'RETRY MAP':ready?'CANCEL READY':'READY UP';$('ready').disabled=!conn||party.length<2||!game||!!match||startingMatch||preparingMap||loadingSnapshot;
- $('map-choice').value=selectedMap;$('map-choice').disabled=(!!conn&&!host)||inMatch()||startingMatch;$('map-description').textContent=selectedMap==='facility'?'Military platform · eight landing zones':'Open terrain · six military outposts';$('mode').disabled=(!!conn&&!host)||!!match||startingMatch;$('room-actions').hidden=!conn;$('connect').hidden=!!conn;
+ $('ready').textContent=preparing?'PREPARING MATCH…':failedSnapshot?'RETRY MAP':ready?'CANCEL READY':'READY UP';$('ready').disabled=!conn||party.length<2||!game||!!match||preparing;$('ready').classList.toggle('is-preparing',preparing);$('ready').setAttribute('aria-busy',String(preparing));
+ $('map-choice').value=selectedMap;$('map-choice').disabled=(!!conn&&!host)||locked;$('map-description').textContent=selectedMap==='facility'?'Military platform · eight landing zones':'Open terrain · six military outposts';$('mode').disabled=(!!conn&&!host)||locked;$('room-actions').hidden=!conn;$('connect').hidden=!!conn;
  if(conn){$('room-code').textContent=host?'PRIVATE PARTY · YOU ARE LEADER':'PRIVATE PARTY · MEMBER';$('invite-more').disabled=inMatch()||party.length>=(conn.maxPlayers||8);}
- $('outfit').disabled=inMatch();$('name').disabled=inMatch();$('local').disabled=!!conn;drawPartyCards();renderOnlinePlayers();renderInvites();updateNetworkChip();
+ $('outfit').disabled=locked;$('name').disabled=locked;$('local').disabled=!!conn;drawPartyCards();renderOnlinePlayers();renderInvites();updateNetworkChip();
 }
 function focusOnline(){const panel=$('social-panel');panel.classList.add('open','attention');panel.setAttribute('aria-hidden','false');$('social-scrim').hidden=false;setTimeout(()=>panel.classList.remove('attention'),800);}
 function closeOnline(){const panel=$('social-panel');panel.classList.remove('open','attention');panel.setAttribute('aria-hidden','true');$('social-scrim').hidden=true;}
@@ -168,22 +169,26 @@ async function respondInvite(inv,accept){
  finally{renderInvites();refresh();}
 }
 
-function resetMatchState(){officialColors=null;mapGeneration++;pendingSnapshot=null;failedSnapshot=null;startingMatch=false;match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';$('deployment-ui').hidden=true;window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('deployment','dropping','deployment-cinematic');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear({resetInventory:true});document.exitPointerLock?.();}
+function invalidatePreparation(){mapGeneration++;pendingSnapshot=null;failedSnapshot=null;startingMatch=false;preparingMap=false;loadingSnapshot=false;}
+const currentPreparation=(connection,generation)=>conn===connection&&generation===mapGeneration;
+function resetMatchState(){officialColors=null;invalidatePreparation();match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';$('deployment-ui').hidden=true;window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('deployment','dropping','deployment-cinematic');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear({resetInventory:true});document.exitPointerLock?.();}
 function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
 async function start(){
  if(!game||!host||match||startingMatch||!everyoneReady())return;
- const connection=conn,generation=mapGeneration,mapId=selectedMap;let stage='map';startingMatch=true;refresh();
+ const connection=conn,generation=mapGeneration,mapId=selectedMap,mode=$('mode').value;let stage='map';startingMatch=true;refresh();
  try{
-  status('Loading '+mapName(mapId)+' · preparing the map…');
+  status('Preparing deployment on '+mapName(mapId)+'…','loading');
   await game.setMap(mapId);
   if(conn!==connection||generation!==mapGeneration||!host||selectedMap!==mapId||!everyoneReady())return;
   const ids=participantIds();if(ids.length<2)return;
   stage='server';
-  if(!conn.local&&await window.HorizonHCS?.startParty(conn.room,mapId,$('mode').value)){ready=false;status('Official qualifying game · preparing deployment.','success');return;}
-  match=new Match(game.world,ids,$('mode').value);match.beginDeployment();matchId=uid();matchEpoch=Math.max(Date.now(),matchEpoch+1);snapshotFrame=-1;seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;sendSnapshot();updatePresence();status('Deployment ship secured · choose a landing zone and enter a pod.','success');
- }catch(e){ready=false;hello();console.error('Horizon match preparation failed ('+stage+').',e);status(stage==='map'?'Map could not load. Please ready up to try again.':publicOnlineError(e),'error');}
- finally{startingMatch=false;refresh();}
+  const official=!connection.local&&await window.HorizonHCS?.startParty(connection.room,mapId,mode);
+  if(!currentPreparation(connection,generation)||!host||selectedMap!==mapId||$('mode').value!==mode)return;
+  if(official){ready=false;status('Official qualifying game · preparing deployment.','success');return;}
+  match=new Match(game.world,ids,mode);match.beginDeployment();matchId=uid();matchEpoch=Math.max(Date.now(),matchEpoch+1);snapshotFrame=-1;seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;sendSnapshot();updatePresence();status('Deployment ship secured · choose a landing zone and enter a pod.','success');
+ }catch(e){if(currentPreparation(connection,generation)){ready=false;hello();console.error('Horizon match preparation failed ('+stage+').',e);status(stage==='map'?'Map could not load. Please ready up to try again.':publicOnlineError(e),'error');}}
+ finally{if(currentPreparation(connection,generation)){startingMatch=false;refresh();}}
 }
 function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;const data={id:matchId,epoch:matchEpoch,frame:snapshotFrame+1,mapId:selectedMap,state};conn.send('snapshot',data);apply(data);}
 const landingPois=()=>selectedMap==='facility'?REACTOR_POIS:ISLAND_POIS;
@@ -235,7 +240,7 @@ function apply(data){
  selectedMap=data.mapId;applyReadySnapshot(data);
 }
 async function loadSnapshotMap(){
- loadingSnapshot=true;refresh();status('Loading the party’s map · preparing deployment…');const connection=conn,generation=mapGeneration;let attempted=null;
+ loadingSnapshot=true;refresh();status('Loading the party’s map · preparing deployment…','loading');const connection=conn,generation=mapGeneration;let attempted=null;
  try{
   while(pendingSnapshot&&conn===connection&&generation===mapGeneration){
    const data=pendingSnapshot;attempted=data;pendingSnapshot=null;await game.setMap(data.mapId);
@@ -243,7 +248,7 @@ async function loadSnapshotMap(){
    if(pendingSnapshot)continue;selectedMap=data.mapId;applyReadySnapshot(data);
   }
  }catch(e){if(conn===connection&&generation===mapGeneration){failedSnapshot=pendingSnapshot||attempted;pendingSnapshot=null;ready=false;hello();console.error('Horizon party map preparation failed.',e);status('Map could not load. Press Retry Map to reconnect to this match.','error');}}
- finally{loadingSnapshot=false;refresh();if(pendingSnapshot)loadSnapshotMap();}
+ finally{if(currentPreparation(connection,generation)){loadingSnapshot=false;refresh();if(pendingSnapshot)loadSnapshotMap();}}
 }
 function applyReadySnapshot(data){
  if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn||!acceptSnapshot(matchId,snapshotFrame,data.id,data.frame,matchEpoch,data.epoch))return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;matchEpoch=data.epoch;snapshotFrame=data.frame;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('deployment',s.phase==='deployment');document.body.classList.toggle('dropping',s.phase==='deployment'&&['pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(s.deployment?.stage));$('lobby').hidden=true;updateDeploymentUI(s,localPlayer);
@@ -262,8 +267,8 @@ function receive(m){
   const known=peers.has(m.from);if(host&&!known&&peers.size>=((conn.maxPlayers||8)-1)){conn.send('full',{},m.from);return;}if(host&&match&&!match.ids.includes(m.from)){conn.send('locked',{},m.from);return;}
   if(!conn.host&&d.host===m.from){conn.host=m.from;host=false;}
   const old=peers.get(m.from),peer={id:m.from,name:cleanName(d.name),color:cleanColor(d.color),ready:!!d.ready&&(!host||d.mapId===selectedMap),voice:!!d.voice,lastSeen:Date.now()};peers.set(m.from,peer);
-  if(m.from===conn.host&&validMap(d.mapId)&&!inMatch()&&selectedMap!==d.mapId){selectedMap=d.mapId;ready=false;hello();}
-  if(m.from===conn.host&&['build','town'].includes(d.mode)&&$('mode').value!==d.mode){$('mode').value=d.mode;ready=false;}
+  if(m.from===conn.host&&validMap(d.mapId)&&!inMatch()&&selectedMap!==d.mapId){invalidatePreparation();selectedMap=d.mapId;ready=false;hello();}
+  if(m.from===conn.host&&!inMatch()&&['build','town'].includes(d.mode)&&$('mode').value!==d.mode){invalidatePreparation();$('mode').value=d.mode;ready=false;}
   if(!known)say('Party',`${peer.name} joined the party.`,true);refresh();syncVoice();if(host)start();return;
  }
  if(m.type==='full'){leave('That party is full (8 players maximum).');return;}
@@ -277,8 +282,8 @@ function receive(m){
  if(m.type==='leave'){if(m.from===conn.host&&!host&&!window.HorizonHCS?.official){leave('The party leader left, so the party was closed.');return;}removePeer(m.from);return;}
  if(m.type==='lobby'&&m.from===conn.host&&!host){resetToLobby(false);return;}
  if(m.type==='lobby-request'&&host){resetToLobby(true);return;}
- if(m.type==='mode'&&m.from===conn.host&&!host&&['build','town'].includes(d.mode)){if($('mode').value!==d.mode){$('mode').value=d.mode;ready=false;hello();refresh();status('Party leader changed the match mode · ready up again.');}return;}
- if(m.type==='map'&&m.from===conn.host&&!host&&validMap(d.mapId)&&!inMatch()){if(selectedMap!==d.mapId){selectedMap=d.mapId;ready=false;for(const p of peers.values())p.ready=false;hello();refresh();status('Party leader changed the map · ready up again.');}return;}
+ if(m.type==='mode'&&m.from===conn.host&&!host&&!inMatch()&&['build','town'].includes(d.mode)){if($('mode').value!==d.mode){invalidatePreparation();$('mode').value=d.mode;ready=false;hello();refresh();status('Party leader changed the match mode · ready up again.');}return;}
+ if(m.type==='map'&&m.from===conn.host&&!host&&validMap(d.mapId)&&!inMatch()){if(selectedMap!==d.mapId){invalidatePreparation();selectedMap=d.mapId;ready=false;for(const p of peers.values())p.ready=false;hello();refresh();status('Party leader changed the map · ready up again.');}return;}
  if(m.type==='voice'&&peer){if(typeof d.enabled==='boolean'){peer.voice=d.enabled;if(!d.enabled)voice.remove(m.from);syncVoice();refresh();}else voice.receive(m.from,d).catch(e=>renderVoice({message:'Voice connection issue: '+e.message,tone:'warning'}));return;}
  if(m.type==='ping'){conn.send('pong',{time:d.time},m.from);return;}
  if(m.type==='pong'&&Number.isFinite(d.time)){latencies.set(m.from,Math.max(0,Date.now()-d.time));updateNetworkChip();}
@@ -303,13 +308,13 @@ $('ready').onclick=async()=>{
  // Both players finish their own download and GPU warm-up before advertising
  // readiness. The leader cannot start a pod sequence while a teammate loads.
  const connection=conn,generation=mapGeneration,mapId=selectedMap,mode=$('mode').value;
- preparingMap=true;refresh();status('Loading '+mapName(mapId)+' · preparing the map…');
+ preparingMap=true;refresh();status('Loading '+mapName(mapId)+' · preparing the map…','loading');
  try{
   const selected=await game.setMap(mapId);
   if(!selected||conn!==connection||generation!==mapGeneration||selectedMap!==mapId||$('mode').value!==mode)return;
   ready=true;hello();status('Map ready · waiting for the party.','success');
  }catch(e){if(conn===connection&&generation===mapGeneration){ready=false;hello();console.error('Horizon map preparation failed.',e);status('Map could not load. Please ready up to try again.','error');}}
- finally{preparingMap=false;refresh();if(host)start();}
+ finally{if(currentPreparation(connection,generation)){preparingMap=false;refresh();if(host)start();}}
 };
 function chooseLanding(x,z){if(!game?.setLanding(x,z))return;const me=snapshot?.players.find(player=>player.id===conn?.id);if(snapshot&&me)updateDeploymentUI(snapshot,{...me,destination:{x,z}});}
 $('landing-map').onclick=e=>{const rect=e.currentTarget.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width,z=(e.clientY-rect.top)/rect.height;if(x<.058||x>.942||z<.088||z>.912)return;const extent=selectedMap==='facility'?230:584;chooseLanding(((x-.058)/.884-.5)*extent,((z-.088)/.824-.5)*extent);};

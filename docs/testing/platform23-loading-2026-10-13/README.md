@@ -44,6 +44,21 @@ Multiplayer match-start service errors are reported separately from map errors. 
 ![Native map overview](08-native-whole-map.png)
 ![Native chest interaction](09-native-chest.png)
 
+## Follow-up loading polish
+
+The final polish passed **521 automated tests** and the static build. The Platform 23 recovery browser test was rerun successfully with the same six checks: [latest loading report](polish-loading-results.json).
+
+`npm run test:map-loading-cancellation` passed seven additional real-lobby checks. Deferred boundary responses exercise leaving during Ready preparation, replacing a party, an old match-start response arriving late, and an old snapshot load completing during a new load. Only the current party's roster deploys; old completions neither alter its readiness nor clear its busy state. These cancellation fixtures use the shared lobby flow on Ironwood; the separate retry test exercises Platform 23's actual assets and renderer.
+
+Loading controls now have a readable busy state and an unobtrusive activity bar, with reduced-motion support. Map, mode and identity controls stay locked during preparation. A focused fake-clock regression also confirms that a texture's own deadline controls timeout and disposal, without an earlier competing timer abandoning a valid texture.
+
+[Cancellation and accessible UI results](cancellation-results.json)
+
+![Loading feedback in the replacement party](10-loading-feedback.png)
+![Only the current roster deploys](11-replacement-party.png)
+
+The native deployment captures and 24-check report above belong to the initial loading fix; the follow-up reran the loading/retry and cancellation suites. Map geometry, weapons, grips and cinematic behavior were not modified by this polish.
+
 ## Scope and limits
 
 Authentication and roster authorization are fixtures in the authoritative server tests; the match server, HTTP, WebSocket transport and native map are real. The browser party test uses two local clients rather than two remote Macs. A separate boundary injection tests snapshot recovery after asset retries have been exhausted.

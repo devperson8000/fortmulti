@@ -13,6 +13,7 @@
     "test:deployment-browser": "node scripts/deployment-cinematic-check.mjs",
     "test:deployment-audio": "node scripts/deployment-audio-check.mjs",
     "test:facility-browser": "node scripts/platform23-browser-check.mjs",
+    "test:map-loading-cancellation": "node scripts/map-loading-cancellation-check.mjs",
     "test:map-loading-browser": "node scripts/map-loading-browser-check.mjs",
     "test:platform23-browser": "node scripts/platform23-browser-check.mjs",
     "test:lobby-browser": "node scripts/lobby-polish-check.mjs",
