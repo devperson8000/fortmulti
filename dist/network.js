@@ -1,7 +1,7 @@
 import {isActiveSocket} from './network-tuning.js';
 
 export const uid=()=>Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
-const timeout=(p,ms,label)=>Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(Error(label)),ms))]);
+const timeout=(p,ms,label)=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error(label)),ms);Promise.resolve(p).then(value=>{clearTimeout(timer);resolve(value);},error=>{clearTimeout(timer);reject(error);});});
 const AUTH_STORE='sunny-auth-v3';
 const readAuth=()=>{try{return typeof sessionStorage==='undefined'?null:JSON.parse(sessionStorage.getItem(AUTH_STORE)||'null');}catch{return null;}};
 const saveAuth=s=>{try{if(typeof sessionStorage!=='undefined')sessionStorage.setItem(AUTH_STORE,JSON.stringify({access_token:s.access_token,refresh_token:s.refresh_token,user:s.user,expires_at:s.expires_at||0}));}catch{}};
@@ -24,12 +24,12 @@ class SupabaseClient{
  async api(path,data,{auth=true,keepalive=false}={}){
   const r=await fetch(this.config.url+path,{method:'POST',headers:{apikey:this.config.key,'Content-Type':'application/json',...(auth&&this.session?.access_token?{Authorization:'Bearer '+this.session.access_token}:{})},body:JSON.stringify(data??{}),signal:keepalive?undefined:AbortSignal.timeout(12000),keepalive});
   const raw=await r.text();let j={};try{j=raw?JSON.parse(raw):{};}catch{j={message:raw};}
-  if(!r.ok)throw Error(friendlyError(j));return j;
+  if(!r.ok)throw Object.assign(Error(friendlyError(j)),{status:r.status,code:typeof j.code==='string'?j.code:undefined,source:'supabase'});return j;
  }
  async authenticate(){
   const saved=readAuth();
   if(saved?.access_token&&saved?.user&&Number(saved.expires_at||0)*1000>Date.now()+60000){this.session=saved;return this.session;}
-  if(saved?.refresh_token){try{this.session=await this.api('/auth/v1/token?grant_type=refresh_token',{refresh_token:saved.refresh_token},{auth:false});saveAuth(this.session);return this.session;}catch{clearAuth();this.session=null;}}
+  if(saved?.refresh_token){try{this.session=await this.api('/auth/v1/token?grant_type=refresh_token',{refresh_token:saved.refresh_token},{auth:false});saveAuth(this.session);return this.session;}catch(error){const revoked=[400,401,403].includes(error.status)&&(['refresh_token_not_found','refresh_token_already_used','refresh_token_expired','session_not_found'].includes(error.code)||/invalid refresh token|refresh token.*(not found|already used|expired)|session.*(not found|expired)/i.test(error.message));if(!revoked)throw error;clearAuth();this.session=null;}}
   this.session=await this.api('/auth/v1/signup',{},{auth:false});saveAuth(this.session);return this.session;
  }
  async renewSession(){this.session=await this.api('/auth/v1/token?grant_type=refresh_token',{refresh_token:this.session.refresh_token},{auth:false});saveAuth(this.session);return this.session;}
@@ -112,7 +112,7 @@ export class Connection extends SupabaseClient{
    socket.onopen=()=>{if(current())this.raw('phx_join',{config:{broadcast:{ack:false,self:false},presence:{enabled:false},private:true},access_token:this.session.access_token},this.joinRef);};
    socket.onmessage=e=>{if(!current())return;let m;try{m=JSON.parse(e.data);}catch{return;}if(m.event==='phx_reply'&&m.ref===this.joinRef){if(m.payload.status!=='ok'){fail(Error(m.payload.response?.reason||'Room authorization failed. Run the latest supabase.sql.'));socket.close();return;}if(!settled){settled=true;this.connected=true;this.retry=0;this.onstatus('Online · private party');resolve();}}if(m.event==='broadcast'&&m.payload.event==='duel')this.onmessage(m.payload.payload);if(m.event==='phx_error')socket.close();};
    socket.onerror=()=>{if(current())fail(Error('Could not reach the room service.'));};
-   socket.onclose=()=>{if(!current())return;clearInterval(this.heartbeat);this.connected=false;if(!this.closed){this.onstatus('Connection lost · reconnecting');clearTimeout(this.reconnect);this.reconnect=setTimeout(()=>this.connect().catch(e=>this.onstatus(e.message)),Math.min(10000,1000*2**this.retry++));}};
+   socket.onclose=()=>{if(!current())return;fail(Error('Room connection closed before joining. Please try again.'));clearInterval(this.heartbeat);this.connected=false;if(!this.closed){this.onstatus('Connection lost · reconnecting');clearTimeout(this.reconnect);this.reconnect=setTimeout(()=>this.connect().catch(e=>this.onstatus(e.message)),Math.min(10000,1000*2**this.retry++));}};
   }),12000,'Room connection timed out.');}catch(e){if(current())socket.close();throw e;}
   if(!current())return;
   clearInterval(this.heartbeat);this.heartbeat=setInterval(()=>{if(socket.readyState===1)socket.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:String(++this.ref)}));},20000);

@@ -80,6 +80,21 @@ export class Referee {
       this.match.input(id, {});
     }
   }
+  forfeit(id) {
+    if (!this.match.ids.includes(id) || this.match.disconnected.has(id))
+      return false;
+    const phase = this.match.phase;
+    // Adjudicate the whole departure before resolving a round winner.
+    this.match.phase = "paused";
+    this.match.disconnect(id);
+    this.absent.delete(id);
+    this.match.phase = phase;
+    if (this.match.ids.every((id) => this.match.disconnected.has(id))) {
+      this.match.phase = "abandoned";
+      this.match.winner = -1;
+    } else this.match.checkRoundEnd();
+    return true;
+  }
   reconnect(id, now = Date.now()) {
     if (!this.match.ids.includes(id) || this.match.disconnected.has(id))
       return false;

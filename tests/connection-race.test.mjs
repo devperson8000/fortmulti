@@ -69,3 +69,14 @@ test('session refresh is scheduled before expiry and retries quickly after a fai
  assert.equal(sessionRefreshDelay({expires_at:expiresAtSeconds},now,2),30_000);
  assert.equal(sessionRefreshDelay({expires_at:expiresAtSeconds},now,5),120_000);
 });
+
+test('a socket closing before its join reply rejects promptly so reconnection can run',async()=>{
+ const previous=globalThis.WebSocket;globalThis.WebSocket=FakeSocket;
+ const conn=new Connection(()=>{},()=>{});
+ conn.config={url:'https://example.supabase.co',key:'public-key'};conn.session={access_token:'token'};conn.room='room';
+ try{
+  const connecting=conn.connect().then(()=> 'connected',()=> 'rejected');
+  const socket=FakeSocket.instances.at(-1);socket.readyState=3;socket.onclose?.();
+  assert.equal(await Promise.race([connecting,delay(40).then(()=> 'stuck')]),'rejected');
+ }finally{conn.close();globalThis.WebSocket=previous;FakeSocket.instances.length=0;}
+});

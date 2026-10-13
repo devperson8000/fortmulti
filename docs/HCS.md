@@ -50,3 +50,9 @@ The lobby reports actionable failures without exposing database response bodies 
 Browser screenshots and test reports are written to `/workspace/fortmulti-artifacts/hcs` by default. These are local software-rendered checks, not a guarantee of zero lag on every computer or internet connection.
 
 HCS polish checks cover mobile event-card bounds and broadcast controls, first-person competitors, third-person viewers, player selection after elimination, visible reconnect status, stale WebSocket callbacks and leaving during map loading.
+
+## Normal-match lifecycle
+
+Returning to the party lobby ends the current normal match through a leader-authorized `/party-end` request. Both clients retain their party connection and can ready up again immediately. The request includes the match ID, so a delayed request cannot cancel a newer match. Cancelled games do not award qualifying scores. Leaving a normal party clears the local match transport; a guest explicitly forfeits their old match, while the leader leaving closes that party for everyone. Network interruptions keep the existing 60-second grace, and final broadcasts retain their separate rules. Deploy the updated referee alongside the website; this change adds no SQL migration.
+
+The lobby preserves safe HCS failure messages and sanitized database HTTP status messages instead of replacing them with one generic error. A successful public standings response alone still does not validate authenticated party creation. [Multiplayer regression evidence](testing/multiplayer-2026-10-13/README.md) covers both modes on both maps, two/eight-client server matches, browser reconnects and rematches.

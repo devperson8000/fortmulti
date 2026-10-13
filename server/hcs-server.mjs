@@ -74,7 +74,9 @@ export async function createHCSServer({
         return;
       }
       if (
-        !["/profile", "/checkin", "/party-start"].includes(req.url) ||
+        !["/profile", "/checkin", "/party-start", "/party-end"].includes(
+          req.url,
+        ) ||
         req.method !== "POST"
       ) {
         res.writeHead(404).end("{}");
@@ -96,6 +98,36 @@ export async function createHCSServer({
         }
       }
       const data = JSON.parse(body || "{}");
+      if (req.url === "/party-end") {
+        let roster;
+        try {
+          roster = await authorizeParty(user.id, data.room);
+        } catch {
+          fail(res, 503, "PARTY_DATABASE_UNAVAILABLE");
+          return;
+        }
+        const match = matches.get(data.room);
+        if (
+          !roster ||
+          !roster.includes(user.id) ||
+          (match && match.owner !== user.id)
+        ) {
+          fail(res, 403, "PARTY_FORBIDDEN");
+          return;
+        }
+        if (match && match.id !== data.matchId) {
+          fail(res, 409, "MATCH_CHANGED");
+          return;
+        }
+        if (match) {
+          matches.delete(data.room);
+          for (const [ws, client] of clients)
+            if (match.referee.match.ids.includes(client.id))
+              send(ws, { type: "match-cancelled", matchId: match.id });
+        }
+        res.end(JSON.stringify({ ended: true }));
+        return;
+      }
       if (req.url === "/party-start") {
         let roster;
         try {
@@ -119,8 +151,10 @@ export async function createHCSServer({
           matches.has(data.room) ||
           roster.some(
             (id) =>
-              [...matches.values()].some((m) =>
-                m.referee.match.ids.includes(id),
+              [...matches.values()].some(
+                (m) =>
+                  m.referee.match.ids.includes(id) &&
+                  !m.referee.match.disconnected.has(id),
               ) ||
               (championship.state.phase === "live" &&
                 championship.state.finalists?.includes(id)),
@@ -159,6 +193,7 @@ export async function createHCSServer({
             if (roster.includes(c.id)) c.exited = false;
           matches.set(data.room, {
             id,
+            owner: user.id,
             referee: ref,
             mapId: data.map,
             epoch: now(),
@@ -271,11 +306,36 @@ export async function createHCSServer({
           send(ws, { type: "watching", delay: HCS.delay });
         }
         if (data.type === "leave") {
+          const finalTarget = referee && data.matchId === finalId;
+          const normalTarget = [...matches.values()].some(
+            (m) =>
+              m.id === data.matchId &&
+              m.referee.match.ids.includes(identity) &&
+              !m.referee.match.disconnected.has(identity),
+          );
+          if (data.matchId && !finalTarget && !normalTarget) {
+            // A late departure from a previous game must not exit a newer one.
+            client.watching = false;
+            return;
+          }
           client.exited = true;
           client.watching = false;
-          referee?.disconnect(identity, now());
-          for (const m of matches.values())
-            m.referee.disconnect(identity, now());
+          if (!data.matchId || finalTarget)
+            referee?.disconnect(identity, now());
+          for (const [room, m] of matches) {
+            if (data.matchId && m.id !== data.matchId) continue;
+            if (data.forfeit === true && m.owner === identity) {
+              matches.delete(room);
+              for (const [other, member] of clients)
+                if (m.referee.match.ids.includes(member.id))
+                  send(other, {
+                    type: "match-cancelled",
+                    matchId: m.id,
+                    partyClosed: true,
+                  });
+            } else if (data.forfeit === true) m.referee.forfeit(identity);
+            else m.referee.disconnect(identity, now());
+          }
         }
         if (data.type === "leave-watch") client.watching = false;
         if (data.type === "input" && !client.watching && !client.exited) {
@@ -338,7 +398,13 @@ export async function createHCSServer({
         creating = true;
         try {
           for (const [room, m] of matches) {
-            if (!m.referee.match.ids.some((id) => ids.includes(id))) continue;
+            if (
+              !m.referee.match.ids.some(
+                (id) =>
+                  ids.includes(id) && !m.referee.match.disconnected.has(id),
+              )
+            )
+              continue;
             for (const [ws, c] of clients)
               if (m.referee.match.ids.includes(c.id))
                 send(ws, { type: "match-cancelled", matchId: m.id });
@@ -409,7 +475,12 @@ export async function createHCSServer({
           ),
         });
         for (const [ws, c] of clients)
-          if (!c.watching && !c.exited && m.referee.match.ids.includes(c.id))
+          if (
+            !c.watching &&
+            !c.exited &&
+            m.referee.match.ids.includes(c.id) &&
+            !m.referee.match.disconnected.has(c.id)
+          )
             send(ws, packet);
         if (m.finishedAt && time - m.finishedAt > 10000) matches.delete(room);
       }
@@ -447,8 +518,10 @@ export async function createHCSServer({
             : c.watching
               ? delayed
               : referee.match.ids.includes(c.id) &&
-                  ![...matches.values()].some((m) =>
-                    m.referee.match.ids.includes(c.id),
+                  ![...matches.values()].some(
+                    (m) =>
+                      m.referee.match.ids.includes(c.id) &&
+                      !m.referee.match.disconnected.has(c.id),
                   )
                 ? state
                 : null;

@@ -42,6 +42,14 @@ function status(text,tone='normal'){
 }
 function publicOnlineError(value){
  const message=String(value?.message||value||'');
+ if(value?.source==='hcs')return message;
+ if(value?.source==='supabase'){
+  if(value.status===401)return 'Your online session or project key was rejected (HTTP 401). Reload the page and check the deployment settings.';
+  if(value.status===403)return 'Party access was denied (HTTP 403). Leave and create a new party, then check the database permissions if it persists.';
+  if(value.status===404)return 'Multiplayer database setup is incomplete (HTTP 404). Apply the latest database setup to the configured project.';
+  if(value.status===429)return 'The online service is busy (HTTP 429). Wait briefly and try again.';
+  return `Online request failed (HTTP ${Number(value.status)||'unknown'}). Please try again; check the deployment if it persists.`;
+ }
  return /supabase|publishable|service[- ]role|anonymous.*sign.?in|authentication settings|schema|\brpc\b|realtime|invalid jwt|api.?key|project url|room authorization/i.test(message)
   ?'Online services are unavailable right now. Please try again later.'
   :message;
@@ -133,18 +141,18 @@ function toggleProfile(force){const open=force??!document.body.classList.contain
 function hello(){conn?.send('hello',{name:profile.name,color:profile.color,ready,host:conn.host||null,mode:$('mode').value,mapId:selectedMap,match:matchId,voice:voiceWanted,maxPlayers:conn.maxPlayers||8});}
 function everyoneReady(){const party=partyProfiles();return party.length>=2&&party.every(p=>p.ready);}
 
-async function updatePresence(){if(!social)return;try{await social.presence(profile.name,profile.color,currentActivity(),conn?.code||null);}catch(e){if(Date.now()-lastStatusAt>5000)status(e.message,'error');}}
+async function updatePresence(){if(!social)return;try{await social.presence(profile.name,profile.color,currentActivity(),conn?.code||null);}catch(e){if(Date.now()-lastStatusAt>5000)status(e,'error');}}
 async function pollSocial(){
  if(!social||socialBusy)return;socialBusy=true;
  try{await updatePresence();const [players,invites]=await Promise.all([social.online(),social.invites()]);onlinePlayers=players;incomingInvites=invites;renderOnlinePlayers();renderInvites();updateNetworkChip();}
- catch(e){if(Date.now()-lastStatusAt>6000)status(e.message,'error');}
+ catch(e){if(Date.now()-lastStatusAt>6000)status(e,'error');}
  finally{socialBusy=false;}
 }
 async function startSocial(){
  clearInterval(socialTimer);social?.close();social=null;socialError='';onlinePlayers=[];incomingInvites=[];renderOnlinePlayers();renderInvites();
  const local=$('local').checked;if(!local&&!validOnlineConfig()){status('Online services are unavailable right now. Please try again later.','error');updateNetworkChip();return;}
  try{social=new SocialDirectory(()=>{});await social.open(config,local);await updatePresence();await pollSocial();socialTimer=setInterval(pollSocial,3500);status(local?'Local party finder ready · open another tab to test invites':'Online · choose a player to invite');}
- catch(e){social?.close();social=null;socialError=publicOnlineError(e);status(e.message,'error');renderOnlinePlayers();updateNetworkChip();}
+ catch(e){social?.close();social=null;socialError=publicOnlineError(e);status(e,'error');renderOnlinePlayers();updateNetworkChip();}
 }
 
 async function connect(create,codeOverride=''){
@@ -154,25 +162,25 @@ async function connect(create,codeOverride=''){
   const raw=String(codeOverride||$('code').value||'').trim();const parsed=raw.includes('#')?raw.split('#').pop():raw;const code=parsed.toUpperCase();if(!create&&!/^[A-Z0-9]{8,12}$/.test(code))throw Error('That fallback party code is invalid.');
   await candidate.open(config,code,create,$('local').checked);conn=candidate;host=conn.id===conn.host;ready=false;peers.clear();latencies.clear();match=null;snapshot=null;refresh();hello();await updatePresence();
   status(create?(conn.local?'Party created · invite another local tab from Online Players':'Party created · invite players from the online list'):'Joining party…');return true;
- }catch(e){candidate.close();status(e.message,'error');return false;}
+ }catch(e){candidate.close();status(e,'error');return false;}
  finally{busy=false;$('create').disabled=false;$('join').disabled=false;refresh();}
 }
 async function invitePlayer(id,name){
  if(busy||inMatch())return;if(!social){status('Online players are unavailable right now. Please try again later.','error');return;}
  try{if(!conn){const ok=await connect(true);if(!ok)return;}if(partyProfiles().length>=(conn.maxPlayers||8)){status('Your party is already full.','error');return;}await social.invite(id,conn.code,profile.name,profile.color);status(`Invite sent to ${name}.`,'success');}
- catch(e){status(e.message,'error');}
+ catch(e){status(e,'error');}
 }
 async function respondInvite(inv,accept){
  if(!social||busy)return;
  try{const result=await social.respond(inv.id,accept);incomingInvites=incomingInvites.filter(v=>v.id!==inv.id);if(!accept){status(`Declined ${cleanName(inv.from_name)}'s invite.`);renderInvites();return;}if(inMatch()){status('Finish or leave your current match before switching parties.','error');return;}if(conn)leave('Switching parties…',true);const ok=await connect(false,result.code||inv.room_code);if(ok)status(`Joined ${cleanName(inv.from_name)}'s party.`,'success');}
- catch(e){status(e.message,'error');}
+ catch(e){status(e,'error');}
  finally{renderInvites();refresh();}
 }
 
 function invalidatePreparation(){mapGeneration++;pendingSnapshot=null;failedSnapshot=null;startingMatch=false;preparingMap=false;loadingSnapshot=false;}
 const currentPreparation=(connection,generation)=>conn===connection&&generation===mapGeneration;
 function resetMatchState(){officialColors=null;invalidatePreparation();match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';$('deployment-ui').hidden=true;window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('deployment','dropping','deployment-cinematic');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear({resetInventory:true});document.exitPointerLock?.();}
-function leave(reason='Party left. Invite someone online to start another.',quiet=false){const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
+function leave(reason='Party left. Invite someone online to start another.',quiet=false){if(window.HorizonHCS?.official)window.HorizonHCS.stop();const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
 function resetToLobby(broadcast=false){if(broadcast&&host)conn?.send('lobby');resetMatchState();ready=false;for(const p of peers.values())p.ready=false;hello();refresh();updatePresence();status(host?'Party lobby · ready up when everyone is ready':'Party lobby · waiting for the leader');}
 async function start(){
  if(!game||!host||match||startingMatch||!everyoneReady())return;
@@ -187,7 +195,7 @@ async function start(){
   if(!currentPreparation(connection,generation)||!host||selectedMap!==mapId||$('mode').value!==mode)return;
   if(official){ready=false;status('Official qualifying game · preparing deployment.','success');return;}
   match=new Match(game.world,ids,mode);match.beginDeployment();matchId=uid();matchEpoch=Math.max(Date.now(),matchEpoch+1);snapshotFrame=-1;seenEvent=0;ready=false;for(const p of peers.values())p.ready=false;sendSnapshot();updatePresence();status('Deployment ship secured · choose a landing zone and enter a pod.','success');
- }catch(e){if(currentPreparation(connection,generation)){ready=false;hello();console.error('Horizon match preparation failed ('+stage+').',e);status(stage==='map'?'Map could not load. Please ready up to try again.':publicOnlineError(e),'error');}}
+ }catch(e){if(currentPreparation(connection,generation)){ready=false;hello();console.error('Horizon match preparation failed ('+stage+').',e);status(stage==='map'?'Map could not load. Please ready up to try again.':e,'error');}}
  finally{if(currentPreparation(connection,generation)){startingMatch=false;refresh();}}
 }
 function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;const data={id:matchId,epoch:matchEpoch,frame:snapshotFrame+1,mapId:selectedMap,state};conn.send('snapshot',data);apply(data);}
@@ -266,7 +274,7 @@ function receive(m){
  if(m.type==='hello'){
   const known=peers.has(m.from);if(host&&!known&&peers.size>=((conn.maxPlayers||8)-1)){conn.send('full',{},m.from);return;}if(host&&match&&!match.ids.includes(m.from)){conn.send('locked',{},m.from);return;}
   if(!conn.host&&d.host===m.from){conn.host=m.from;host=false;}
-  const old=peers.get(m.from),peer={id:m.from,name:cleanName(d.name),color:cleanColor(d.color),ready:!!d.ready&&(!host||d.mapId===selectedMap),voice:!!d.voice,lastSeen:Date.now()};peers.set(m.from,peer);
+  const old=peers.get(m.from),peer={id:m.from,name:cleanName(d.name),color:cleanColor(d.color),ready:!!d.ready&&(!host||(d.mapId===selectedMap&&d.mode===$('mode').value)),voice:!!d.voice,lastSeen:Date.now()};peers.set(m.from,peer);
   if(m.from===conn.host&&validMap(d.mapId)&&!inMatch()&&selectedMap!==d.mapId){invalidatePreparation();selectedMap=d.mapId;ready=false;hello();}
   if(m.from===conn.host&&!inMatch()&&['build','town'].includes(d.mode)&&$('mode').value!==d.mode){invalidatePreparation();$('mode').value=d.mode;ready=false;}
   if(!known)say('Party',`${peer.name} joined the party.`,true);refresh();syncVoice();if(host)start();return;
@@ -281,7 +289,7 @@ function receive(m){
  if(m.type==='chat'&&peer&&typeof d.text==='string'){say(peer.name,d.text.slice(0,200));return;}
  if(m.type==='leave'){if(m.from===conn.host&&!host&&!window.HorizonHCS?.official){leave('The party leader left, so the party was closed.');return;}removePeer(m.from);return;}
  if(m.type==='lobby'&&m.from===conn.host&&!host){resetToLobby(false);return;}
- if(m.type==='lobby-request'&&host){resetToLobby(true);return;}
+ if(m.type==='lobby-request'&&host){returnPartyLobby();return;}
  if(m.type==='mode'&&m.from===conn.host&&!host&&!inMatch()&&['build','town'].includes(d.mode)){if($('mode').value!==d.mode){invalidatePreparation();$('mode').value=d.mode;ready=false;hello();refresh();status('Party leader changed the match mode · ready up again.');}return;}
  if(m.type==='map'&&m.from===conn.host&&!host&&validMap(d.mapId)&&!inMatch()){if(selectedMap!==d.mapId){invalidatePreparation();selectedMap=d.mapId;ready=false;for(const p of peers.values())p.ready=false;hello();refresh();status('Party leader changed the map · ready up again.');}return;}
  if(m.type==='voice'&&peer){if(typeof d.enabled==='boolean'){peer.voice=d.enabled;if(!d.enabled)voice.remove(m.from);syncVoice();refresh();}else voice.receive(m.from,d).catch(e=>renderVoice({message:'Voice connection issue: '+e.message,tone:'warning'}));return;}
@@ -335,7 +343,21 @@ $('outfit').onchange=()=>{profile.color=cleanColor($('outfit').value);writeStore
 $('mode').onchange=()=>{if(!host&&conn)return;ready=false;for(const p of peers.values())p.ready=false;if(conn)conn.send('mode',{mode:$('mode').value});hello();refresh();status('Match mode changed · everyone needs to ready up again.');};
 $('copy').onclick=async()=>{if(!conn)return;try{await navigator.clipboard.writeText(conn.code);status('Fallback party code copied.');}catch{status(`Fallback code: ${conn.code}`);}};
 $('resume').onclick=()=>{showMenu=false;$('match-actions').hidden=true;game.capture();};
-$('rematch').onclick=$('back-lobby').onclick=()=>{if(window.HorizonHCS?.active){window.HorizonHCS.stop();return;}if(host)resetToLobby(true);else conn?.send('lobby-request');};
+let returningToLobby=false;
+async function returnPartyLobby(){
+ if(returningToLobby)return;
+ if(window.HorizonHCS?.official){
+  if(!host){conn?.send('lobby-request');return;}
+  const connection=conn;returningToLobby=true;
+  try{await window.HorizonHCS.endParty(connection.room);if(conn===connection)resetToLobby(true);}
+  catch(e){if(conn===connection)status(e,'error');}
+  finally{returningToLobby=false;}
+  return;
+ }
+ if(window.HorizonHCS?.active){window.HorizonHCS.stop();return;}
+ if(host)resetToLobby(true);else conn?.send('lobby-request');
+}
+$('rematch').onclick=$('back-lobby').onclick=returnPartyLobby;
 $('chat-form').onsubmit=e=>{e.preventDefault();const text=$('message').value.trim();if(!text||!conn||peers.size<1)return;conn.send('chat',{text});say(profile.name,text);$('message').value='';};
 function toggleChat(force){const content=$('chat-content'),open=force??content.hidden;content.hidden=!open;$('chat-toggle').textContent=open?'−':'+';$('chat-toggle').setAttribute('aria-expanded',String(open));if(open)$('message').focus();}
 $('chat-toggle').onclick=()=>toggleChat();

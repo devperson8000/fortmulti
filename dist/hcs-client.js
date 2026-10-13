@@ -51,6 +51,7 @@ export function createHCS({
         "This party or one of its players is already in a match. Return to the lobby or wait for the previous match to close.",
       PARTY_DATABASE_UNAVAILABLE:
         "HCS could not read the party database. Check Northflank’s Supabase credentials and apply the latest supabase.sql to that project.",
+      MATCH_CHANGED: "The party has moved to another match. Refresh the lobby before trying again.",
       MATCH_CAPACITY: "All match servers are busy. Please try again shortly.",
       MATCH_WORLD_UNAVAILABLE:
         "The server could not prepare the map. Please try again shortly.",
@@ -68,7 +69,7 @@ export function createHCS({
           fallback[status] ||
           "HCS service is unavailable. Please try again.",
       ),
-      { status, code },
+      { status, code, source: "hcs" },
     );
   };
   const api = async (path, data) => {
@@ -230,9 +231,11 @@ export function createHCS({
         return;
       }
       if (data.type === "match-cancelled" && frame?.matchId === data.matchId) {
+        declined = data.matchId;
         official = false;
         frame = null;
-        returnLobby();
+        if (data.partyClosed) await leaveParty();
+        else returnLobby();
         return;
       }
       if (data.type === "authenticated") {
@@ -405,6 +408,7 @@ export function createHCS({
     window.Game.clear();
   };
   const stop = () => {
+    const forfeit = official;
     transition++;
     celebration.reset();
     finaleKey = "";
@@ -415,7 +419,7 @@ export function createHCS({
     watching = false;
     frame = null;
     seen = 0;
-    send({ type: "leave" });
+    send({ type: "leave", forfeit, matchId: declined });
     $("hcs-broadcast").hidden = true;
     document.body.classList.remove("hcs-match");
     returnLobby();
@@ -456,6 +460,12 @@ export function createHCS({
         $("hcs-service").textContent = error.message;
       }
       draw();
+    },
+    async endParty(room) {
+      if (!official || !frame?.matchId) return;
+      const matchId = frame.matchId;
+      await api("/party-end", { room, matchId });
+      if (frame?.matchId === matchId) stop();
     },
     async startParty(room, map, mode) {
       if (!valid) return false;
