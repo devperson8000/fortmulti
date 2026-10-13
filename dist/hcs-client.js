@@ -26,7 +26,9 @@ export function createHCS({
     rosterKey = "",
     transition = 0,
     disconnected = false,
-    checkingIn = false;
+    checkingIn = false,
+    streamReady = false,
+    connectionError = null;
   const base = String(config.hcsUrl || "").replace(/\/$/, "");
   const celebration = createHCSCelebration({
     id: "hcs-official-finale",
@@ -37,6 +39,38 @@ export function createHCS({
     /^https:\/\/[^/]+$/.test(base) ||
     (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(base) &&
       ["localhost", "127.0.0.1"].includes(location.hostname));
+  const serviceError = (status, code) => {
+    const messages = {
+      AUTH_REQUIRED:
+        "HCS session expired or was rejected. Reload both players’ pages. If it persists, check that Vercel and Northflank use the same Supabase project.",
+      PARTY_FORBIDDEN:
+        "HCS could not verify this party. Leave and create a new party. If it persists, check the server’s Supabase project and multiplayer schema.",
+      PARTY_CONNECTING:
+        "A party member is still connecting to HCS. Both players should keep their game pages open, then ready up again.",
+      PARTY_IN_MATCH:
+        "This party or one of its players is already in a match. Return to the lobby or wait for the previous match to close.",
+      PARTY_DATABASE_UNAVAILABLE:
+        "HCS could not read the party database. Check Northflank’s Supabase credentials and apply the latest supabase.sql to that project.",
+      MATCH_CAPACITY: "All match servers are busy. Please try again shortly.",
+      MATCH_WORLD_UNAVAILABLE:
+        "The server could not prepare the map. Please try again shortly.",
+    };
+    const fallback = {
+      401: messages.AUTH_REQUIRED,
+      403: messages.PARTY_FORBIDDEN,
+      409: "A party member is still connecting to HCS or is already in a match. Return both players to the lobby and try again.",
+      404: "HCS endpoint was not found. Vercel’s HCS_SERVER_URL must be the Northflank HTTPS address, not the game’s website address.",
+      400: "HCS rejected the request. Check your callsign and the server’s multiplayer database schema.",
+    };
+    return Object.assign(
+      new Error(
+        messages[code] ||
+          fallback[status] ||
+          "HCS service is unavailable. Please try again.",
+      ),
+      { status, code },
+    );
+  };
   const api = async (path, data) => {
     const auth = session();
     rememberIdentity(auth);
@@ -51,8 +85,10 @@ export function createHCS({
       body: data ? JSON.stringify(data) : undefined,
       signal: AbortSignal.timeout(8000),
     });
-    if (!response.ok)
-      throw new Error("HCS service is unavailable. Please try again.");
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw serviceError(response.status, body.code);
+    }
     return response.json();
   };
   const countdown = () => {
@@ -134,14 +170,14 @@ export function createHCS({
         : "";
     $("hcs-checkin").disabled =
       !qualified || !open || !identity || state.checked?.includes(identity);
-    $("hcs-checkin").disabled ||= checkingIn || !identity;
+    $("hcs-checkin").disabled ||= checkingIn || !streamReady;
     $("hcs-checkin").textContent = checkingIn
       ? "CHECKING IN…"
       : state.checked?.includes(identity)
         ? "CHECKED IN"
         : "CHECK IN";
     $("hcs-watch").hidden = state.phase !== "live";
-    $("hcs-watch").disabled = !identity;
+    $("hcs-watch").disabled = !streamReady;
     $("hcs-watch").textContent =
       watching && !active ? "CANCEL WATCH" : "WATCH HCS";
     $("hcs-champion").textContent = state.champion
@@ -153,9 +189,12 @@ export function createHCS({
     try {
       state = await api("/state");
       $("hcs-service").textContent =
-        watching && !active
-          ? "Connecting to broadcast · waiting for the 20-second delayed feed."
-          : "Official standings · 20-second broadcast delay";
+        connectionError?.message ||
+        (!streamReady
+          ? "Standings connected · connecting your player to HCS…"
+          : watching && !active
+            ? "Connecting to broadcast · waiting for the 20-second delayed feed."
+            : "Official standings · 20-second broadcast delay");
       draw();
     } catch {
       $("hcs-service").textContent =
@@ -167,6 +206,8 @@ export function createHCS({
     const auth = session();
     if (!auth?.access_token) return;
     rememberIdentity(auth);
+    streamReady = false;
+    connectionError = null;
     socket = new WebSocket(base.replace(/^http/, "ws") + "/stream");
     const connection = socket;
     socket.onopen = () => {
@@ -198,12 +239,23 @@ export function createHCS({
         disconnected = false;
         identity = data.id;
         retry = 0;
-        await api("/profile", {
-          name: profile().name,
-          color: profile().color,
-        }).catch(() => {});
+        try {
+          await api("/profile", {
+            name: profile().name,
+            color: profile().color,
+          });
+        } catch (error) {
+          if (socket !== connection || closed) return;
+          connectionError = error;
+          $("hcs-service").textContent = error.message;
+          draw();
+          return;
+        }
         if (socket !== connection || closed) return;
+        streamReady = true;
+        connectionError = null;
         if (watching) send({ type: "watch" });
+        poll();
         draw();
       }
       if (data.type === "snapshot") {
@@ -281,8 +333,14 @@ export function createHCS({
         }
       }
     };
-    socket.onclose = () => {
+    socket.onclose = (event) => {
       if (socket !== connection || closed) return;
+      streamReady = false;
+      if (event?.code === 1008 && event.reason === "Authentication failed") {
+        connectionError = serviceError(401, "AUTH_REQUIRED");
+        $("hcs-service").textContent = connectionError.message;
+      }
+      draw();
       disconnected = true;
       socket = null;
       if (active)
@@ -380,17 +438,55 @@ export function createHCS({
       return official;
     },
     async updateProfile() {
-      if (valid && identity)
+      if (!valid || !identity || socket?.readyState !== 1) return;
+      const connection = socket;
+      try {
         await api("/profile", {
           name: profile().name,
           color: profile().color,
-        }).catch(() => {});
+        });
+        if (socket !== connection || closed) return;
+        streamReady = true;
+        connectionError = null;
+        poll();
+      } catch (error) {
+        if (socket !== connection || closed) return;
+        streamReady = false;
+        connectionError = error;
+        $("hcs-service").textContent = error.message;
+      }
+      draw();
     },
     async startParty(room, map, mode) {
       if (!valid) return false;
       declined = null;
-      await api("/party-start", { room, map, mode });
-      return true;
+      const deadline = Date.now() + 10000;
+      // A public /state response does not prove the player stream or profile is ready.
+      while (!streamReady || socket?.readyState !== 1) {
+        if (closed) throw new Error("HCS connection was closed.");
+        if (connectionError) throw connectionError;
+        if (Date.now() >= deadline)
+          throw new Error(
+            "Your HCS player connection could not open. Check Northflank’s HCS_ORIGINS includes this website, redeploy the service, and reload both players’ pages.",
+          );
+        connect();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      for (;;) {
+        try {
+          await api("/party-start", { room, map, mode });
+          return true;
+        } catch (error) {
+          // Only an explicit pre-creation rejection is safe to retry automatically.
+          if (
+            closed ||
+            error.code !== "PARTY_CONNECTING" ||
+            Date.now() >= deadline
+          )
+            throw error;
+          await new Promise((resolve) => setTimeout(resolve, 350));
+        }
+      }
     },
     render(dt) {
       if (official) return false;

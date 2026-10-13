@@ -47,6 +47,8 @@ export async function createHCSServer({
       ws.send(typeof data === "string" ? data : JSON.stringify(data));
     }
   };
+  const fail = (res, status, code) =>
+    res.writeHead(status).end(JSON.stringify({ code }));
   const server = http.createServer(async (req, res) => {
     const origin = req.headers.origin;
     if (origin && !origins.includes(origin)) {
@@ -82,7 +84,7 @@ export async function createHCSServer({
         req.headers.authorization?.replace(/^Bearer /, ""),
       );
       if (!user) {
-        res.writeHead(401).end("{}");
+        fail(res, 401, "AUTH_REQUIRED");
         return;
       }
       let body = "";
@@ -95,7 +97,13 @@ export async function createHCSServer({
       }
       const data = JSON.parse(body || "{}");
       if (req.url === "/party-start") {
-        const roster = await authorizeParty(user.id, data.room);
+        let roster;
+        try {
+          roster = await authorizeParty(user.id, data.room);
+        } catch {
+          fail(res, 503, "PARTY_DATABASE_UNAVAILABLE");
+          return;
+        }
         if (
           !roster ||
           roster.length < 2 ||
@@ -103,18 +111,12 @@ export async function createHCSServer({
           !["build", "town"].includes(data.mode) ||
           !["island", "facility"].includes(data.map)
         ) {
-          res.writeHead(403).end("{}");
+          fail(res, 403, "PARTY_FORBIDDEN");
           return;
         }
         if (
           startingRooms.has(data.room) ||
           matches.has(data.room) ||
-          matches.size >= 8 ||
-          roster.some(
-            (id) =>
-              !championship.state.players[id] ||
-              ![...clients.values()].some((c) => c.id === id && !c.watching),
-          ) ||
           roster.some(
             (id) =>
               [...matches.values()].some((m) =>
@@ -124,7 +126,21 @@ export async function createHCSServer({
                 championship.state.finalists?.includes(id)),
           )
         ) {
-          res.writeHead(409).end("{}");
+          fail(res, 409, "PARTY_IN_MATCH");
+          return;
+        }
+        if (matches.size >= 8) {
+          fail(res, 503, "MATCH_CAPACITY");
+          return;
+        }
+        if (
+          roster.some(
+            (id) =>
+              !championship.state.players[id] ||
+              ![...clients.values()].some((c) => c.id === id && !c.watching),
+          )
+        ) {
+          fail(res, 409, "PARTY_CONNECTING");
           return;
         }
         startingRooms.add(data.room);
@@ -136,7 +152,7 @@ export async function createHCSServer({
             championship.state.phase === "live" &&
             roster.some((id) => championship.state.finalists?.includes(id))
           ) {
-            res.writeHead(409).end("{}");
+            fail(res, 409, "PARTY_IN_MATCH");
             return;
           }
           for (const c of clients.values())
@@ -152,6 +168,8 @@ export async function createHCSServer({
             finishedAt: null,
           });
           res.end(JSON.stringify({ id }));
+        } catch {
+          fail(res, 503, "MATCH_WORLD_UNAVAILABLE");
         } finally {
           startingRooms.delete(data.room);
         }
