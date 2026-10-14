@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as cinematic from '../public/deployment-cinematic.js';
-const {deploymentCinematic,cinematicCamera,cinematicPodPosition,cinematicFov,podExitPosition,podExitYaw,DEPLOYMENT_CUES,POD_TOUCHDOWN_MUSIC,MUSIC_START}=cinematic;
+const {deploymentCinematic,cinematicCamera,cinematicPodPosition,cinematicFov,podExitPosition,podExitYaw,DEPLOYMENT_CUES,MUSIC_START}=cinematic;
 import {DEPLOYMENT_TIMELINE,deploymentStageAt} from '../public/deployment-sequence.js';
 
 test('music starts only on full black and the title follows the measured vocal cues',()=>{
@@ -12,7 +12,7 @@ test('music starts only on full black and the title follows the measured vocal c
  assert.equal(at(DEPLOYMENT_CUES.lyricsStart+1.56).logo,0);
  assert.equal(at(DEPLOYMENT_CUES.businessStart).black,0);
  assert.equal(at(DEPLOYMENT_CUES.businessStart).orbit,1);
- assert.equal(at(POD_TOUCHDOWN_MUSIC).black,0);
+ assert.equal(at(DEPLOYMENT_CUES.impact).black,0);
 });
 
 test('the Horizon mark fades visibly from the first uh instead of flashing on',()=>{
@@ -21,7 +21,7 @@ test('the Horizon mark fades visibly from the first uh instead of flashing on',(
 });
 
 test('the salute gets a frontal held shot before fading the unrepeated supplied song',()=>{
- const r=cinematic.POD_RELEASE,start=POD_TOUCHDOWN_MUSIC+r.hold+r.open+r.exit,end=cinematic.DEPLOYMENT_MUSIC_END;
+ const r=cinematic.POD_RELEASE,start=DEPLOYMENT_CUES.impact+r.hold+r.open+r.exit,end=cinematic.DEPLOYMENT_MUSIC_END;
  assert.ok(end<=30,'the ending fits inside the uploaded audio');
  assert.ok(end-cinematic.DEPLOYMENT_MUSIC_FADE-start-r.salute*.23>=.8,'full raised salute holds before music fade');
  const actor=[.32,0,2.35],yaw=Math.PI,state=deploymentCinematic(MUSIC_START+start+r.salute*.5),view=cinematicCamera([0,0,0],0,state,{subjectPosition:actor,returnYaw:yaw});
@@ -37,12 +37,12 @@ test('the local character fades out before the camera returns through its body',
  assert.equal(inside.operatorOpacity,0,'the character is hidden before the first-person camera handoff');
 });
 
-test('the authoritative landing precedes the Big stepper salute cue',()=>{
- const impact=MUSIC_START+POD_TOUCHDOWN_MUSIC;
+test('the authoritative landing boundary is the exact Big stepper cue',()=>{
+ const impact=MUSIC_START+DEPLOYMENT_CUES.impact;
  assert.equal(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds,impact);
  assert.equal(deploymentStageAt(impact-.001),'transition');
  assert.equal(deploymentStageAt(impact),'landed');
- assert.ok(DEPLOYMENT_CUES.lyricsStart<DEPLOYMENT_CUES.businessStart&&POD_TOUCHDOWN_MUSIC<DEPLOYMENT_CUES.businessStart);
+ assert.ok(DEPLOYMENT_CUES.lyricsStart<DEPLOYMENT_CUES.businessStart&&DEPLOYMENT_CUES.businessStart<DEPLOYMENT_CUES.impact);
 });
 
 test('camera finishes facing the operator and stays outside the pod and character',()=>{
@@ -63,24 +63,24 @@ test('salute portrait keeps the complete character comfortably inside the frame'
  assert.ok(Math.hypot(view.target[0]-actor[0],view.target[2]-actor[2])<.01,'portrait remains centred on the operator');
 });
 
-test('descent is continuous, stays above the island, and touches chosen ground before the salute beat',()=>{
+test('descent is continuous, stays above the island, and touches chosen ground on the beat',()=>{
  const landing={x:12,y:7,z:-18},at=t=>cinematicPodPosition(landing,MUSIC_START+t);
- assert.ok(at(POD_TOUCHDOWN_MUSIC-.8)[1]>landing.y+10);
- assert.ok(at(POD_TOUCHDOWN_MUSIC-.02)[1]>landing.y);
- assert.deepEqual(at(POD_TOUCHDOWN_MUSIC),[12,7,-18]);
- assert.deepEqual(at(POD_TOUCHDOWN_MUSIC+1),[12,7,-18]);
+ assert.ok(at(DEPLOYMENT_CUES.businessStart)[1]>landing.y+10);
+ assert.ok(at(DEPLOYMENT_CUES.impact-.02)[1]>landing.y);
+ assert.deepEqual(at(DEPLOYMENT_CUES.impact),[12,7,-18]);
+ assert.deepEqual(at(DEPLOYMENT_CUES.impact+1),[12,7,-18]);
 });
 
 test('the exit camera returns continuously to the actual first-person position and heading',()=>{
  const p=[12,7,-18],yaw=.7,time=DEPLOYMENT_TIMELINE;
- const exitAt=MUSIC_START+POD_TOUCHDOWN_MUSIC+time.landedSeconds+time.openingSeconds;
+ const exitAt=MUSIC_START+DEPLOYMENT_CUES.impact+time.landedSeconds+time.openingSeconds;
  assert.equal(deploymentCinematic(exitAt).returnProgress,0);
  assert.equal(deploymentCinematic(exitAt+time.exitSeconds).returnProgress,0,'the camera stays outside for the salute');
  assert.equal(deploymentCinematic(exitAt+time.exitSeconds+time.saluteSeconds).returnProgress,1);
  const heading=yaw+Math.PI;
  let previous=cinematicCamera(p,yaw,{orbit:1,returnProgress:0},{returnYaw:heading});
- for(let i=1;i<=240;i++){
-  const state=deploymentCinematic(exitAt+(time.exitSeconds+time.saluteSeconds)*i/240),view=cinematicCamera(p,yaw,state,{returnYaw:heading});
+ for(let i=1;i<=120;i++){
+  const state=deploymentCinematic(exitAt+(time.exitSeconds+time.saluteSeconds)*i/120),view=cinematicCamera(p,yaw,state,{returnYaw:heading});
   assert.ok(Math.hypot(...view.eye.map((v,k)=>v-previous.eye[k]))<.5,'no single-frame camera cut');
   assert.ok(Math.hypot(...view.target.map((v,k)=>v-view.eye[k]))>.03,'look direction never degenerates');
   previous=view;
@@ -113,15 +113,15 @@ test('the complete pod roof and floor fit the portrait shot across screen sizes'
  }
 });
 
-test('the heavy final descent reaches touchdown with a finite velocity instead of teleporting the last metres',()=>{
- const landing={x:2,y:7,z:9},at=t=>cinematicPodPosition(landing,MUSIC_START+t)[1],hit=POD_TOUCHDOWN_MUSIC;
+test('the heavy final descent reaches the beat with a finite velocity instead of teleporting the last metres',()=>{
+ const landing={x:2,y:7,z:9},at=t=>cinematicPodPosition(landing,MUSIC_START+t)[1],hit=DEPLOYMENT_CUES.impact;
  const speeds=[.2,.1,.04,.02].map(dt=>(at(hit-dt)-landing.y)/dt);
  assert.ok(speeds.every(speed=>speed>30&&speed<60),'the final approach is fast, with bounded motion between frames');
  assert.ok(at(hit-.2)-at(hit-.1)<6,'the exterior camera can follow the final approach without a cut');
 });
 
 test('impact has a downward camera punch and settles before the hatch opens',()=>{
- const c=DEPLOYMENT_CUES,at=age=>cinematicCamera([0,0,0],0,{musicTime:POD_TOUCHDOWN_MUSIC+age,orbit:1,impact:Math.exp(-age*3.8)}),steady=age=>cinematicCamera([0,0,0],0,{musicTime:POD_TOUCHDOWN_MUSIC+age,orbit:1,impact:Math.exp(-age*3.8)},{reducedMotion:true});
+ const c=DEPLOYMENT_CUES,at=age=>cinematicCamera([0,0,0],0,{musicTime:c.impact+age,orbit:1,impact:Math.exp(-age*3.8)}),steady=age=>cinematicCamera([0,0,0],0,{musicTime:c.impact+age,orbit:1,impact:Math.exp(-age*3.8)},{reducedMotion:true});
  assert.ok(at(0).eye[1]<steady(0).eye[1]-.16,'the initial hit must push the camera down');
  assert.ok(Math.hypot(...at(.09).eye.map((v,k)=>v-steady(.09).eye[k]))>.12,'the heavy impact is visible after the first frame');
  assert.ok(Math.hypot(...at(1).eye.map((v,k)=>v-steady(1).eye[k]))<.01,'camera settles before walkout');
@@ -162,12 +162,12 @@ test('landing gear compresses on impact and is stationary before the door opens'
 
 test('the operator stays concealed until the hatch actually opens after impact',()=>{
  const c=DEPLOYMENT_CUES,r=cinematic.POD_RELEASE,at=t=>deploymentCinematic(MUSIC_START+t);
- for(const t of [POD_TOUCHDOWN_MUSIC-.8,POD_TOUCHDOWN_MUSIC-.001,POD_TOUCHDOWN_MUSIC,POD_TOUCHDOWN_MUSIC+r.hold-.001]){
+ for(const t of [c.businessStart,c.impact-.001,c.impact,c.impact+r.hold-.001]){
   assert.equal(at(t).hatchOpen,0);assert.equal(at(t).operatorOpacity,0,'no cutaway view during descent or touchdown');
  }
- assert.equal(at(POD_TOUCHDOWN_MUSIC+r.hold+r.open*.04).operatorOpacity,0,'a tiny opening does not pop the Soldier into view');
- assert.ok(at(POD_TOUCHDOWN_MUSIC+r.hold+r.open*.5).operatorOpacity>.95,'opening hatch naturally reveals the Soldier');
- assert.equal(at(POD_TOUCHDOWN_MUSIC+r.hold+r.open+r.exit*.5).operatorOpacity,1,'the walkout remains fully visible');
+ assert.equal(at(c.impact+r.hold+r.open*.04).operatorOpacity,0,'a tiny opening does not pop the Soldier into view');
+ assert.ok(at(c.impact+r.hold+r.open*.5).operatorOpacity>.95,'opening hatch naturally reveals the Soldier');
+ assert.equal(at(c.impact+r.hold+r.open+r.exit*.5).operatorOpacity,1,'the walkout remains fully visible');
 });
 
 test('the pod walk-out follows its rotated hatch and preserves terrain height',()=>{
@@ -188,20 +188,20 @@ test('the pod walk-out follows its rotated hatch and preserves terrain height',(
 
 test('the exit camera holds outside the stationary pod while panning toward the walking Soldier',()=>{
  const pod=[12,3,-18],yaw=.4;
- const a=cinematicCamera(pod,yaw,{musicTime:POD_TOUCHDOWN_MUSIC+2.5,orbit:1,returnProgress:0},{
+ const a=cinematicCamera(pod,yaw,{musicTime:DEPLOYMENT_CUES.impact+2.5,orbit:1,returnProgress:0},{
   subjectPosition:pod,returnYaw:yaw});
  const soldier=[pod[0]+Math.sin(yaw)*2.35,pod[1],pod[2]+Math.cos(yaw)*2.35];
- const b=cinematicCamera(pod,yaw,{musicTime:POD_TOUCHDOWN_MUSIC+5,orbit:1,returnProgress:0},{
+ const b=cinematicCamera(pod,yaw,{musicTime:DEPLOYMENT_CUES.impact+5,orbit:1,returnProgress:0},{
   subjectPosition:soldier,returnYaw:yaw+Math.PI});
  assert.ok(Math.hypot(...a.eye.map((v,i)=>v-b.eye[i]))<1e-8,'tripod remains fixed while the Soldier walks');
  assert.ok(Math.hypot(...a.target.map((v,i)=>v-b.target[i]))>1.5,'camera pans toward Soldier');
- const end=cinematicCamera(pod,yaw,{musicTime:POD_TOUCHDOWN_MUSIC+6,orbit:1,returnProgress:1},{
+ const end=cinematicCamera(pod,yaw,{musicTime:DEPLOYMENT_CUES.impact+6,orbit:1,returnProgress:1},{
   subjectPosition:soldier,returnYaw:yaw+Math.PI});
  assert.ok(Math.hypot(...end.eye.map((v,i)=>v-[soldier[0],soldier[1]+1.72,soldier[2]][i]))<1e-8,'handoff reaches Soldier eye');
 });
 
 test('reduced-motion mode disables the impact camera vibration',()=>{
- const pod=[0,1,0],cinema={musicTime:POD_TOUCHDOWN_MUSIC+.06,impact:1,orbit:1};
+ const pod=[0,1,0],cinema={musicTime:DEPLOYMENT_CUES.impact+.06,impact:1,orbit:1};
  const shaking=cinematicCamera(pod,0,cinema,{reducedMotion:false});
  const steady=cinematicCamera(pod,0,cinema,{reducedMotion:true});
  assert.ok(Math.hypot(...shaking.eye.map((v,i)=>v-steady.eye[i]))>.05);

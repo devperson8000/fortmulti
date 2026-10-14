@@ -1,4 +1,4 @@
-import {MUSIC_START,POD_TOUCHDOWN,deploymentSaluteProgress,POD_RELEASE,CINEMATIC_CAMERA_RADIUS,deploymentCinematic,podExitPosition,podExitYaw} from './deployment-cinematic.js';
+import {DEPLOYMENT_CUES,MUSIC_START,POD_RELEASE,CINEMATIC_CAMERA_RADIUS,deploymentCinematic,podExitPosition,podExitYaw} from './deployment-cinematic.js';
 import {POD_BOARDING_SECONDS} from './deployment-ship.js';
 export const DEPLOYMENT_STATES=Object.freeze([
  'ship_waiting','landing_selection','pod_available','entering_pod','pod_ready',
@@ -8,8 +8,8 @@ export const DEPLOYMENT_STATES=Object.freeze([
 export const DEPLOYMENT_TIMELINE=Object.freeze({
  enterSeconds:POD_BOARDING_SECONDS,
  sealSeconds:1.12,
- launchSeconds:POD_TOUCHDOWN-1.12,
- fadeAt:POD_TOUCHDOWN-1.12-.14,
+ launchSeconds:MUSIC_START+DEPLOYMENT_CUES.impact-1.12,
+ fadeAt:MUSIC_START+DEPLOYMENT_CUES.impact-1.12-.14,
  fadeSeconds:.42,
  landedSeconds:POD_RELEASE.hold,
  openingSeconds:POD_RELEASE.open,
@@ -19,6 +19,7 @@ export const DEPLOYMENT_TIMELINE=Object.freeze({
 });
 
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+const smooth=value=>{const t=clamp(value,0,1);return t*t*(3-2*t);};
 
 export function createDeploymentClock(){return {sequenceId:'',serverElapsed:0,elapsed:0};}
 export function stepDeploymentClock(previous,{sequenceId='',serverElapsed=0,active=false}={},dt=.016){
@@ -52,14 +53,15 @@ export function deploymentActorPose(landing,podYaw=0,side=1,sequenceElapsed=0,gr
  if(t<openingAt||t>=combatAt)return null;
  const opening=clamp((t-openingAt)/time.openingSeconds,0,1);
  const progress=clamp((t-exitingAt)/time.exitSeconds,0,1);
-
+ const salute=(t-salutingAt)/time.saluteSeconds;
+ const raised=smooth(salute/.23),lowered=smooth((1-salute)/.23);
  const animationState=t<exitingAt?'idle':t<salutingAt?'pod-exit':'idle';
  return {
   position:podExitPosition(landing,podYaw,side,progress,groundHeight),
   yaw:podExitYaw(podYaw,opening),
   animationState,locomotionState:animationState,grounded:true,vy:0,
   moveSpeed:t>=exitingAt&&t<salutingAt?6*progress*(1-progress)*Math.hypot(.32,2.35)/time.exitSeconds:0,
-  saluteProgress:t<salutingAt?0:deploymentSaluteProgress(t-MUSIC_START),
+  saluteProgress:t<salutingAt?0:Math.min(raised,lowered),
   exitProgress:progress
  };
 }

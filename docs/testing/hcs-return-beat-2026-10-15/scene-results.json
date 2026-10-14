@@ -1,0 +1,68 @@
+{
+  "checks": [
+    {
+      "stage": "pickup",
+      "time": 0.3,
+      "actorVisible": 1,
+      "weapon": null
+    },
+    {
+      "stage": "landed",
+      "time": 2.65,
+      "actorVisible": 1,
+      "weapon": null
+    },
+    {
+      "stage": "boarding",
+      "time": 4.3,
+      "actorVisible": 1,
+      "weapon": null
+    },
+    {
+      "stage": "launch",
+      "time": 6.8,
+      "actorVisible": 0,
+      "weapon": null
+    },
+    {
+      "stage": "launch",
+      "time": 7.7,
+      "actorVisible": 0,
+      "weapon": null
+    },
+    {
+      "stage": "docking",
+      "time": 10.5,
+      "actorVisible": 0,
+      "weapon": null
+    },
+    {
+      "stage": "opening",
+      "time": 11.25,
+      "actorVisible": 0,
+      "weapon": null
+    },
+    {
+      "stage": "exit",
+      "time": 12.1,
+      "actorVisible": 1,
+      "weapon": null
+    },
+    {
+      "stage": "salute",
+      "time": 13.1,
+      "actorVisible": 1,
+      "weapon": null
+    },
+    {
+      "stage": "salute",
+      "time": 13.29,
+      "actorVisible": 1,
+      "weapon": null
+    },
+    {
+      "audio": "late result seeks into the verse; clearing inputs preserves one playing voice; lobby exit cancels it"
+    }
+  ],
+  "errors": []
+}

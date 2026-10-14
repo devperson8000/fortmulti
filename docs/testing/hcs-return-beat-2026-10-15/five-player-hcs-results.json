@@ -1,0 +1,11 @@
+{
+  "checks": [
+    "human presses E to board; four native bots board; two password-gated audience windows join",
+    "uploaded HCS mark uses original cue; held salute; actual five-player first-person combat",
+    "native AudioContext output drives the champion launch and camera; one forward-playing victory excerpt",
+    "winner gets HCS VICTORY; two audiences receive the result only after the real 20-second delay",
+    "exit restores host and both viewers; ordinary deployment retains Horizon branding",
+    "full test automatically opens its password-gated audience and runs the HCS rule checks"
+  ],
+  "errors": []
+}

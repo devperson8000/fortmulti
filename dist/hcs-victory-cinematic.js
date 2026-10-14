@@ -5,16 +5,24 @@ import {
   podBoardingAvatarOpacity,
 } from "./deployment-ship.js";
 import { podExitPosition } from "./deployment-cinematic.js";
+import { DEPLOYMENT_CUES } from "./deployment-cues.js";
 export const HCS_VICTORY_LANDING = 2.5;
+// Preserve the rescue, dock and walkout pace; align the music excerpt to the salute.
+export const HCS_VICTORY_DOCK = 10.95;
+export const HCS_VICTORY_SALUTE = Object.freeze({
+  start: HCS_VICTORY_DOCK + 0.65 + 1.3,
+  raise: 0.2,
+});
 export const HCS_VICTORY_MUSIC = Object.freeze({
   start: 6.5,
-  offset: 20.835,
+  offset:
+    DEPLOYMENT_CUES.bigStart -
+    (HCS_VICTORY_SALUTE.start + HCS_VICTORY_SALUTE.raise) +
+    6.5,
   end: 30,
   fade: 0.5,
   beats: [25.285, 26.415, 26.789, 27.956, 29.124, 29.578],
 });
-export const HCS_VICTORY_DOCK =
-  HCS_VICTORY_MUSIC.start + 25.285 - HCS_VICTORY_MUSIC.offset;
 export const HCS_VICTORY_DURATION = HCS_VICTORY_DOCK + 3.1;
 const clamp = (t) => Math.max(0, Math.min(1, Number(t) || 0)),
   ease = (t) => {
@@ -121,7 +129,7 @@ export function hcsVictoryCinematic(
     doorOpen = ease((t - HCS_VICTORY_DOCK) / 0.65);
   }
   const exitAt = HCS_VICTORY_DOCK + 0.65,
-    saluteAt = exitAt + 1.3;
+    saluteAt = HCS_VICTORY_SALUTE.start;
   if (t >= exitAt) {
     stage = "exit";
     const q = clamp((t - exitAt) / 1.3);
@@ -139,7 +147,7 @@ export function hcsVictoryCinematic(
   }
   if (t >= saluteAt) {
     stage = "salute";
-    salute = ease((t - saluteAt) / 0.4);
+    salute = ease((t - saluteAt) / HCS_VICTORY_SALUTE.raise);
     moveSpeed = 0;
     animationState = "idle";
   }
@@ -149,6 +157,9 @@ export function hcsVictoryCinematic(
       const age = musicTime - hit;
       if (age >= 0 && age < 0.3) beat = Math.max(beat, Math.exp(-age * 18));
     }
+  const salutePunch =
+    ease((musicTime - DEPLOYMENT_CUES.impact) / 0.045) *
+    (1 - ease((musicTime - DEPLOYMENT_CUES.stepperStart) / 0.28));
   const landingAge = t - HCS_VICTORY_LANDING,
     impact = landingAge >= 0 ? Math.exp(-landingAge * 10) : 0,
     dockKick =
@@ -184,7 +195,14 @@ export function hcsVictoryCinematic(
       mix(shipBase[2], actor[2], front),
     ];
   }
+  if (scene === "ship") {
+    eye[0] -= (eye[0] - target[0]) * salutePunch * 0.12;
+    eye[1] -= salutePunch * 0.025;
+    eye[2] -= salutePunch * 0.34;
+  }
   return {
+    musicTime,
+    salutePunch,
     time: Math.min(t, HCS_VICTORY_DURATION),
     scene,
     stage,
@@ -205,7 +223,10 @@ export function hcsVictoryCinematic(
     animationState,
     eye,
     target,
-    fov: (58 * Math.PI) / 180 + impact * 0.018 + dockKick * 0.018,
+    fov:
+      ((58 + salutePunch * 3) * Math.PI) / 180 +
+      impact * 0.018 +
+      dockKick * 0.018,
     showResults: t >= HCS_VICTORY_DURATION,
   };
 }

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Match } from '../public/simulation.js';
 import { DEPLOYMENT_TIMELINE } from '../public/deployment-sequence.js';
-import { DEPLOYMENT_CUES,POD_TOUCHDOWN_MUSIC,MUSIC_START } from '../public/deployment-cinematic.js';
+import { DEPLOYMENT_CUES,MUSIC_START } from '../public/deployment-cinematic.js';
 import { SHIP_PODS } from '../public/deployment-ship.js';
 
 const world={height:()=>0,obstacles:[]};
@@ -54,7 +54,7 @@ test('both connected players auto-deploy to their own destinations only after bo
  assert.equal(match.deployment.stage,'both_ready');
  assert.ok(match.players.every(p=>p.deploymentState==='both_ready'));
  tick(match,.75);assert.equal(match.deployment.stage,'pod_sealing');
- const impact=DEPLOYMENT_TIMELINE.readyBeat+MUSIC_START+POD_TOUCHDOWN_MUSIC;
+ const impact=DEPLOYMENT_TIMELINE.readyBeat+MUSIC_START+DEPLOYMENT_CUES.impact;
  while(match.deployment.elapsed<impact-.1)match.tick(Math.min(.02,impact-.1-match.deployment.elapsed));
  assert.equal(match.deployment.stage,'transition');
  assert.ok(match.players.every(p=>p.p[1]>0&&p.p[1]<10),'pods visibly approach ground before the musical impact');
@@ -110,7 +110,7 @@ test('pod exit eases from the landed position rather than jumping on its first f
 
 test('scripted deployment catches up after a stalled host without skipping touchdown or enabling combat early',()=>{
  const match=new Match(world,['a','b']);match.beginDeployment();readyPlayer(match,'a',0,{x:30,z:40});readyPlayer(match,'b',1,{x:-80,z:65});tick(match,DEPLOYMENT_TIMELINE.enterSeconds+.1);
- const impact=DEPLOYMENT_TIMELINE.readyBeat+MUSIC_START+POD_TOUCHDOWN_MUSIC;
+ const impact=DEPLOYMENT_TIMELINE.readyBeat+MUSIC_START+DEPLOYMENT_CUES.impact;
  match.tick(impact-.04-match.deployment.elapsed);
  assert.equal(match.deployment.stage,'transition');assert.equal(match.phase,'deployment');
  assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,0);
@@ -129,7 +129,7 @@ test('the host follows audible music elapsed while scripted deployment is active
  assert.ok(Math.abs(match.deployment.elapsed-start-.02)<1e-8,'music time takes precedence over delayed timer wall time');
  match.tick(2,{deploymentElapsed:start});
  assert.ok(Math.abs(match.deployment.elapsed-start-.02)<1e-8,'a stale clock never rewinds deployment');
- const impact=DEPLOYMENT_TIMELINE.readyBeat+MUSIC_START+POD_TOUCHDOWN_MUSIC;
+ const impact=DEPLOYMENT_TIMELINE.readyBeat+MUSIC_START+DEPLOYMENT_CUES.impact;
  match.tick(.05,{deploymentElapsed:impact-.001});assert.equal(match.deployment.stage,'transition');
  match.tick(.05,{deploymentElapsed:impact+.001});assert.equal(match.deployment.stage,'landed');
  assert.equal(match.events.filter(e=>e.type==='deployment_landed').length,1);

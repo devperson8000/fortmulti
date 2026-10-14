@@ -1,5 +1,7 @@
 # Deployment salute beat synchronization — 14 October 2026
 
+> Superseded on 15 October: this report records the mistaken start-game deployment change. That sequence was restored to its previous behavior. The requested **HCS winner pod return** is documented in [the corrected report](../hcs-return-beat-2026-10-15/README.md). These captures remain historical evidence.
+
 The pod lands and the operator walks out early enough to reach the full whole-hand salute on **“Big” at 25.580 seconds**, holding through **“stepper” at 25.770 seconds**. A camera push starts on the bass hit at 25.285 seconds, stays close through the lyric, and eases back. The original song continues forward, with the existing 400 ms fade and gameplay handoff at 29.835 seconds.
 
 | Song time | Deployment action |

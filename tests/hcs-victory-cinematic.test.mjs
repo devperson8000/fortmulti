@@ -56,14 +56,16 @@ test("pod returns into the existing spaceship floor hatch before the champion ex
   assert.equal(end.showResults, true);
   assert.equal(end.fade, 0);
 });
-test("music uses one forward-playing excerpt and docking and light pulses follow its measured bass drop", () => {
+test("music uses one forward-playing excerpt and the ship hero light pulses follow its measured bass drop", () => {
   const m = api.HCS_VICTORY_MUSIC;
   assert.ok(m.start >= 6);
   assert.ok(m.start + m.end - m.offset > api.HCS_VICTORY_DOCK + 2);
-  const f = api.hcsVictoryCinematic(api.HCS_VICTORY_DOCK, context);
+  const hitAt = m.start + 25.285 - m.offset;
+  const f = api.hcsVictoryCinematic(hitAt, context);
+  assert.equal(f.scene, "ship");
   assert.ok(f.beat > 0.99);
   assert.ok(
-    Math.abs(m.offset + api.HCS_VICTORY_DOCK - m.start - 25.285) < 0.001,
+    Math.abs(f.musicTime - 25.285) < 0.001,
   );
 });
 test("poses and camera stay finite and continuous within each scene, and keep a stable final salute", () => {

@@ -1,0 +1,50 @@
+{
+  "first": {
+    "musicTime": 25.740130483088564,
+    "salutePunch": 1,
+    "time": 13.260130483088567,
+    "scene": "ship",
+    "stage": "salute",
+    "fade": 0,
+    "doorOpen": 1,
+    "hatchOpen": 0,
+    "boost": 0,
+    "beat": 0,
+    "impact": 1.8592897125784554e-47,
+    "landingAge": 10.760130483088567,
+    "pod": [
+      -7,
+      240,
+      -10
+    ],
+    "podYaw": 0,
+    "actor": [
+      -6.68,
+      240,
+      -7.65
+    ],
+    "actorVisible": 1,
+    "yaw": 3.141592653589793,
+    "salute": 1,
+    "moveSpeed": 0,
+    "animationState": "idle",
+    "eye": [
+      -6.004,
+      241.52499999999995,
+      -5.54
+    ],
+    "target": [
+      -7.279999999999999,
+      241.05,
+      -7.65
+    ],
+    "fov": 1.0646508437165574,
+    "showResults": false,
+    "sampledAt": 87459.90000009537,
+    "observedAt": 87779.40000009537,
+    "nativeSalute": 1,
+    "weapon": null
+  },
+  "frameGapMs": 319.60000002384186,
+  "peakPunch": 1
+}

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
+import { HCS_VICTORY_MUSIC } from "../public/hcs-victory-cinematic.js";
 const url = process.env.GAME_TEST_URL || "http://127.0.0.1:4174",
   output =
     (process.env.GAME_ARTIFACTS ||
@@ -25,9 +26,9 @@ try {
   await page.goto(url);
   const results = [];
   for (const sampleRate of [44100, 48000])
-    for (const offset of [20.835, 27.956, 29.75, 29.99]) {
+    for (const offset of [HCS_VICTORY_MUSIC.offset, 27.956, 29.75, 29.99]) {
       const result = await page.evaluate(
-        async ({ sampleRate, offset }) => {
+        async ({ sampleRate, offset, fullOffset }) => {
           const [
             { createDeploymentAudio },
             { DEPLOYMENT_MUSIC_END: end, DEPLOYMENT_MUSIC_FADE: fade },
@@ -126,7 +127,7 @@ try {
               )
                 lastPeak = Math.max(lastPeak, Math.abs(actual[i]));
               if (
-                offset === 20.835 &&
+                offset === fullOffset &&
                 i / sampleRate >= 0.7 &&
                 i / sampleRate < duration - fade - 0.01
               )
@@ -140,7 +141,7 @@ try {
             }
           }
           let pcm = null;
-          if (sampleRate === 44100 && offset === 20.835) {
+          if (sampleRate === 44100 && offset === fullOffset) {
             const data = new Float32Array(rendered.length * 2);
             for (let i = 0; i < rendered.length; i++)
               for (let c = 0; c < 2; c++)
@@ -167,7 +168,7 @@ try {
             pcm,
           };
         },
-        { sampleRate, offset },
+        { sampleRate, offset, fullOffset: HCS_VICTORY_MUSIC.offset },
       );
       if (result.pcm) {
         const data = Buffer.from(result.pcm, "base64"),
@@ -205,7 +206,7 @@ try {
         "native audio output is silent after the exact gameplay deadline",
       );
       assert.ok(result.peak < 1, "no digital clipping");
-      if (offset === 20.835)
+      if (offset === HCS_VICTORY_MUSIC.offset)
         assert.ok(
           result.maxForwardDifference < 1e-6,
           "walkout/salute samples are the original song played forward at normal gain",

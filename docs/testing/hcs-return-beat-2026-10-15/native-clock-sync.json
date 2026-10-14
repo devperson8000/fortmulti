@@ -1,0 +1,56 @@
+{
+  "voice": {
+    "offset": 19.401999999999997,
+    "loop": false
+  },
+  "excerptOffset": 18.979999999999997,
+  "difference": 0.0013390000953812375,
+  "atFrame": 19.54962548308856,
+  "frame": {
+    "musicTime": 19.548286482993177,
+    "salutePunch": 0,
+    "time": 7.06828648299318,
+    "scene": "match",
+    "stage": "launch",
+    "fade": 0.9565621326631026,
+    "doorOpen": 0,
+    "hatchOpen": 0,
+    "boost": 1,
+    "beat": 0,
+    "impact": 1.4460519213154746e-20,
+    "landingAge": 4.56828648299318,
+    "pod": [
+      -0.32,
+      10.585060836188406,
+      -12.05
+    ],
+    "podYaw": 0,
+    "actor": [
+      -0.32,
+      -0.125,
+      -12.05
+    ],
+    "actorVisible": 0,
+    "yaw": 0,
+    "salute": 0,
+    "moveSpeed": 0,
+    "animationState": "idle",
+    "eye": [
+      2.48,
+      5.338018250856521,
+      -1.8500000000000005
+    ],
+    "target": [
+      -0.32,
+      12.385060836188407,
+      -12.05
+    ],
+    "fov": 1.0122909661567112,
+    "showResults": false,
+    "sampledAt": 81259.40000009537
+  },
+  "stamp": {
+    "contextTime": 77.000018,
+    "performanceTime": 81320.5
+  }
+}

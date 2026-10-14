@@ -95,7 +95,8 @@ try {
     ["docking", "06-ship-docking", 10.5],
     ["opening", "07-doors-open", 11.25],
     ["exit", "08-walk-out", 12.1],
-    ["salute", "09-salute", 13.5],
+    ["salute", "09-salute", 13.1],
+    ["salute", "09b-stepper-salute", 13.29],
   ]) {
     await page.evaluate((at) => (window.__state.victoryElapsed = at), at);
     await page.waitForFunction(

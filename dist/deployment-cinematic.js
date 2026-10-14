@@ -5,43 +5,31 @@ export {DEPLOYMENT_CUES};
 // deployment stages use the same audible AudioContext timing.
 export const MUSIC_START=1.12+.42;
 export const CINEMATIC_CAMERA_RADIUS=5.4;
-export const DEPLOYMENT_MUSIC_END=29.835;
-export const DEPLOYMENT_SALUTE=Object.freeze({raise:.2,lower:.3,start:DEPLOYMENT_CUES.bigStart-.2,contact:DEPLOYMENT_CUES.bigStart});
-export const POD_RELEASE=Object.freeze({hold:.45,open:.7,exit:1.4,salute:DEPLOYMENT_MUSIC_END-DEPLOYMENT_SALUTE.start});
-export const POD_TOUCHDOWN_MUSIC=DEPLOYMENT_SALUTE.start-POD_RELEASE.hold-POD_RELEASE.open-POD_RELEASE.exit;
-export const POD_TOUCHDOWN=MUSIC_START+POD_TOUCHDOWN_MUSIC;
+export const POD_RELEASE=Object.freeze({hold:.45,open:.7,exit:1.4,salute:2});
+export const POD_TOUCHDOWN=MUSIC_START+DEPLOYMENT_CUES.impact;
+export const DEPLOYMENT_MUSIC_END=DEPLOYMENT_CUES.impact+Object.values(POD_RELEASE).reduce((a,b)=>a+b,0);
 export const DEPLOYMENT_MUSIC_FADE=.4;
 const clamp=t=>Math.max(0,Math.min(1,t));
 const ease=t=>{t=clamp(t);return t*t*(3-2*t);};
-
-// Shared by authoritative snapshots and locally clocked character rendering.
-export function deploymentSaluteProgress(musicTime){
- return Math.min(ease((musicTime-DEPLOYMENT_SALUTE.start)/DEPLOYMENT_SALUTE.raise),ease((DEPLOYMENT_MUSIC_END-musicTime)/DEPLOYMENT_SALUTE.lower));
-}
-export function deploymentSalutePunch(musicTime){
- const age=musicTime-DEPLOYMENT_CUES.impact,hold=DEPLOYMENT_CUES.stepperStart-DEPLOYMENT_CUES.impact;
- // Snap in on the bass hit, hold through the lyric and full palm, then ease back.
- return ease(age/.045)*(1-ease((age-hold)/.28));
-}
 
 export function deploymentCinematic(sequenceTime){
  const musicTime=sequenceTime-MUSIC_START,c=DEPLOYMENT_CUES;
  // The mark hits at the first "uh, yeah", remains for the full ad-lib and
  // dissolves more gradually as the pod exterior returns to view.
  const logo=ease((musicTime-c.uhYeahStart)/.7)*(1-ease((musicTime-c.lyricsStart)/.8));
- const orbit=ease((musicTime-c.lyricsStart-.12)/(Math.min(c.businessStart,POD_TOUCHDOWN_MUSIC-.8)-c.lyricsStart-.25));
+ const orbit=ease((musicTime-c.lyricsStart-.12)/(c.businessStart-c.lyricsStart-.25));
  const black=ease((sequenceTime-(MUSIC_START-.42))/.42)*(1-ease((musicTime-c.lyricsStart-.25)/.85));
- const impact=musicTime>=POD_TOUCHDOWN_MUSIC?Math.exp(-(musicTime-POD_TOUCHDOWN_MUSIC)*3.8):0;
- const hatchOpen=clamp((musicTime-POD_TOUCHDOWN_MUSIC-POD_RELEASE.hold)/POD_RELEASE.open);
+ const impact=musicTime>=c.impact?Math.exp(-(musicTime-c.impact)*3.8):0;
+ const hatchOpen=clamp((musicTime-c.impact-POD_RELEASE.hold)/POD_RELEASE.open);
  const returnProgress=ease((musicTime-(DEPLOYMENT_MUSIC_END-.55))/.55);
- const saluteAt=DEPLOYMENT_SALUTE.start;
+ const saluteAt=c.impact+POD_RELEASE.hold+POD_RELEASE.open+POD_RELEASE.exit;
  const saluteFraming=ease((musicTime-saluteAt+.45)/.45);
  // Fade the operator before the return camera crosses the torso and head.
  // Keeping the body visible until the final frames makes the camera render
  // from inside the Soldier mesh, which looks like the model has torn apart.
  const avatarOpacity=1-ease((returnProgress-.4)/.18);
  return {
-  musicTime,logo,black,orbit,impact,salutePunch:deploymentSalutePunch(musicTime),returnProgress,
+  musicTime,logo,black,orbit,impact,returnProgress,
   avatarOpacity,hatchOpen,saluteFraming,operatorOpacity:ease((hatchOpen-.08)/.22)*avatarOpacity,
   portrait:musicTime>=c.lyricsStart+.12,
   logoScale:1.045-.045*ease((musicTime-c.uhYeahStart)/.7)+.012*Math.sin((musicTime-c.uhYeahStart)*Math.PI*1.9)*logo
@@ -50,29 +38,21 @@ export function deploymentCinematic(sequenceTime){
 
 export function cinematicPodPosition(landing,sequenceTime){
  const c=DEPLOYMENT_CUES;
- const progress=clamp((sequenceTime-MUSIC_START-c.lyricsStart-.12)/(POD_TOUCHDOWN_MUSIC-c.lyricsStart-.12));
- // Speed increases sharply during the final metres for a heavy touchdown.
- // The shorter descent preserves the speed budget and leaves time to salute on the lyric.
- return [landing.x,landing.y+Math.min(80,16*(POD_TOUCHDOWN_MUSIC-c.lyricsStart-.12))*(1-progress**3),landing.z];
+ const progress=clamp((sequenceTime-MUSIC_START-c.lyricsStart-.12)/(c.impact-c.lyricsStart-.12));
+ // Speed increases sharply during the final metres for a heavy beat-drop hit.
+ return [landing.x,landing.y+80*(1-progress**3),landing.z];
 }
 
 export function cinematicFov(aspect=16/9,cameraRadius=CINEMATIC_CAMERA_RADIUS){
  return Math.max(73*Math.PI/180,Math.min(86*Math.PI/180,2*Math.atan(2.25/(Math.max(.4,aspect)*(cameraRadius-.95)))));
 }
 
-// Fit the actual available camera distance rather than cropping the salute
-// when collision avoidance draws the lens closer to the operator.
-export function cinematicSaluteFov(aspect=16/9,distance=4.4){
- const extent=Math.max(1.28,.78/Math.max(.3,aspect)),near=Math.max(1.1,distance-.5);
- return Math.max(54*Math.PI/180,Math.min(86*Math.PI/180,2*Math.atan(extent/near)));
-}
-
 export function cinematicCamera(position,yaw,{orbit=0,impact=0,returnProgress=0,musicTime=-1,saluteFraming=0}={}, {groundHeight,wallDistance,reducedMotion=false,subjectPosition=null,returnYaw=null,cameraRadius=CINEMATIC_CAMERA_RADIUS}={}){
  const q=clamp(returnProgress),angle=-1.0+orbit*1.28,radius=cameraRadius*(1-q);
  const actor=subjectPosition||position,heading=Number.isFinite(returnYaw)?returnYaw:yaw;
  const x=Math.sin(angle)*radius,z=Math.cos(angle)*radius;
- const preImpact=musicTime<POD_TOUCHDOWN_MUSIC?Math.pow(clamp(1-(POD_TOUCHDOWN_MUSIC-musicTime)/1.2),2)*.065:0;
- const age=Math.max(0,musicTime-POD_TOUCHDOWN_MUSIC),hit=musicTime>=POD_TOUCHDOWN_MUSIC&&age<1&&!reducedMotion?Math.exp(-age*5.5):0;
+ const preImpact=musicTime<DEPLOYMENT_CUES.impact?Math.pow(clamp(1-(DEPLOYMENT_CUES.impact-musicTime)/1.2),2)*.065:0;
+ const age=Math.max(0,musicTime-DEPLOYMENT_CUES.impact),hit=musicTime>=DEPLOYMENT_CUES.impact&&age<1&&!reducedMotion?Math.exp(-age*5.5):0;
  const rumble=reducedMotion?0:preImpact;
  // A downward punch on the exact hit, then phase-anchored vibration. Using
  // the song's absolute phase made the first impact frame arbitrarily jump up.
@@ -81,7 +61,7 @@ export function cinematicCamera(position,yaw,{orbit=0,impact=0,returnProgress=0,
   Math.sin(age*83)*hit*.16+Math.cos(musicTime*93)*rumble*.7];
  // Keep the tripod anchored in front of the capsule while the Soldier walks
  // out. Pan to the Soldier, then blend into their own first-person eye.
- const follow=ease((musicTime-(POD_TOUCHDOWN_MUSIC+POD_RELEASE.hold+POD_RELEASE.open)-.12)/(POD_RELEASE.exit*.75));
+ const follow=ease((musicTime-(DEPLOYMENT_CUES.impact+POD_RELEASE.hold+POD_RELEASE.open)-.12)/(POD_RELEASE.exit*.75));
  const gaze=Math.max(q,follow*.98),delta=[actor[0]-position[0],actor[1]-position[1],actor[2]-position[2]];
  const eye=[position[0]+x*Math.cos(yaw)+z*Math.sin(yaw)+delta[0]*q+jitter[0],position[1]+2.25-.53*q+delta[1]*q+jitter[1],position[2]-x*Math.sin(yaw)+z*Math.cos(yaw)+delta[2]*q+jitter[2]];
  const targetBlend=ease((q-.35)/.65);
@@ -89,10 +69,8 @@ export function cinematicCamera(position,yaw,{orbit=0,impact=0,returnProgress=0,
  const target=[position[0]+delta[0]*gaze-Math.sin(heading)*targetBlend*2,position[1]+focusHeight+delta[1]*gaze+(1.72-focusHeight-Math.tan(.04)*2)*targetBlend,position[2]+delta[2]*gaze-Math.cos(heading)*targetBlend*2];
  // The operator faces a stable portrait camera for the held salute. Ease in
  // during the final steps, then share the same first-person handoff endpoint.
- const punch=reducedMotion?0:deploymentSalutePunch(musicTime),settle=reducedMotion?0:ease((musicTime-DEPLOYMENT_CUES.impact)/.35)*.16;
- const heroRadius=Math.min(4.4,cameraRadius)-.42*punch-settle;
- const heroEye=[actor[0]-Math.sin(heading)*heroRadius*(1-q),actor[1]+1.4+.32*q-.04*punch*(1-q),actor[2]-Math.cos(heading)*heroRadius*(1-q)];
- const heroTarget=[actor[0]-Math.sin(heading)*targetBlend*2,actor[1]+.84+(.88-Math.tan(.04)*2)*targetBlend,actor[2]-Math.cos(heading)*targetBlend*2];
+ const heroEye=[actor[0]-Math.sin(heading)*Math.min(4.4,cameraRadius)*(1-q),actor[1]+1.4+.32*q,actor[2]-Math.cos(heading)*Math.min(4.4,cameraRadius)*(1-q)];
+ const heroTarget=[actor[0]-Math.sin(heading)*targetBlend*2,actor[1]+1.0+(.72-Math.tan(.04)*2)*targetBlend,actor[2]-Math.cos(heading)*targetBlend*2];
  for(let k=0;k<3;k++){eye[k]+=(heroEye[k]-eye[k])*saluteFraming;target[k]+=(heroTarget[k]-target[k])*saluteFraming;}
  if(wallDistance){
   const anchor=[position[0],position[1]+1.34,position[2]],delta=eye.map((v,k)=>v-anchor[k]),length=Math.hypot(...delta);

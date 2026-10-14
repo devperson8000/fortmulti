@@ -20,7 +20,7 @@ test('two players launch independently to their chosen points after both pods ar
  while(match.deployment.elapsed<impact-.1)match.tick(Math.min(.02,impact-.1-match.deployment.elapsed));
  assert.equal(match.deployment.stage,'transition');assert.ok(match.players.every(player=>player.p[1]>0&&player.p[1]<10),'pods remain above ground until the musical impact');
  tick(match,DEPLOYMENT_TIMELINE.landedSeconds+DEPLOYMENT_TIMELINE.openingSeconds*.5+.1);assert.equal(match.deployment.stage,'pod_opening');assert.ok(Math.hypot(match.players[0].p[0]-30,match.players[0].p[2]-40)<2);assert.ok(Math.hypot(match.players[1].p[0]+80,match.players[1].p[2]-65)<2);
- tick(match,DEPLOYMENT_TIMELINE.openingSeconds+DEPLOYMENT_TIMELINE.exitSeconds+DEPLOYMENT_TIMELINE.saluteSeconds+.1);assert.equal(match.phase,'playing');assert.ok(match.players.every(player=>player.air==='landed'&&player.slot===0));
+ tick(match,6);assert.equal(match.phase,'playing');assert.ok(match.players.every(player=>player.air==='landed'&&player.slot===0));
 });
 
 test('snapshot sequencing rejects late frames while allowing a newer match epoch',()=>{

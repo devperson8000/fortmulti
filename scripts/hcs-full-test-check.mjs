@@ -37,6 +37,19 @@ async function setup(page) {
         });
       return start.call(this, when, offset, ...rest);
     };
+    window.__victoryFrames = [];
+    const sampleVictory = () => {
+      const v = window.Game?.victoryView?.();
+      if (v)
+        window.__victoryFrames.push({
+          ...v,
+          observedAt: performance.now(),
+          nativeSalute: window.Game.pose().saluteProgress,
+          weapon: window.Game.pose().weapon,
+        });
+      requestAnimationFrame(sampleVictory);
+    };
+    requestAnimationFrame(sampleVictory);
     localStorage.setItem(
       "duel-profile",
       JSON.stringify({ name: "HCS Test Ranger", color: "408faf" }),
@@ -148,7 +161,9 @@ try {
     {},
     { timeout: 30000 },
   );
-  const beatSync = await p.evaluate(() => {
+  const beatSync = await p.evaluate(async () => {
+    const { HCS_VICTORY_MUSIC: music } =
+      await import("/hcs-victory-cinematic.js");
     const voice = window.__songVoices.at(-1),
       frame = window.Game.victoryView(),
       now = performance.now(),
@@ -163,14 +178,18 @@ try {
       audible - (now - frame.sampledAt) / 1000 - voice.when + voice.offset;
     return {
       voice: voice && { offset: voice.offset, loop: voice.loop },
-      difference: Math.abs(atFrame - (20.835 + frame.time - 6.5)),
+      excerptOffset: music.offset,
+      difference: Math.abs(atFrame - (music.offset + frame.time - music.start)),
       atFrame,
       frame,
       stamp,
     };
   });
   await writeFile(out + "/beat-sync.json", JSON.stringify(beatSync, null, 2));
-  assert.ok(beatSync.voice.offset >= 20.835 && beatSync.voice.offset < 23);
+  assert.ok(
+    beatSync.voice.offset >= beatSync.excerptOffset &&
+      beatSync.voice.offset < beatSync.excerptOffset + 0.5,
+  );
   assert.equal(beatSync.voice.loop, false);
   assert.ok(beatSync.difference < 0.3);
   assert.equal(beatSync.frame.actorVisible, 0);
@@ -179,9 +198,36 @@ try {
     "native AudioContext output drives the champion launch and camera; one forward-playing victory excerpt",
   );
   await p.waitForFunction(
-    () => window.Game.victoryView()?.stage === "salute",
+    () =>
+      window.__victoryFrames.some(
+        (f) => f.stage === "salute" && f.salute >= 0.999,
+      ),
     {},
     { timeout: 30000 },
+  );
+  const saluteSync = await p.evaluate(() => {
+    const frames = window.__victoryFrames,
+      first = frames.find((f) => f.salute >= 0.999),
+      index = frames.indexOf(first);
+    return {
+      first,
+      frameGapMs:
+        index > 0 ? first.observedAt - frames[index - 1].observedAt : 0,
+      peakPunch: Math.max(...frames.map((f) => f.salutePunch || 0)),
+    };
+  });
+  assert.equal(saluteSync.first.scene, "ship");
+  assert.equal(saluteSync.first.weapon, null);
+  assert.ok(saluteSync.first.nativeSalute > 0.999);
+  assert.ok(saluteSync.first.musicTime >= 25.58 - 0.006);
+  assert.ok(
+    saluteSync.first.musicTime - 25.58 <
+      Math.max(0.25, saluteSync.frameGapMs / 1000 + 0.05),
+  );
+  assert.ok(saluteSync.peakPunch > 0.8);
+  await writeFile(
+    out + "/victory-salute-sync.json",
+    JSON.stringify(saluteSync, null, 2),
   );
   await p.screenshot({ path: out + "/05b-victory-salute.png" });
   await p.locator("#hcs-finale").waitFor({ state: "visible" });
