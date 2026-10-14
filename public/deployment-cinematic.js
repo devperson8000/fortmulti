@@ -81,9 +81,16 @@ export function cinematicCamera(position,yaw,{orbit=0,impact=0,returnProgress=0,
  return {eye,target};
 }
 
+// Rendered capsules use [x,y,z]; deployment destinations use {x,y,z}.
+// Invalid coordinates must never reach the pool's numeric fallback to zero.
+export function podImpactPoint(point){
+ const x=point?.x??point?.[0],y=point?.y??point?.[1],z=point?.z??point?.[2];
+ return [x,y,z].every(Number.isFinite)?{x,y,z}:null;
+}
+
 /** One finite, quality-budgeted burst; chunks are retained even on low. */
 export function podLandingBurst(point,budget=80,random=Math.random){
- if(!point)return [];
+ point=podImpactPoint(point);if(!point)return [];
  const count=Math.max(0,Math.min(144,Math.floor(Number(budget)||0))),chunks=Math.min(count,Math.max(8,Math.round(count*.2))),effects=[];
  for(let n=0;n<count;n++){
   const debris=n<chunks,angle=n*2.399963+random()*.15,spread=.9+random()*.5,radial=debris?5+random()*8:4+random()*10;

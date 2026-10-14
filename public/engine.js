@@ -6,7 +6,7 @@ import {createAimHud} from './aim-hud.js';
 import {chestPose} from './chest-presentation.js';
 import {rayCollider} from './collision-shapes.js';
 import {createDeploymentAudio} from './deployment-audio.js';
-import {deploymentCinematic,cinematicCamera,cinematicPodPosition,cinematicFov,MUSIC_START,DEPLOYMENT_CUES,DEPLOYMENT_MUSIC_END,podLandingBurst,stepPodLandingParticle,podLandingParticleSize,podImpactOffset} from './deployment-cinematic.js';
+import {deploymentCinematic,cinematicCamera,cinematicPodPosition,cinematicFov,MUSIC_START,DEPLOYMENT_CUES,DEPLOYMENT_MUSIC_END,podImpactPoint,podLandingBurst,stepPodLandingParticle,podLandingParticleSize,podImpactOffset} from './deployment-cinematic.js';
 import {createWeaponAudio,remoteGunshotGain} from './weapon-audio.js';
 import {createWorldChunks,updateFrustum,chunkVisible,drawVisibleResources} from './world-chunks.js';
 import {createInventory,inventoryWeapon,movedSelection} from './weapon-inventory.js';
@@ -324,7 +324,7 @@ function rayBox(o,d,b){return b.blocksShots===false?Infinity:rayCollider(o,d,b);
 function wallDistance(o,d,limit=360){let dist=limit;for(const b of allObstacles())dist=Math.min(dist,rayBox(o,d,b));for(const s of structures)if(s.type===3)dist=Math.min(dist,rayRamp(o,d,s));for(let t=.5;t<dist;t+=.75){const p=add(o,mul(d,t));if(p[1]<(activeMap==='facility'?-50:height(p[0],p[2]))){dist=t;break;}}return dist;}
 let audio,noiseBuffer;const weaponAudio=createWeaponAudio(),deploymentAudio=createDeploymentAudio(),victoryAudio=createDeploymentAudio({endAt:HCS_VICTORY_MUSIC.end,fadeSeconds:HCS_VICTORY_MUSIC.fade,level:.5,attackSeconds:.2});let victoryMusicActive=false,victoryImpactPlayed=false;
 function spawnPodLandingBurst(point){
- if(!point)return;
+ point=podImpactPoint(point);if(!point)return;
  const budget=Math.max(0,currentQuality.effects-effectPool.activeCount);
  for(const effect of podLandingBurst(point,budget,rnd))spawnEffect(effect);
  // Hit sounds follow this client's audible cue, rather than a later snapshot.
@@ -332,7 +332,7 @@ function spawnPodLandingBurst(point){
  noiseSound('stone',.28,.068);sweepSound(240,55,.68,'triangle',.024);
 }
 function drawLandingShockwave(point,age){
- if(!point||age<0||age>1.45)return;
+ point=podImpactPoint(point);if(!point||age<0||age>1.45)return;
  const power=Math.pow(1-age/1.45,2);
  for(let ring=0;ring<2;ring++){
   const radius=1.1+age*(ring?15:10),segments=36,shade=ring?color('d7c6a3'):color('e5cb95');

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 const out =
   process.env.GAME_ARTIFACTS ||
   "/workspace/fortmulti-artifacts/hcs-pickup-2026-10-12";
@@ -19,6 +19,7 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 800 } }),
 page.on("pageerror", (e) => errors.push(e.message));
 try {
   await page.addInitScript(() => {
+    window.__podCrashInputs = [];
     window.__musicStarts = [];
     window.__musicStops = [];
     const stop = AudioBufferSourceNode.prototype.stop;
@@ -40,6 +41,19 @@ try {
       JSON.stringify({ name: "Champion Review", color: "408faf" }),
     );
   });
+  // Observe the real pool after its normal coordinate copy, without changing behavior.
+  const poolSource = await readFile("public/effect-pool.js", "utf8");
+  const poolProbe = poolSource.replace(
+    "   return slot;",
+    `
+   const frame=globalThis.Game?.victoryView?.();
+   if(frame?.scene==='match'&&slot.kind.startsWith('pod-'))globalThis.__podCrashInputs.push({origin:frame.pod.slice(),position:slot.p.slice(),kind:slot.kind});
+   return slot;`,
+  );
+  assert.notEqual(poolProbe, poolSource);
+  await page.route("**/effect-pool.js", (route) =>
+    route.fulfill({ contentType: "text/javascript", body: poolProbe }),
+  );
   await page.goto("http://127.0.0.1:4173/?local=1");
   await page.waitForFunction(() => window.HorizonTestLab);
   await page.evaluate(async () => {
@@ -113,6 +127,36 @@ try {
     assert.equal(v.pose.slot, 0);
     if (["launch", "docking"].includes(stage))
       assert.equal(v.frame.actorVisible, 0);
+    if (stage === "landed") {
+      await page.waitForFunction(
+        () => window.__podCrashInputs.length > 0,
+        {},
+        { timeout: 30000 },
+      );
+      const particles = await page.evaluate(() => window.__podCrashInputs);
+      assert.ok(
+        particles.length >= 8,
+        "native crash particles enter the actual effect pool",
+      );
+      assert.ok(
+        particles.every((e) => e.position.every(Number.isFinite)),
+        "native crash positions stay finite",
+      );
+      assert.ok(
+        particles.every(
+          (e) =>
+            Math.hypot(
+              e.position[0] - e.origin[0],
+              e.position[2] - e.origin[2],
+            ) < 1.4,
+        ),
+        "native crash debris is centred on the rendered capsule",
+      );
+      await writeFile(
+        out + "/impact-origin.json",
+        JSON.stringify({ origin: particles[0].origin, particles }, null, 2),
+      );
+    }
     await page.screenshot({ path: out + "/" + filename + ".png" });
     checks.push({
       stage,
