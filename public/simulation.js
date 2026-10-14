@@ -2,7 +2,7 @@ import {characterHitBounds,characterHeadshot} from './character-hitbox.js';
 import {sanitizePickupRequest,validatePickupRequest,recordPickupEye} from './pickup-targeting.js';
 import {CHEST_OPEN_SECONDS} from './chest-presentation.js';
 import {rayCollider,segmentColliderTime} from './collision-shapes.js';
-import {deploymentCinematic,cinematicPodPosition,podExitPosition,podExitYaw} from './deployment-cinematic.js';
+import {MUSIC_START,deploymentSaluteProgress,deploymentCinematic,cinematicPodPosition,podExitPosition,podExitYaw} from './deployment-cinematic.js';
 import {createInventory,createWeaponItem,inventoryWeapon,cloneInventory,applyInventoryMove,movedSelection} from './weapon-inventory.js';
 import {moveHorizontal,upwardLimit,canStandAt} from './movement-collision.js';
 import {gridPlacement,gridBounds,gridValid,rampHeight,rayRamp} from './build-grid.js';
@@ -108,9 +108,7 @@ export class Match{
    }
   }
   if(this.deployment.stage==='saluting'){
-   const saluteElapsed=this.deployment.sequenceElapsed-DEPLOYMENT_TIMELINE.sealSeconds-DEPLOYMENT_TIMELINE.launchSeconds-DEPLOYMENT_TIMELINE.landedSeconds-DEPLOYMENT_TIMELINE.openingSeconds-DEPLOYMENT_TIMELINE.exitSeconds;
-   const q=clamp(saluteElapsed/DEPLOYMENT_TIMELINE.saluteSeconds,0,1),up=clamp(q/.23,0,1),down=clamp((1-q)/.23,0,1);
-   const amount=Math.min(up*up*(3-2*up),down*down*(3-2*down));
+   const amount=deploymentSaluteProgress(this.deployment.sequenceElapsed-MUSIC_START);
    for(const p of alive){
     p.deploymentState='saluting';p.dropState='saluting';p.animationState='idle';p.air='pod';
     const pod=SHIP_PODS.find(value=>value.id===p.pod),start=p.exitPosition||p.p,offset=pod?.side||1;

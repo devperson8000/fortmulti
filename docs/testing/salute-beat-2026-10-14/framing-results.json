@@ -1,0 +1,1157 @@
+{
+  "results": [
+    {
+      "name": "desktop",
+      "width": 1280,
+      "height": 720,
+      "view": {
+        "stage": "launching",
+        "sequenceElapsed": 23.740000000000002,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 22.200000000000003,
+        "logo": 0,
+        "black": 0,
+        "orbit": 1,
+        "impact": 0,
+        "salutePunch": 0,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 0,
+        "saluteFraming": 0,
+        "operatorOpacity": 0,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          19.50153623616027,
+          26.493321991195096,
+          73.18107661157468
+        ],
+        "podPosition": [
+          18,
+          24.240000007152535,
+          68
+        ],
+        "cameraFov": 1.2481431772213236,
+        "localVisible": false
+      },
+      "podPoints": [
+        [
+          -0.08261340957341018,
+          -0.35683014792395146,
+          0.9560776622164127
+        ],
+        [
+          -0.21334104876652582,
+          -0.5523877900447984,
+          0.9373812596183765
+        ],
+        [
+          -0.08633226191042769,
+          0.44298607667111384,
+          0.9540840210626946
+        ],
+        [
+          -0.2272633632009291,
+          0.5943452909300075,
+          0.9332709758275447
+        ],
+        [
+          0.15893159329051804,
+          -0.3995255817726864,
+          0.9519957403253699
+        ],
+        [
+          0.1262506140848711,
+          -0.6422359370844318,
+          0.9287912750413354
+        ],
+        [
+          0.1667778647195643,
+          0.4755389007797884,
+          0.9496077597130101
+        ],
+        [
+          0.13569725672521699,
+          0.6658703446950258,
+          0.9234357359530063
+        ]
+      ],
+      "feet": [
+        {
+          "name": "mixamoriglefttoebase",
+          "position": [
+            17.87961041875597,
+            24.25367362357445,
+            67.87317913939705
+          ]
+        },
+        {
+          "name": "mixamorigrighttoebase",
+          "position": [
+            18.120147457827123,
+            24.25367134444031,
+            67.87137059876207
+          ]
+        }
+      ],
+      "bodyOpacity": 0,
+      "fill": 1.15,
+      "ui": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ]
+    },
+    {
+      "name": "compact",
+      "width": 800,
+      "height": 600,
+      "view": {
+        "stage": "launching",
+        "sequenceElapsed": 23.720100000000002,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 22.180100000000003,
+        "logo": 0,
+        "black": 0,
+        "orbit": 1,
+        "impact": 0,
+        "salutePunch": 0,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 0,
+        "saluteFraming": 0,
+        "operatorOpacity": 0,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          19.501437843264785,
+          27.012965423072604,
+          73.1869311041035
+        ],
+        "podPosition": [
+          18,
+          24.77166257681491,
+          68
+        ],
+        "cameraFov": 1.273795105245734,
+        "localVisible": false
+      },
+      "podPoints": [
+        [
+          -0.10727534973610392,
+          -0.34795057659293216,
+          0.9560806272288266
+        ],
+        [
+          -0.27684617363483854,
+          -0.5373037801910151,
+          0.937380197255986
+        ],
+        [
+          -0.11195326177211283,
+          0.43008651519418983,
+          0.9541494966627971
+        ],
+        [
+          -0.29433838847379906,
+          0.5780709830447232,
+          0.9334005150014983
+        ],
+        [
+          0.20621025314876237,
+          -0.3892347990915868,
+          0.9520034175637714
+        ],
+        [
+          0.16394811872418574,
+          -0.6241939098316666,
+          0.9287989704597127
+        ],
+        [
+          0.2160698394535795,
+          0.46188475640252324,
+          0.9496910481967078
+        ],
+        [
+          0.17582049880031161,
+          0.6478524638350488,
+          0.9236164161278302
+        ]
+      ],
+      "feet": [
+        {
+          "name": "mixamoriglefttoebase",
+          "position": [
+            17.87961041875597,
+            24.785336193236827,
+            67.87317913939705
+          ]
+        },
+        {
+          "name": "mixamorigrighttoebase",
+          "position": [
+            18.120147457827123,
+            24.785333914102686,
+            67.87137059876207
+          ]
+        }
+      ],
+      "bodyOpacity": 0,
+      "fill": 1.15,
+      "ui": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ]
+    },
+    {
+      "name": "ultrawide",
+      "width": 2100,
+      "height": 900,
+      "view": {
+        "stage": "launching",
+        "sequenceElapsed": 23.745,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 22.205000000000002,
+        "logo": 0,
+        "black": 0,
+        "orbit": 1,
+        "impact": 0,
+        "salutePunch": 0,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 0,
+        "saluteFraming": 0,
+        "operatorOpacity": 0,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          19.495932922891242,
+          26.36218645505343,
+          73.18439860051613
+        ],
+        "podPosition": [
+          18,
+          24.10464254935463,
+          68
+        ],
+        "cameraFov": 1.2740821831455407,
+        "localVisible": false
+      },
+      "podPoints": [
+        [
+          -0.061353018828123565,
+          -0.3469256486392259,
+          0.9560935523222587
+        ],
+        [
+          -0.15800409223735218,
+          -0.5375068832750292,
+          0.9374059570684066
+        ],
+        [
+          -0.06414222626027295,
+          0.43126864827482725,
+          0.9540808588805264
+        ],
+        [
+          -0.16841910618419526,
+          0.5782569826896636,
+          0.933255881656185
+        ],
+        [
+          0.11767526796891258,
+          -0.3883371667672606,
+          0.9520329128206667
+        ],
+        [
+          0.09373234307539367,
+          -0.6246298262056126,
+          0.9288630472802394
+        ],
+        [
+          0.12354010315095265,
+          0.4627261062526451,
+          0.949624036857665
+        ],
+        [
+          0.10081248290859822,
+          0.6473846679314548,
+          0.9234620264059522
+        ]
+      ],
+      "feet": [
+        {
+          "name": "mixamoriglefttoebase",
+          "position": [
+            17.87961041875597,
+            24.118316165776545,
+            67.87317913939705
+          ]
+        },
+        {
+          "name": "mixamorigrighttoebase",
+          "position": [
+            18.120147457827123,
+            24.118313886642404,
+            67.87137059876207
+          ]
+        }
+      ],
+      "bodyOpacity": 0,
+      "fill": 1.15,
+      "ui": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ]
+    },
+    {
+      "name": "portrait",
+      "width": 540,
+      "height": 960,
+      "view": {
+        "stage": "launching",
+        "sequenceElapsed": 23.686700000000002,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 22.146700000000003,
+        "logo": 0,
+        "black": 0,
+        "orbit": 1,
+        "impact": 0,
+        "salutePunch": 0,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 0,
+        "saluteFraming": 0,
+        "operatorOpacity": 0,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          19.482402893883812,
+          27.895204813470546,
+          73.19242586689397
+        ],
+        "podPosition": [
+          18,
+          25.63889736955365,
+          68
+        ],
+        "cameraFov": 1.4033899341395542,
+        "localVisible": false
+      },
+      "podPoints": [
+        [
+          -0.2238413130847724,
+          -0.30376380666679453,
+          0.9561024222054678
+        ],
+        [
+          -0.5728687915856416,
+          -0.4706368340283904,
+          0.9374017991994984
+        ],
+        [
+          -0.23397628887985036,
+          0.3773449234985439,
+          0.9540982815104219
+        ],
+        [
+          -0.6104848392980546,
+          0.5061670786390091,
+          0.9332674120075614
+        ],
+        [
+          0.42625346989758917,
+          -0.3395979833171328,
+          0.9520866658015573
+        ],
+        [
+          0.34190007953443347,
+          -0.546035890771343,
+          0.9289522051731354
+        ],
+        [
+          0.44739093328772483,
+          0.40459083724955053,
+          0.9496925480927924
+        ],
+        [
+          0.3675892170565057,
+          0.5660361175303348,
+          0.9235864364405323
+        ]
+      ],
+      "feet": [
+        {
+          "name": "mixamoriglefttoebase",
+          "position": [
+            17.87961041875597,
+            25.652570985975565,
+            67.87317913939705
+          ]
+        },
+        {
+          "name": "mixamorigrighttoebase",
+          "position": [
+            18.120147457827123,
+            25.652568706841425,
+            67.87137059876207
+          ]
+        }
+      ],
+      "bodyOpacity": 0,
+      "fill": 1.15,
+      "ui": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ]
+    },
+    {
+      "name": "opening",
+      "view": {
+        "stage": "pod_opening",
+        "sequenceElapsed": 25.290100000000002,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 23.750100000000003,
+        "logo": 0,
+        "black": 0,
+        "orbit": 1,
+        "impact": 0.030306896048569225,
+        "salutePunch": 0,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 0.6715714285714307,
+        "saluteFraming": 0,
+        "operatorOpacity": 1,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          19.3145177143708,
+          3.539553694953377,
+          72.56770270996648
+        ],
+        "podPosition": [
+          18,
+          0.9300000071525574,
+          68
+        ],
+        "cameraFov": 1.3318194708247644,
+        "localVisible": true
+      },
+      "position": [
+        18,
+        0.9300000071525574,
+        68
+      ],
+      "animation": "idle",
+      "salute": 0,
+      "feet": [
+        [
+          17.710255836506413,
+          0.94442063342973,
+          68.28522621364499
+        ],
+        [
+          18.03948509570126,
+          0.9363630194581711,
+          67.67896222017174
+        ]
+      ],
+      "input": {
+        "x": 0,
+        "z": 0,
+        "yaw": 0,
+        "pitch": -0.15,
+        "aimYaw": 0,
+        "aimPitch": -0.15,
+        "rotation": 0,
+        "inventoryRevision": 0,
+        "material": "wood",
+        "drop": false,
+        "dropRevision": 0,
+        "slot": 0,
+        "jump": false,
+        "interact": false,
+        "interactRevision": 0,
+        "pickupRequest": null,
+        "crouchRevision": 0,
+        "crouchPress": null,
+        "reloadRevision": 0,
+        "crouch": false,
+        "sprint": false,
+        "aim": false,
+        "fire": false,
+        "reload": false,
+        "landing": {
+          "x": 18,
+          "z": 68
+        }
+      }
+    },
+    {
+      "name": "walkout",
+      "view": {
+        "stage": "exiting",
+        "sequenceElapsed": 26.32,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 24.78,
+        "logo": 0,
+        "black": 0,
+        "orbit": 1,
+        "impact": 0.0006051706945350553,
+        "salutePunch": 0,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 1,
+        "saluteFraming": 0,
+        "operatorOpacity": 1,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          19.313513886813297,
+          3.5395353607175584,
+          72.56788081147461
+        ],
+        "podPosition": [
+          18,
+          0.9300000071525574,
+          68
+        ],
+        "cameraFov": 1.276140342296883,
+        "localVisible": true
+      },
+      "position": [
+        17.80594752186589,
+        1.6065318047720034,
+        69.42507288629737
+      ],
+      "animation": "pod-exit",
+      "salute": 0,
+      "feet": [
+        [
+          17.940987997690304,
+          1.6238907594356768,
+          69.82785614129841
+        ],
+        [
+          17.699021505140472,
+          1.6729659116629743,
+          69.02328311703451
+        ]
+      ],
+      "input": {
+        "x": 0,
+        "z": 0,
+        "yaw": 0,
+        "pitch": -0.15,
+        "aimYaw": 0,
+        "aimPitch": -0.15,
+        "rotation": 0,
+        "inventoryRevision": 0,
+        "material": "wood",
+        "drop": false,
+        "dropRevision": 0,
+        "slot": 0,
+        "jump": false,
+        "interact": false,
+        "interactRevision": 0,
+        "pickupRequest": null,
+        "crouchRevision": 0,
+        "crouchPress": null,
+        "reloadRevision": 0,
+        "crouch": false,
+        "sprint": false,
+        "aim": false,
+        "fire": false,
+        "reload": false,
+        "landing": {
+          "x": 18,
+          "z": 68
+        }
+      }
+    },
+    {
+      "name": "salute",
+      "view": {
+        "stage": "saluting",
+        "sequenceElapsed": 29.247500000000002,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 27.707500000000003,
+        "logo": 0,
+        "black": 0,
+        "orbit": 1,
+        "impact": 8.924192406870671e-9,
+        "salutePunch": 0,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 1,
+        "saluteFraming": 1,
+        "operatorOpacity": 1,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          17.76902114951453,
+          3.4612784392619793,
+          72.75672070218515
+        ],
+        "podPosition": [
+          18,
+          0.9300000071525574,
+          68
+        ],
+        "cameraFov": 1.2004503155824986,
+        "localVisible": true
+      },
+      "position": [
+        17.68,
+        1.8999249440431694,
+        70.35
+      ],
+      "animation": "idle",
+      "salute": 1,
+      "feet": [
+        [
+          17.764540493914986,
+          1.8929485879188004,
+          70.66542563473374
+        ],
+        [
+          17.37944556302593,
+          1.906348655016506,
+          70.23579984750445
+        ]
+      ],
+      "input": {
+        "x": 0,
+        "z": 0,
+        "yaw": 0,
+        "pitch": -0.15,
+        "aimYaw": 0,
+        "aimPitch": -0.15,
+        "rotation": 0,
+        "inventoryRevision": 0,
+        "material": "wood",
+        "drop": false,
+        "dropRevision": 0,
+        "slot": 0,
+        "jump": false,
+        "interact": false,
+        "interactRevision": 0,
+        "pickupRequest": null,
+        "crouchRevision": 0,
+        "crouchPress": null,
+        "reloadRevision": 0,
+        "crouch": false,
+        "sprint": false,
+        "aim": false,
+        "fire": false,
+        "reload": false,
+        "landing": {
+          "x": 18,
+          "z": 68
+        }
+      }
+    },
+    {
+      "name": "salute-desktop",
+      "view": {
+        "stage": "saluting",
+        "sequenceElapsed": 27.3067,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 25.7667,
+        "logo": 0,
+        "black": 0,
+        "orbit": 1,
+        "impact": 0.000014239938084336219,
+        "salutePunch": 1,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 1,
+        "saluteFraming": 1,
+        "operatorOpacity": 1,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          17.753495874162535,
+          3.457136440152584,
+          72.7529076763036
+        ],
+        "podPosition": [
+          18,
+          0.9300000071525574,
+          68
+        ],
+        "cameraFov": 1.2208067935710913,
+        "localVisible": true
+      },
+      "bounds": {
+        "min": [
+          17.242024551038362,
+          1.8988101226219507,
+          70.00187771312378
+        ],
+        "max": [
+          18.053116565968974,
+          3.5817966190691575,
+          70.83189730262691
+        ]
+      },
+      "points": [
+        [
+          -0.11095695146539274,
+          -0.32452430906637747,
+          0.9034322826330204
+        ],
+        [
+          -0.1581719647787501,
+          -0.58406339962844,
+          0.869933427473885
+        ],
+        [
+          -0.13137751143309337,
+          0.49762344272465125,
+          0.8855925786689827
+        ],
+        [
+          -0.20000248807056498,
+          0.528707988336791,
+          0.8354389489539155
+        ],
+        [
+          0.10041640963406034,
+          -0.3303339031453111,
+          0.9026824350853462
+        ],
+        [
+          0.12651856719583485,
+          -0.594610447718439,
+          0.8685721140950095
+        ],
+        [
+          0.11906659665839027,
+          0.498275922261228,
+          0.8845398299017226
+        ],
+        [
+          0.16042074863889508,
+          0.5300607224110012,
+          0.8332563684295846
+        ]
+      ],
+      "salute": 1
+    },
+    {
+      "name": "salute-compact",
+      "view": {
+        "stage": "saluting",
+        "sequenceElapsed": 27.2915,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 25.7515,
+        "logo": 0,
+        "black": 0,
+        "orbit": 1,
+        "impact": 0.000015086654694300096,
+        "salutePunch": 1,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 1,
+        "saluteFraming": 1,
+        "operatorOpacity": 1,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          17.753495874162535,
+          3.457136440152584,
+          72.7529076763036
+        ],
+        "podPosition": [
+          18,
+          0.9300000071525574,
+          68
+        ],
+        "cameraFov": 1.2206718428773686,
+        "localVisible": true
+      },
+      "bounds": {
+        "min": [
+          17.242267671881816,
+          1.8988260283877925,
+          70.00189262468112
+        ],
+        "max": [
+          18.05712903997967,
+          3.5776619908651135,
+          70.83189535822648
+        ]
+      },
+      "points": [
+        [
+          -0.1478810736449617,
+          -0.32456956537546056,
+          0.9034314699402454
+        ],
+        [
+          -0.21081385084561308,
+          -0.5841413068380954,
+          0.8699328714125147
+        ],
+        [
+          -0.17501799629628645,
+          0.4953047280840136,
+          0.885643509487724
+        ],
+        [
+          -0.26639272470249753,
+          0.525329235701197,
+          0.835545557873975
+        ],
+        [
+          0.1353137130041316,
+          -0.3304072452395354,
+          0.9026780978936652
+        ],
+        [
+          0.17061367750976622,
+          -0.5947393888515458,
+          0.8685651535995813
+        ],
+        [
+          0.16037318527854427,
+          0.49593805140922903,
+          0.8845867660530935
+        ],
+        [
+          0.21619186112896518,
+          0.5266417412338738,
+          0.8333555523122805
+        ]
+      ],
+      "salute": 1
+    },
+    {
+      "name": "salute-ultrawide",
+      "view": {
+        "stage": "saluting",
+        "sequenceElapsed": 27.3117,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 25.7717,
+        "logo": 0,
+        "black": 0,
+        "orbit": 1,
+        "impact": 0.00001397193336796613,
+        "salutePunch": 0.9998898608782799,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 1,
+        "saluteFraming": 1,
+        "operatorOpacity": 1,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          17.753497698634956,
+          3.457136931357487,
+          72.75290813197515
+        ],
+        "podPosition": [
+          18,
+          0.9300000071525574,
+          68
+        ],
+        "cameraFov": 1.2245855325806299,
+        "localVisible": true
+      },
+      "bounds": {
+        "min": [
+          17.24485100817026,
+          1.8988391474779356,
+          70.00186666465103
+        ],
+        "max": [
+          18.062937711025427,
+          3.5824616390195305,
+          70.83189485498846
+        ]
+      },
+      "points": [
+        [
+          -0.08356854976763585,
+          -0.32322773202028277,
+          0.9034297933042595
+        ],
+        [
+          -0.11917530687778469,
+          -0.5817400414142213,
+          0.8699284559161587
+        ],
+        [
+          -0.09895589574887029,
+          0.49601209900557514,
+          0.885581096242332
+        ],
+        [
+          -0.1507092827623502,
+          0.5271450298894238,
+          0.8354144951520227
+        ],
+        [
+          0.07808722607183723,
+          -0.3290646472633799,
+          0.902673371038244
+        ],
+        [
+          0.09856238579373328,
+          -0.5923372030608558,
+          0.8685551399277928
+        ],
+        [
+          0.09259835080159416,
+          0.49667126030232644,
+          0.8845189449803221
+        ],
+        [
+          0.12499035662177627,
+          0.5285117979771575,
+          0.8332121291204985
+        ]
+      ],
+      "salute": 1
+    },
+    {
+      "name": "salute-portrait",
+      "view": {
+        "stage": "saluting",
+        "sequenceElapsed": 27.274899999999995,
+        "boarding": false,
+        "boardingDoorOpen": 0,
+        "shipLaunch": {
+          "hatchOpen": 1,
+          "drop": 80
+        },
+        "musicTime": 25.734899999999996,
+        "logo": 0,
+        "black": 0,
+        "orbit": 1,
+        "impact": 0.000016068977630435864,
+        "salutePunch": 1,
+        "returnProgress": 0,
+        "avatarOpacity": 1,
+        "hatchOpen": 1,
+        "saluteFraming": 1,
+        "operatorOpacity": 1,
+        "portrait": true,
+        "logoScale": 0.9999999999999999,
+        "eye": [
+          17.753495874162535,
+          3.457136440152584,
+          72.7529076763036
+        ],
+        "podPosition": [
+          18,
+          0.9300000071525574,
+          68
+        ],
+        "cameraFov": 1.2805783028623074,
+        "localVisible": true
+      },
+      "bounds": {
+        "min": [
+          17.24320495743554,
+          1.8988427841101805,
+          70.00186834279461
+        ],
+        "max": [
+          18.054720897840326,
+          3.586054442883425,
+          70.83189945673604
+        ]
+      },
+      "points": [
+        [
+          -0.32836750642243523,
+          -0.3047087509545444,
+          0.9034311883737667
+        ],
+        [
+          -0.46817342339411216,
+          -0.5484116536102083,
+          0.8699308203246213
+        ],
+        [
+          -0.38898092182804955,
+          0.46956304968562845,
+          0.8855379892098612
+        ],
+        [
+          -0.5923840935047193,
+          0.4997827202699797,
+          0.8353252011224434
+        ],
+        [
+          0.2992442796933184,
+          -0.3101666139186682,
+          0.9026809288730897
+        ],
+        [
+          0.37714428764292773,
+          -0.5583203377991015,
+          0.8685687332768536
+        ],
+        [
+          0.3549890059415288,
+          0.4701975678588242,
+          0.8844836783602639
+        ],
+        [
+          0.47852987997996266,
+          0.5010987885177398,
+          0.8331384315529682
+        ]
+      ],
+      "salute": 1
+    }
+  ],
+  "delayedExit": {
+    "view": {
+      "stage": "match_active",
+      "sequenceElapsed": 31.392300000000045,
+      "boarding": false,
+      "boardingDoorOpen": 0,
+      "shipLaunch": {
+        "hatchOpen": 1,
+        "drop": 80
+      },
+      "musicTime": 29.852300000000046,
+      "logo": 0,
+      "black": 0,
+      "orbit": 1,
+      "impact": 2.5761115630155978e-12,
+      "salutePunch": 0,
+      "returnProgress": 1,
+      "avatarOpacity": 0,
+      "hatchOpen": 1,
+      "saluteFraming": 1,
+      "operatorOpacity": 0,
+      "portrait": true,
+      "logoScale": 0.9999999999999999,
+      "eye": [
+        17.681443743155793,
+        3.6285133381202592,
+        70.33939751119964
+      ],
+      "podPosition": [
+        18,
+        0.9300000071525574,
+        68
+      ],
+      "cameraFov": 1.3069530875307458,
+      "localVisible": false
+    },
+    "position": [
+      17.681443743155793,
+      1.9085133381202595,
+      70.33939751119964
+    ],
+    "expected": [
+      17.680768746355685,
+      1.9044979850452708,
+      70.34435451895044
+    ],
+    "cinematic": true
+  },
+  "confirmed": {
+    "cinematic": false,
+    "view": {
+      "stage": "match_active",
+      "sequenceElapsed": 26.88,
+      "boarding": false,
+      "boardingDoorOpen": 0,
+      "shipLaunch": {
+        "hatchOpen": 1,
+        "drop": 80
+      },
+      "musicTime": 25.34,
+      "logo": 0,
+      "black": 0,
+      "orbit": 1,
+      "impact": 0.00007206082528227664,
+      "salutePunch": 1,
+      "returnProgress": 0,
+      "avatarOpacity": 1,
+      "hatchOpen": 1,
+      "saluteFraming": 0.9777009602194797,
+      "operatorOpacity": 1,
+      "portrait": true,
+      "logoScale": 0.9999999999999999,
+      "eye": [
+        17.681139192453912,
+        3.6264861190394693,
+        70.34163405541658
+      ],
+      "podPosition": null,
+      "cameraFov": 1.3088523939376568,
+      "localVisible": false
+    },
+    "air": "landed"
+  },
+  "errors": []
+}

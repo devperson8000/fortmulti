@@ -1,0 +1,90 @@
+[
+  {
+    "run": "platform23",
+    "captureEnabled": true,
+    "clients": [
+      {
+        "client": 0,
+        "firstFullSaluteMusicTime": 25.74849656016223,
+        "lyricDifferenceMs": 168.49656016223236,
+        "peakSalutePunch": 0.06867445485744,
+        "sampledFrames": 628,
+        "largestFrameGapMs": 1070.5
+      },
+      {
+        "client": 1,
+        "firstFullSaluteMusicTime": 25.582911131447755,
+        "lyricDifferenceMs": 2.9111314477567873,
+        "peakSalutePunch": 0.7977863564584514,
+        "sampledFrames": 1782,
+        "largestFrameGapMs": 163
+      }
+    ]
+  },
+  {
+    "run": "platform23-rerun",
+    "captureEnabled": true,
+    "clients": [
+      {
+        "client": 0,
+        "firstFullSaluteMusicTime": 25.620663290297127,
+        "lyricDifferenceMs": 40.663290297128896,
+        "peakSalutePunch": 0.15563448623381235,
+        "sampledFrames": 624,
+        "largestFrameGapMs": 1087.5
+      },
+      {
+        "client": 1,
+        "firstFullSaluteMusicTime": 25.591720673469382,
+        "lyricDifferenceMs": 11.720673469383769,
+        "peakSalutePunch": 0.8330244296795859,
+        "sampledFrames": 1782,
+        "largestFrameGapMs": 140
+      }
+    ]
+  },
+  {
+    "run": "platform23-timing",
+    "captureEnabled": false,
+    "clients": [
+      {
+        "client": 0,
+        "firstFullSaluteMusicTime": 25.71468367120181,
+        "lyricDifferenceMs": 134.68367120181313,
+        "peakSalutePunch": 0.0852663411885541,
+        "sampledFrames": 638,
+        "largestFrameGapMs": 1085.0999999046326
+      },
+      {
+        "client": 1,
+        "firstFullSaluteMusicTime": 25.600904374173496,
+        "lyricDifferenceMs": 20.90437417349733,
+        "peakSalutePunch": 0.9452731368327788,
+        "sampledFrames": 1777,
+        "largestFrameGapMs": 175.60000002384186
+      }
+    ]
+  },
+  {
+    "run": "platform23-held",
+    "captureEnabled": false,
+    "clients": [
+      {
+        "client": 0,
+        "firstFullSaluteMusicTime": 25.77493221544334,
+        "lyricDifferenceMs": 194.93221544334105,
+        "peakSalutePunch": 0.999080061052532,
+        "sampledFrames": 639,
+        "largestFrameGapMs": 1164.3999999761581
+      },
+      {
+        "client": 1,
+        "firstFullSaluteMusicTime": 25.63056851022792,
+        "lyricDifferenceMs": 50.5685102279223,
+        "peakSalutePunch": 1,
+        "sampledFrames": 1745,
+        "largestFrameGapMs": 193.20000004768372
+      }
+    ]
+  }
+]

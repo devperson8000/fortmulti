@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEPLOYMENT_TIMELINE, DEPLOYMENT_STATES, createDeploymentClock, stepDeploymentClock, deploymentStageAt, safeLandingPoint, deploymentActorPose } from '../public/deployment-sequence.js';
-import { DEPLOYMENT_CUES, MUSIC_START, CINEMATIC_CAMERA_RADIUS, deploymentCinematic, cinematicPodPosition, DEPLOYMENT_MUSIC_END } from '../public/deployment-cinematic.js';
+import { DEPLOYMENT_CUES, POD_TOUCHDOWN_MUSIC, MUSIC_START, CINEMATIC_CAMERA_RADIUS, deploymentCinematic, cinematicPodPosition, DEPLOYMENT_MUSIC_END } from '../public/deployment-cinematic.js';
 import { SHIP_PODS, clampShipPosition, moveInShip } from '../public/deployment-ship.js';
 import {characterLocomotion} from '../public/character-animation.js';
 
 const world={height:(x,z)=>Math.sin(x*.02)+Math.cos(z*.02),obstacles:[{min:[-5,-2,-5],max:[5,15,5]}]};
 
-test('deployment timeline covers seal, the musical intro, beat touchdown, opening and exit',()=>{
+test('deployment timeline covers seal, the musical intro, early touchdown, opening and beat salute',()=>{
  assert.deepEqual(DEPLOYMENT_STATES,['ship_waiting','landing_selection','pod_available','entering_pod','pod_ready','both_ready','pod_sealing','launching','transition','landed','pod_opening','exiting','saluting','match_active']);
- assert.equal(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds,MUSIC_START+DEPLOYMENT_CUES.impact);
+ assert.equal(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds,MUSIC_START+POD_TOUCHDOWN_MUSIC);
  assert.ok(DEPLOYMENT_TIMELINE.fadeAt>2.3&&DEPLOYMENT_TIMELINE.fadeAt<DEPLOYMENT_TIMELINE.launchSeconds);
  assert.equal(deploymentStageAt(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.fadeAt),'transition');
  assert.equal(deploymentStageAt(DEPLOYMENT_TIMELINE.sealSeconds+DEPLOYMENT_TIMELINE.launchSeconds),'landed');
@@ -82,12 +82,12 @@ test('first uh-yeah starts the Horizon mark on cue and the logo holds through th
 
 test('landing accelerates into the impact and the track continues under the salute',()=>{
  const c=DEPLOYMENT_CUES,at=t=>cinematicPodPosition({x:10,y:5,z:20},MUSIC_START+t)[1];
- const earlier=at(c.impact-.5)-at(c.impact-.35);
- const later=at(c.impact-.15)-at(c.impact);
+ const earlier=at(POD_TOUCHDOWN_MUSIC-.5)-at(POD_TOUCHDOWN_MUSIC-.35);
+ const later=at(POD_TOUCHDOWN_MUSIC-.15)-at(POD_TOUCHDOWN_MUSIC);
  assert.ok(later>earlier,'the final descent accelerates into the kick');
- assert.equal(at(c.impact),5);
- assert.ok(DEPLOYMENT_MUSIC_END>c.impact+4);
- assert.ok(deploymentCinematic(MUSIC_START+c.impact+.01).impact>.95);
+ assert.equal(at(POD_TOUCHDOWN_MUSIC),5);
+ assert.ok(DEPLOYMENT_MUSIC_END>POD_TOUCHDOWN_MUSIC+4);
+ assert.ok(deploymentCinematic(MUSIC_START+POD_TOUCHDOWN_MUSIC+.01).impact>.95);
 });
 
 test('nearby launch capsules and cameras have clear space',()=>{

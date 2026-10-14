@@ -1,0 +1,18 @@
+[
+  {
+    "client": 0,
+    "firstFullSaluteMusicTime": 25.616716344575835,
+    "lyricDifferenceMs": 36.7163445758365,
+    "peakSalutePunch": 1,
+    "sampledFrames": 1448,
+    "largestFrameGapMs": 199.19999992847443
+  },
+  {
+    "client": 1,
+    "firstFullSaluteMusicTime": 25.617101294784582,
+    "lyricDifferenceMs": 37.10129478458413,
+    "peakSalutePunch": 1,
+    "sampledFrames": 1524,
+    "largestFrameGapMs": 164.39999997615814
+  }
+]

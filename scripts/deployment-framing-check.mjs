@@ -9,10 +9,10 @@ page.on('pageerror',e=>errors.push(e.message));
 try{
  await page.addInitScript(()=>localStorage.setItem('horizon-callsign',JSON.stringify({name:'Ranger'})));await page.goto(url);await page.waitForFunction(()=>Boolean(window.Game));
  await page.evaluate(async()=>{
-  const [{Match},{MatchCharacterRenderer},{SHIP_PODS},{DEPLOYMENT_CUES,MUSIC_START},{DEPLOYMENT_TIMELINE},THREE]=await Promise.all([import('/simulation.js'),import('/match-character-renderer.js'),import('/deployment-ship.js'),import('/deployment-cinematic.js'),import('/deployment-sequence.js'),import('three')]);
+  const [{Match},{MatchCharacterRenderer},{SHIP_PODS},{DEPLOYMENT_CUES,POD_TOUCHDOWN_MUSIC,MUSIC_START},{DEPLOYMENT_TIMELINE},THREE]=await Promise.all([import('/simulation.js'),import('/match-character-renderer.js'),import('/deployment-ship.js'),import('/deployment-cinematic.js'),import('/deployment-sequence.js'),import('three')]);
   const render=MatchCharacterRenderer.prototype.render;MatchCharacterRenderer.prototype.render=function(...args){window.__renderer=this;return render.apply(this,args);};
   window.__THREE=THREE;let sequence=0;
-  window.__portrait=(musicTime=DEPLOYMENT_CUES.businessStart)=>{
+  window.__portrait=(musicTime=POD_TOUCHDOWN_MUSIC-.8)=>{
    window.Game.clear({resetInventory:true});const m=new Match(window.Game.world,['a','b']);m.beginDeployment();
    m.players.forEach((p,i)=>{m.chooseLanding(p.id,{x:i?-85:18,z:i?70:68});const pod=SHIP_PODS[i];p.shipLocal=[pod.x,0,pod.z+2.2];p.p=m.shipWorld(p.shipLocal);if(!m.enterPod(p.id))throw Error('Fixture pod entry failed');});
    while(m.deployment.stage!=='both_ready')m.tick(.05);
@@ -44,7 +44,7 @@ try{
  }
  await page.setViewportSize({width:1280,height:720});
  for(const phase of ['opening','walkout','salute']){
-  await page.evaluate(async phase=>{const {DEPLOYMENT_CUES:c,POD_RELEASE:r}=await import('/deployment-cinematic.js');window.__portrait(c.impact+r.hold+(phase==='opening'?r.open*.55:r.open+(phase==='walkout'?r.exit*.5:r.exit+r.salute*.5)));},phase);
+  await page.evaluate(async phase=>{const {POD_TOUCHDOWN_MUSIC:t,POD_RELEASE:r}=await import('/deployment-cinematic.js');window.__portrait(t+r.hold+(phase==='opening'?r.open*.55:r.open+(phase==='walkout'?r.exit*.5:r.exit+r.salute*.5)));},phase);
   await page.waitForFunction(()=>window.Game.deploymentView().localVisible);
   const result=await page.evaluate(()=>{const view=window.Game.deploymentView(),p=window.Game.pose(),r=window.__renderer;return {view,position:p.p.slice(),animation:p.animationState,salute:p.saluteProgress,feet:[...r.instances.get('a').bones].filter(([n])=>/toebase$/.test(n)).map(([,b])=>b.getWorldPosition(new window.__THREE.Vector3()).toArray()),input:window.Game.input()};});
   assert.ok(result.view.operatorOpacity>.99);assert.equal(result.input.fire,false);assert.equal(result.input.slot,0);
@@ -56,7 +56,7 @@ try{
  // Frame the actual skinned salute, including hands and boots, on narrow screens.
  for(const [name,width,height] of [['desktop',1280,720],['compact',800,600],['ultrawide',2100,900],['portrait',540,960]]){
   await page.setViewportSize({width,height});
-  await page.evaluate(async()=>{const {DEPLOYMENT_CUES:c,POD_RELEASE:r}=await import('/deployment-cinematic.js');window.__portrait(c.impact+r.hold+r.open+r.exit+r.salute*.5);});
+  await page.evaluate(async()=>{const {DEPLOYMENT_CUES:c}=await import('/deployment-cinematic.js');window.__portrait(c.bigStart+.02);});
   await page.waitForFunction(()=>window.Game.deploymentView().saluteFraming===1&&window.Game.deploymentView().localVisible);
   await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
   const result=await page.evaluate(()=>{
@@ -65,13 +65,13 @@ try{
    for(const x of[bounds.min.x,bounds.max.x])for(const y of[bounds.min.y,bounds.max.y])for(const z of[bounds.min.z,bounds.max.z])points.push(new T.Vector3(x,y,z).project(r.camera).toArray());
    return {view:window.Game.deploymentView(),bounds:{min:bounds.min.toArray(),max:bounds.max.toArray()},points,salute:window.Game.pose().saluteProgress};
   });
-  assert.ok(result.salute>.99);assert.equal(result.view.returnProgress,0);assert.ok(result.points.every(p=>Math.abs(p[0])<.95&&Math.abs(p[1])<.95),'whole native Soldier and raised salute fit with margin');
+  assert.ok(result.salute>.99);assert.equal(result.view.returnProgress,0);assert.ok(result.points.every(p=>Math.abs(p[0])<.95&&Math.abs(p[1])<.95),JSON.stringify({message:'whole native Soldier and raised salute fit with margin',name,bounds:result.bounds,points:result.points,view:result.view,maxX:Math.max(...result.points.map(p=>Math.abs(p[0]))),maxY:Math.max(...result.points.map(p=>Math.abs(p[1]))),minY:Math.min(...result.points.map(p=>p[1]))}));
   await page.screenshot({path:artifacts+'/salute-'+name+'.png'});results.push({name:'salute-'+name,...result});
  }
  // A delayed server snapshot can still say exiting after the local music
  // clock finishes. Keep the open shell anchored until gameplay is confirmed.
  await page.setViewportSize({width:1280,height:720});
- await page.evaluate(async()=>{const {DEPLOYMENT_CUES,POD_RELEASE}=await import('/deployment-cinematic.js');window.__portrait(DEPLOYMENT_CUES.impact+POD_RELEASE.hold+POD_RELEASE.open+POD_RELEASE.exit-.04);});
+ await page.evaluate(async()=>{const {POD_TOUCHDOWN_MUSIC,POD_RELEASE}=await import('/deployment-cinematic.js');window.__portrait(POD_TOUCHDOWN_MUSIC+POD_RELEASE.hold+POD_RELEASE.open+POD_RELEASE.exit-.04);});
  await page.waitForFunction(()=>window.Game.deploymentView().returnProgress===1);
  const delayedExit=await page.evaluate(()=>({view:window.Game.deploymentView(),position:window.Game.pose().p.slice(),expected:window.__snapshot.players[0].p.slice(),cinematic:document.body.classList.contains('deployment-cinematic')}));
  assert.equal(delayedExit.cinematic,true,'hold cinematic presentation until the server confirms gameplay');
