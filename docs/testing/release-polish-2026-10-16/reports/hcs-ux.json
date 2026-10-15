@@ -1,0 +1,14 @@
+{
+  "checks": [
+    "Concurrent standings refreshes share one request",
+    "A delayed pre-check-in response cannot undo confirmed check-in",
+    "Unchanged standings preserve existing rows",
+    "Reconnect attempts respect exponential backoff instead of retrying every UI tick",
+    "Normal multiplayer exposes reconnect feedback and clears it on fresh gameplay",
+    "Closed clients ignore late standings responses"
+  ],
+  "errors": [],
+  "limits": [
+    "Real browser HCS client with controlled HTTP/socket responses; actual referee sockets and game rendering are checked separately."
+  ]
+}

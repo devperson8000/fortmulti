@@ -1,0 +1,16 @@
+✔ 2 normal competitors share authoritative frames on facility in build (1299.480521ms)
+✔ 2 normal competitors share authoritative frames on facility in town (386.227304ms)
+✔ 2 normal competitors share authoritative frames on island in build (421.73563ms)
+✔ 2 normal competitors share authoritative frames on island in town (369.076676ms)
+✔ 8 normal competitors share authoritative frames on facility in build (528.82441ms)
+✔ 8 normal competitors share authoritative frames on facility in town (532.665861ms)
+✔ 8 normal competitors share authoritative frames on island in build (497.259209ms)
+✔ 8 normal competitors share authoritative frames on island in town (506.496981ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4948.928154

@@ -1,0 +1,14 @@
+{
+  "checks": [
+    "Two real connected clients synchronize four new variants plus the original in five slots with actual model thumbnails",
+    "ar_sentinel equips and fires through guest→host input, ammo snapshots and the correct nonlooping one-shot audio",
+    "Breacher reload completes with its own magazine capacity",
+    "shotgun_breacher equips and fires through guest→host input, ammo snapshots and the correct nonlooping one-shot audio",
+    "smg_viper equips and fires through guest→host input, ammo snapshots and the correct nonlooping one-shot audio",
+    "sniper_longbow equips and fires through guest→host input, ammo snapshots and the correct nonlooping one-shot audio",
+    "Variant drops keep their model identity and synchronize the empty slot",
+    "Variant moves into an empty slot and receives the host acknowledgement",
+    "Variants swap occupied slots without losing identity or magazines"
+  ],
+  "errors": []
+}

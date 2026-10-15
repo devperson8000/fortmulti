@@ -1,0 +1,12 @@
+Firing ar_sentinel
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.waitForFunction: Timeout 30000ms exceeded.
+    at /workspace/fortmulti/scripts/weapon-variants-browser-check.mjs:7:1094 {
+  log: [],
+  name: 'TimeoutError'
+}
+
+Node.js v24.19.0

@@ -1,0 +1,11 @@
+{
+  "checks": [
+    "All six presets update the native soldier with distinct material colors",
+    "Character preview uses the selected uniform",
+    "Selection persists through reload",
+    "Real connected teammate sees changed host outfit while keeping their own uniform",
+    "No page errors or invalid color warnings"
+  ],
+  "errors": [],
+  "warnings": []
+}

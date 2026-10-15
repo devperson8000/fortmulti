@@ -141,6 +141,9 @@ try {
   assert.equal(await player.locator('#hcs-panel').isVisible(),true);
   assert.match(await player.locator('#hcs-service').textContent(),/retry map/i);
   assert.equal(await player.evaluate(()=>window.HorizonHCS.active),false);
+  assert.equal(await player.locator('#hcs-watch').isVisible(),false);
+  // Even a stale/programmatic click must not turn a finalist into a viewer.
+  await player.locator('#hcs-watch').evaluate(button=>button.onclick());
   await player.screenshot({path:out+'/hcs-map-retry.png'});
   await player.locator('#hcs-retry-map').click();
   await player.waitForFunction(

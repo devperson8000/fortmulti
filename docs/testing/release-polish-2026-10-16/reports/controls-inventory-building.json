@@ -1,0 +1,249 @@
+{
+  "checks": [
+    "Five-slot Tab menu, real-model previews and separate utilities",
+    "Quick slots match real inventory previews and reuse cached image nodes",
+    "Keyboard move controls are reachable; held Tab does not flicker",
+    "Occupied swap is immediate and preserves equipped instance",
+    "Empty-slot move and authoritative acknowledgement",
+    "Outside release cancels without item loss",
+    "Pointer cancellation and focus loss clear drag state without losing weapons",
+    "Rapid queued moves converge over real BroadcastChannel; duplicate delivery is harmless",
+    "Q preserves last weapon identity across rearrangement while building",
+    "Opening match menu preserves in-flight inventory operations",
+    "Escape closes inventory before match menu",
+    "All arbitrary weapon keys and separate building/pickaxe/consumable controls",
+    "Inventory suppresses movement and combat inputs",
+    "Real R press plays one shotgun reload across guest/host snapshots and completes with ammo refill",
+    "Switching guns cancels the authoritative shotgun reload and fades its audio",
+    "Release-E cancels networked chest progress",
+    "Networked held-E completion opens chest exactly once",
+    "Quick Ctrl tap toggles crouch, survives key release, and ignores auto-repeat",
+    "Both Shift keys only run; releasing Shift returns to walking without a crouch or slide",
+    "A quick Ctrl tap while running starts a knee slide that completes standing with all keys released",
+    "Real Z, G and B inputs place matching wood/stone walls, rotate 90 degrees and charge each material once",
+    "Real V input builds connected ramps, preview matches upper-level authority, and walking climbs both levels"
+  ],
+  "errors": [],
+  "moves": [
+    {
+      "accepted": true,
+      "duration": 1.6999999999534339,
+      "ids": [
+        null,
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar"
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 0.8000000000465661,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        null
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 1,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        null
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 1.6000000000931323,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        null,
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar"
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 1,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        null
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 0.5999999998603016,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        null,
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar"
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 0.5,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        null
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 0.5,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        null,
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar"
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 0.8000000000465661,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        null
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 0.39999999990686774,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        null,
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar"
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 0.6000000000931323,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        null
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 0.39999999990686774,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        null,
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar"
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 0.39999999990686774,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        null
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 0.5,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        null,
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar"
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 1.1000000000931323,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        null
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 0.5,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        null,
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar"
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 1.6000000000931323,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        null
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 1,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        null,
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar"
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 0.9000000001396984,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        null
+      ]
+    },
+    {
+      "accepted": true,
+      "duration": 1,
+      "ids": [
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:shotgun",
+        null,
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:smg",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:sniper",
+        "011ddfc727f7c2d2fd8a56dde16d3d5b:ar"
+      ]
+    }
+  ]
+}

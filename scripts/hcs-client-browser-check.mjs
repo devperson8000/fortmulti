@@ -250,6 +250,12 @@ try {
   assert.equal(failed.shown, true, 'map error must be presented in the lobby');
   assert.match(failed.message, /retry map/i);
   assert.equal(failed.retry, true);
+  const competitorWatch = await page.evaluate(() => {
+    const before=window.__socket.sent.filter(m=>m.type==='watch').length;
+    document.getElementById('hcs-watch').onclick();
+    return window.__socket.sent.filter(m=>m.type==='watch').length-before;
+  });
+  assert.equal(competitorWatch,0,'a competitor recovering their map must not accidentally switch to watching');
   await page.evaluate(async () => {
     window.__mapRetries = 0;
     window.Game.setMap = async () => { window.__mapRetries++; };

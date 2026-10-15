@@ -1,0 +1,97 @@
+[
+  {
+    "script": "aim-hud-browser-check",
+    "exitCode": 0,
+    "seconds": 10.46
+  },
+  {
+    "script": "hcs-live-browser-check",
+    "exitCode": 0,
+    "seconds": 80.29
+  },
+  {
+    "script": "hcs-efficiency-check",
+    "exitCode": 0,
+    "seconds": 5.81
+  },
+  {
+    "script": "multiplayer-matrix-check",
+    "exitCode": 0,
+    "seconds": 112.0
+  },
+  {
+    "script": "lobby-polish-check",
+    "exitCode": 0,
+    "seconds": 68.23
+  },
+  {
+    "script": "weapon-state-check",
+    "exitCode": 0,
+    "seconds": 108.9
+  },
+  {
+    "script": "remote-grip-visual-check",
+    "exitCode": 0,
+    "seconds": 48.89
+  },
+  {
+    "script": "full-hand-salute-check",
+    "exitCode": 0,
+    "seconds": 10.11
+  },
+  {
+    "script": "outfit-browser-check",
+    "exitCode": 0,
+    "seconds": 95.86
+  },
+  {
+    "script": "pickup-browser-check",
+    "exitCode": 0,
+    "seconds": 163.05
+  },
+  {
+    "script": "weapon-variants-browser-check",
+    "exitCode": 1,
+    "seconds": 47.31
+  },
+  {
+    "script": "browser-check",
+    "exitCode": 0,
+    "seconds": 59.99
+  },
+  {
+    "script": "deployment-audio-check",
+    "exitCode": 0,
+    "seconds": 12.55
+  },
+  {
+    "script": "hcs-victory-audio-check",
+    "exitCode": 0,
+    "seconds": 9.88
+  },
+  {
+    "script": "hcs-victory-browser-check",
+    "exitCode": 0,
+    "seconds": 36.41
+  },
+  {
+    "script": "hcs-full-test-check",
+    "exitCode": 0,
+    "seconds": 166.96
+  },
+  {
+    "script": "platform23-browser-check",
+    "exitCode": 1,
+    "seconds": 91.52
+  },
+  {
+    "script": "map-loading-browser-check",
+    "exitCode": 0,
+    "seconds": 71.09
+  },
+  {
+    "script": "map-loading-cancellation-check",
+    "exitCode": 0,
+    "seconds": 77.73
+  }
+]

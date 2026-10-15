@@ -120,6 +120,8 @@ export function createHCS({
     const node = $(id);
     if (node && node.textContent !== text) node.textContent = text;
   };
+  const competing = () => Boolean(frame && frame.tournament !== false &&
+    !frame.spectator && frame.state.players.some(p => p.id === identity));
   function updateConnectionUI() {
     const node = $("match-connection");
     if (!node) return;
@@ -223,7 +225,7 @@ export function createHCS({
       : state.checked?.includes(identity)
         ? "CHECKED IN"
         : "CHECK IN";
-    $("hcs-watch").hidden = state.phase !== "live";
+    $("hcs-watch").hidden = state.phase !== "live" || competing();
     $("hcs-watch").disabled = !streamReady;
     $("hcs-watch").textContent =
       watching && !active ? "CANCEL WATCH" : "WATCH HCS";
@@ -511,6 +513,7 @@ export function createHCS({
     await prepareFinal(socket, true);
   };
   $("hcs-watch").onclick = () => {
+    if (competing()) return;
     if (watching && !active) {
       stop();
       draw();

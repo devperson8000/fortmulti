@@ -28,7 +28,7 @@ async function open(){
   const {MatchCharacterRenderer}=await import('/match-character-renderer.js'),render=MatchCharacterRenderer.prototype.render;
   MatchCharacterRenderer.prototype.render=function(...args){window.__renderer=this;return render.apply(this,args);};
   const effect=window.Game.effect;window.Game.effect=function(e,...args){if(e.type==='deployment_landed'){const m=window.__music.at(-1);window.__landings.push({musicTime:m?m.context.currentTime-m.anchor:null,sequence:e.sequence});}return effect.call(this,e,...args);};
-  const sample=()=>{const v=window.Game.deploymentView();if(document.body.classList.contains('deployment-cinematic'))window.__views.push({...v,at:performance.now(),position:window.Game.pose().p.slice(),logoOpacity:Number(document.getElementById('deployment-cinematic').style.opacity)});requestAnimationFrame(sample);};requestAnimationFrame(sample);
+  const sample=()=>{const v=window.Game.deploymentView();if(document.body.classList.contains('deployment-cinematic'))window.__views.push({...v,at:performance.now(),position:window.Game.pose().p.slice(),animation:window.Game.pose().animationState,salute:window.Game.pose().saluteProgress,input:window.Game.input(),logoOpacity:Number(document.getElementById('deployment-cinematic').style.opacity)});requestAnimationFrame(sample);};requestAnimationFrame(sample);
  });return p;
 }
 try{
@@ -88,13 +88,17 @@ try{
  assert.deepEqual(impact.position,[impact.landing.x,impact.landing.y,impact.landing.z]);assert.equal(impact.view.localVisible,false);assert.equal(impact.view.hatchOpen,0);await guest.screenshot({path:artifacts+'/04-touchdown.png'});checks.push('Sealed pod slams onto the selected ground on the measured bass drop');
  for(const phase of ['opening','walkout','salute']){
   const time=DEPLOYMENT_CUES.impact+POD_RELEASE.hold+(phase==='opening'?POD_RELEASE.open*.55:POD_RELEASE.open+(phase==='walkout'?POD_RELEASE.exit*.5:POD_RELEASE.exit+POD_RELEASE.salute*.5));
-  await guest.waitForFunction(t=>window.Game.deploymentView().musicTime>=t,time,{timeout:15000});
-  const shot=await guest.evaluate(()=>({view:window.Game.deploymentView(),position:window.Game.pose().p.slice(),animation:window.Game.pose().animationState,salute:window.Game.pose().saluteProgress,input:window.Game.input()}));
+  // Read the recorded native frame atomically. Taking the previous screenshot
+  // can outlast a short cinematic stage on a software GPU.
+  const recorded=await guest.waitForFunction(t=>window.__views.find(v=>v.musicTime>=t),time,{timeout:15000});
+  const captured=await recorded.jsonValue();
+  const shot={view:captured,position:captured.position,animation:captured.animation,salute:captured.salute,input:captured.input};
   assert.equal(shot.view.localVisible,true);assert.ok(shot.view.operatorOpacity>.99);assert.equal(shot.input.fire,false);assert.equal(shot.input.slot,0);
   if(phase==='opening'){assert.ok(shot.view.hatchOpen>.5,'the hatch opens after the landing hold even when the software renderer skips its midpoint frame');}
   else assert.ok(Math.hypot(shot.position[0]-shot.view.podPosition[0],shot.position[2]-shot.view.podPosition[2])>1);
   if(phase==='salute'){assert.ok(shot.salute>.99,'native salute is fully raised');assert.ok(shot.view.musicTime<DEPLOYMENT_MUSIC_END-.4);assert.equal(shot.view.saluteFraming,1);assert.equal(shot.view.returnProgress,0);assert.ok(Math.abs(shot.view.eye[0]-shot.position[0])<.01);assert.ok(shot.view.eye[2]>shot.position[2]+2,'camera views the front of the saluting character');}
-  await guest.screenshot({path:artifacts+'/0'+(phase==='opening'?5:phase==='walkout'?6:7)+'-'+phase+'.png'});
+  const live=await guest.evaluate(()=>window.Game.deploymentView());
+  if(live.localVisible&&live.musicTime<time+.5)await guest.screenshot({path:artifacts+'/0'+(phase==='opening'?5:phase==='walkout'?6:7)+'-'+phase+'.png'});
  }
  checks.push('Hatch reveals the operator after impact; walkout and salute remain visible with music and combat locked');
  await host.waitForFunction(()=>window.__testMatch.phase==='playing',{timeout:15000});await guest.waitForFunction(()=>window.Game.deploymentView().stage==='match_active'&&!document.body.classList.contains('deployment-cinematic'),{timeout:15000});
