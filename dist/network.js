@@ -60,7 +60,12 @@ export class SocialDirectory extends SupabaseClient{
  async presence(name,color,activity='online',roomCode=null){
   this.profile={name:String(name||'Ranger').slice(0,20),color:String(color||'408faf'),activity,roomCode:roomCode||null};
   if(this.local){this.broadcast({kind:'presence',from:this.id,...this.profile,at:Date.now()});return {ok:true};}
-  return this.api('/rest/v1/rpc/duel_presence_upsert',{display_name:this.profile.name,outfit_color:this.profile.color,activity_state:activity,room_code:roomCode||null});
+  const key=JSON.stringify(this.profile);
+  if(key===this.presenceKey&&Date.now()-this.presenceAt<15000)return this.presenceResult;
+  if(this.presencePending?.key===key)return this.presencePending.promise;
+  const pending={key,promise:this.api('/rest/v1/rpc/duel_presence_upsert',{display_name:this.profile.name,outfit_color:this.profile.color,activity_state:activity,room_code:roomCode||null}).then(result=>{this.presenceKey=key;this.presenceAt=Date.now();this.presenceResult=result;return result;})};
+  this.presencePending=pending;
+  try{return await pending.promise;}finally{if(this.presencePending===pending)this.presencePending=null;}
  }
  async online(){
   if(this.local){const cutoff=Date.now()-16000;for(const [id,p] of this.localPeers)if(p.last_seen<cutoff)this.localPeers.delete(id);return [...this.localPeers.values()];}

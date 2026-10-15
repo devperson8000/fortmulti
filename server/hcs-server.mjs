@@ -7,6 +7,7 @@ import { Referee } from "./hcs-referee.mjs";
 import { Match } from "../public/simulation.js";
 import { officialWorld } from "./hcs-world.mjs";
 import { HCS, postponeAt } from "../public/hcs-rules.js";
+import { sendSocketPacket } from "./hcs-transport.mjs";
 export async function createHCSServer({
   authenticate,
   load,
@@ -29,7 +30,9 @@ export async function createHCSServer({
     dirty = false,
     saving = false,
     savePromise = null,
-    lastSave = 0;
+    lastSave = 0,
+    nextSaveAt = 0,
+    saveFailures = 0;
   // A process restart cannot reconstruct a partially played authoritative final.
   if (championship.state.phase === "live") {
     championship.state.phase = "locked";
@@ -38,15 +41,7 @@ export async function createHCSServer({
     championship.state.postponed = true;
     dirty = true;
   }
-  const send = (ws, data) => {
-    if (ws.readyState === 1) {
-      if (ws.bufferedAmount > 262144) {
-        ws.close(1013, "Connection is too slow");
-        return;
-      }
-      ws.send(typeof data === "string" ? data : JSON.stringify(data));
-    }
-  };
+  const send = sendSocketPacket;
   const fail = (res, status, code) =>
     res.writeHead(status).end(JSON.stringify({ code }));
   const server = http.createServer(async (req, res) => {
@@ -511,7 +506,7 @@ export async function createHCSServer({
             m.referee.match.ids.includes(c.id) &&
             !m.referee.match.disconnected.has(c.id)
           )
-            send(ws, packet);
+            send(ws, packet, { snapshot: true });
         if (m.finishedAt && time - m.finishedAt > 10000) matches.delete(room);
       }
       if (referee) {
@@ -570,6 +565,7 @@ export async function createHCSServer({
               c.watching
                 ? (delayedPacket ??= encode())
                 : (livePacket ??= encode()),
+              { snapshot: true },
             );
           }
         }
@@ -585,7 +581,7 @@ export async function createHCSServer({
         referee = null;
         finalFinishedAt = null;
       }
-      if (dirty && !saving && time - lastSave >= 1000) {
+      if (dirty && !saving && time - lastSave >= 1000 && time >= nextSaveAt) {
         saving = true;
         const copy = structuredClone(championship.state);
         dirty = false;
@@ -593,8 +589,12 @@ export async function createHCSServer({
           savePromise = Promise.resolve().then(() => save(copy));
           await savePromise;
           lastSave = time;
+          saveFailures = 0;
+          nextSaveAt = 0;
         } catch {
           dirty = true;
+          nextSaveAt =
+            now() + Math.min(30000, 1000 * 2 ** Math.min(saveFailures++, 5));
         } finally {
           saving = false;
           savePromise = null;

@@ -29,7 +29,13 @@ export function createHCS({
     disconnected = false,
     checkingIn = false,
     streamReady = false,
-    connectionError = null;
+    connectionError = null,
+    pendingPoll = null,
+    stateRevision = 0,
+    ranksKey = "",
+    reconnectAt = 0,
+    reconnectTimer = null,
+    lastSnapshotAt = 0;
   const base = String(config.hcsUrl || "").replace(/\/$/, "");
   const celebration = createHCSCelebration({
     id: "hcs-official-finale",
@@ -103,6 +109,33 @@ export function createHCS({
     }
     return response.json();
   };
+  const dateFormat = new Intl.DateTimeFormat("en-AU", {
+    timeZone: HCS.zone,
+    dateStyle: "full",
+    timeStyle: "short",
+  });
+  const setText = (id, text) => {
+    const node = $(id);
+    if (node && node.textContent !== text) node.textContent = text;
+  };
+  function updateConnectionUI() {
+    const node = $("match-connection");
+    if (!node) return;
+    const delayed = lastSnapshotAt > 0 && Date.now() - lastSnapshotAt > 2500;
+    const visible =
+      !closed && (active || official) && (disconnected || delayed);
+    if (node.hidden !== !visible) node.hidden = !visible;
+    if (visible) {
+      const kind = disconnected ? "reconnecting" : "delayed";
+      if (node.dataset.state !== kind) node.dataset.state = kind;
+      setText(
+        "match-connection",
+        disconnected
+          ? "RECONNECTING · Your match is still running. Keep this page open."
+          : "CONNECTION DELAYED · Waiting for a fresh match update…",
+      );
+    }
+  }
   const countdown = () => {
     const seconds = Math.max(0, Math.ceil((state.at - Date.now()) / 1000)),
       days = Math.floor(seconds / 86400),
@@ -110,13 +143,9 @@ export function createHCS({
       minutes = Math.floor((seconds % 3600) / 60),
       s = seconds % 60;
     const text = `${days}d ${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
-    $("hcs-countdown").textContent = text;
-    $("hcs-promo-time").textContent = text;
-    $("hcs-date").textContent = new Intl.DateTimeFormat("en-AU", {
-      timeZone: HCS.zone,
-      dateStyle: "full",
-      timeStyle: "short",
-    }).format(state.at);
+    setText("hcs-countdown", text);
+    setText("hcs-promo-time", text);
+    setText("hcs-date", dateFormat.format(state.at));
     $("hcs-promo").hidden =
       state.at - Date.now() > HCS.promo || state.at < Date.now() - HCS.grace;
   };
@@ -135,29 +164,33 @@ export function createHCS({
       phase.dataset.phase = state.phase;
     }
     const ranks = $("hcs-ranks");
-    ranks.replaceChildren();
-    for (const [i, p] of state.ranks.entries()) {
-      const row = document.createElement("tr");
-      row.className =
-        (i < 5 ? "qualifier" : i < 9 ? "reserve" : "") +
-        (p.id === identity ? " hcs-you" : "");
-      row.setAttribute(
-        "aria-label",
-        `${p.name}, rank ${i + 1}${p.id === identity ? ", your position" : ""}`,
-      );
-      for (const text of [
-        String(i + 1).padStart(2, "0"),
-        p.name,
-        p.points ?? p.wins * 100 + p.kills * 10,
-        p.wins,
-        p.kills,
-        p.games,
-      ]) {
-        const cell = document.createElement("td");
-        cell.textContent = String(text);
-        row.append(cell);
+    const nextRanksKey = JSON.stringify([identity, state.ranks]);
+    if (nextRanksKey !== ranksKey) {
+      ranksKey = nextRanksKey;
+      ranks.replaceChildren();
+      for (const [i, p] of state.ranks.entries()) {
+        const row = document.createElement("tr");
+        row.className =
+          (i < 5 ? "qualifier" : i < 9 ? "reserve" : "") +
+          (p.id === identity ? " hcs-you" : "");
+        row.setAttribute(
+          "aria-label",
+          `${p.name}, rank ${i + 1}${p.id === identity ? ", your position" : ""}`,
+        );
+        for (const text of [
+          String(i + 1).padStart(2, "0"),
+          p.name,
+          p.points ?? p.wins * 100 + p.kills * 10,
+          p.wins,
+          p.kills,
+          p.games,
+        ]) {
+          const cell = document.createElement("td");
+          cell.textContent = String(text);
+          row.append(cell);
+        }
+        ranks.append(row);
       }
-      ranks.append(row);
     }
     $("hcs-empty").hidden = !!state.ranks.length;
     const rank = state.ranks.findIndex((p) => p.id === identity),
@@ -195,26 +228,47 @@ export function createHCS({
     $("hcs-champion").textContent = state.champion
       ? `REIGNING CHAMPION · ${state.champion.name}`
       : "";
+    updateConnectionUI();
   }
-  async function poll() {
-    if (!valid) return;
-    try {
-      state = await api("/state");
-      $("hcs-service").textContent =
-        connectionError?.message ||
-        (!streamReady
-          ? "Standings connected · connecting your player to HCS…"
-          : watching && !active
-            ? "Connecting to broadcast · waiting for the 20-second delayed feed."
-            : "Official standings · 20-second broadcast delay");
-      draw();
-    } catch {
-      $("hcs-service").textContent =
-        "HCS is temporarily offline. Your ordinary games remain available.";
-    }
+  function poll() {
+    if (!valid || closed) return Promise.resolve();
+    if (pendingPoll) return pendingPoll;
+    const revision = stateRevision;
+    pendingPoll = (async () => {
+      try {
+        const next = await api("/state");
+        if (closed || revision !== stateRevision) return;
+        state = next;
+        setText(
+          "hcs-service",
+          connectionError?.message ||
+            (!streamReady
+              ? "Standings connected · connecting your player to HCS…"
+              : watching && !active
+                ? "Connecting to broadcast · waiting for the 20-second delayed feed."
+                : "Official standings · 20-second broadcast delay"),
+        );
+        draw();
+      } catch {
+        if (!closed && revision === stateRevision)
+          setText(
+            "hcs-service",
+            "HCS is temporarily offline. Your ordinary games remain available.",
+          );
+      }
+    })().finally(() => {
+      pendingPoll = null;
+    });
+    return pendingPoll;
   }
   function connect() {
-    if (!valid || closed || (socket && socket.readyState < 2)) return;
+    if (
+      !valid ||
+      closed ||
+      Date.now() < reconnectAt ||
+      (socket && socket.readyState < 2)
+    )
+      return;
     const auth = session();
     if (!auth?.access_token) return;
     rememberIdentity(auth);
@@ -250,8 +304,8 @@ export function createHCS({
         return;
       }
       if (data.type === "authenticated") {
-        disconnected = false;
         identity = data.id;
+        reconnectAt = 0;
         retry = 0;
         try {
           await api(
@@ -286,6 +340,9 @@ export function createHCS({
         if (data.matchId === declined) return;
         if (data.tournament === false) {
           official = true;
+          disconnected = false;
+          lastSnapshotAt = Date.now();
+          updateConnectionUI();
           frame = data;
           applyOfficial({
             id: data.matchId,
@@ -298,6 +355,8 @@ export function createHCS({
           return;
         }
         if (!watching && data.spectator) return;
+        disconnected = false;
+        lastSnapshotAt = Date.now();
         frame = data;
         if (!active && !loading) {
           loading = true;
@@ -355,6 +414,7 @@ export function createHCS({
           }
           $("hcs-view-player").hidden = !watching;
         }
+        updateConnectionUI();
       }
     };
     socket.onclose = (event) => {
@@ -366,6 +426,7 @@ export function createHCS({
       }
       draw();
       disconnected = true;
+      updateConnectionUI();
       socket = null;
       if (active)
         $("hcs-broadcast-label").textContent = watching
@@ -374,8 +435,12 @@ export function createHCS({
       if (active && !watching)
         $("hcs-service").textContent =
           "Reconnecting · your character remains vulnerable for 60 seconds.";
-      if (!closed)
-        setTimeout(connect, Math.min(15000, 1000 * 2 ** Math.min(retry++, 4)));
+      if (!closed) {
+        const delay = Math.min(15000, 1000 * 2 ** Math.min(retry++, 4));
+        reconnectAt = Date.now() + delay;
+        clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(connect, delay);
+      }
     };
     socket.onerror = () => {};
   }
@@ -394,6 +459,7 @@ export function createHCS({
   document.addEventListener("visibilitychange", visibilityInput);
   const timer = setInterval(() => {
       countdown();
+      updateConnectionUI();
       connect();
     }, 1000),
     poller = setInterval(poll, 10000),
@@ -412,13 +478,16 @@ export function createHCS({
     checkingIn = true;
     draw();
     try {
-      state = await api("/checkin", {});
+      const next = await api("/checkin", {});
+      if (closed) return;
+      stateRevision++;
+      state = next;
       draw();
     } catch (e) {
-      $("hcs-service").textContent = e.message;
+      if (!closed) $("hcs-service").textContent = e.message;
     } finally {
       checkingIn = false;
-      draw();
+      if (!closed) draw();
     }
   };
   $("hcs-watch").onclick = () => {
@@ -449,6 +518,8 @@ export function createHCS({
     official = false;
     watching = false;
     frame = null;
+    lastSnapshotAt = 0;
+    updateConnectionUI();
     seen = 0;
     send({ type: "leave", forfeit, matchId: declined });
     $("hcs-broadcast").hidden = true;
@@ -593,8 +664,10 @@ export function createHCS({
         chipText = watching ? "HCS · 20s DELAY" : "HCS · OFFICIAL FINAL";
       if (chip && chip.textContent !== chipText) chip.textContent = chipText;
       const alive = s.players.filter((p) => p.hp > 0).length;
-      $("hcs-watch-stats").textContent =
-        `${Math.ceil(p.hp)} HP · ${s.tournamentKills?.[p.id] || 0} KILLS · ${alive} LEFT${s.phase === "done" ? " · FINAL COMPLETE" : ""}`;
+      setText(
+        "hcs-watch-stats",
+        `${Math.ceil(p.hp)} HP · ${s.tournamentKills?.[p.id] || 0} KILLS · ${alive} LEFT${s.phase === "done" ? " · FINAL COMPLETE" : ""}`,
+      );
       return true;
     },
     moveInventory(operation) {
@@ -606,6 +679,8 @@ export function createHCS({
     close() {
       celebration.reset();
       closed = true;
+      updateConnectionUI();
+      clearTimeout(reconnectTimer);
       clearInterval(timer);
       clearInterval(poller);
       clearInterval(inputTimer);

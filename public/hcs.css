@@ -384,3 +384,7 @@
 .hcs-table-scroll {
   min-width: 0;
 }
+
+/* A connection hint stays clear of the crosshair and never captures controls. */
+#match-connection { position:fixed; z-index:85; top:82px; left:50%; transform:translateX(-50%); width:max-content; max-width:min(430px,calc(100vw - 36px)); padding:12px 16px; border:1px solid #d9cb8170; border-left:3px solid #e8db93; border-radius:10px; background:#101f24ed; box-shadow:0 8px 24px #0003; color:#f4edcb; font-size:12px; line-height:1.5; font-weight:700; text-align:center; pointer-events:none; }
+#match-connection[hidden] { display:none; }

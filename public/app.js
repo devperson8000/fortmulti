@@ -34,7 +34,7 @@ const activePeers=()=>[...peers.values()];
 const playerName=id=>id===conn?.id?profile.name:(peers.get(id)?.name||'Player');
 const colors=()=>window.HorizonHCS?.official&&officialColors?officialColors:Object.fromEntries([[conn?.id,profile.color],...activePeers().map(p=>[p.id,p.color])]);
 const participantIds=()=>{if(!conn)return[];const ids=[conn.id,...activePeers().map(p=>p.id)],leader=conn.host||conn.id;return [leader,...ids.filter(id=>id!==leader).sort()].slice(0,conn.maxPlayers||8);};
-const inMatch=()=>!!(match||snapshot)&&!window.Duel?.lobby;
+const inMatch=()=>!!window.HorizonHCS?.active||!!(match||snapshot)&&!window.Duel?.lobby;
 const currentActivity=()=>inMatch()?'match':conn?'party':'online';
 const validOnlineConfig=()=>/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test((config.url||'').replace(/\/$/,''))&&!!config.key;
 
@@ -130,7 +130,7 @@ function refresh(){
  if(conn){$('room-code').textContent=host?'PRIVATE PARTY · YOU ARE LEADER':'PRIVATE PARTY · MEMBER';$('invite-more').disabled=inMatch()||party.length>=(conn.maxPlayers||8);}
  $('outfit').disabled=locked;$('name').disabled=locked;$('local').disabled=!!conn;drawPartyCards();renderOnlinePlayers();renderInvites();updateNetworkChip();
 }
-function focusOnline(){const panel=$('social-panel');panel.classList.add('open','attention');panel.setAttribute('aria-hidden','false');$('social-scrim').hidden=false;setTimeout(()=>panel.classList.remove('attention'),800);}
+function focusOnline(){void pollSocial();const panel=$('social-panel');panel.classList.add('open','attention');panel.setAttribute('aria-hidden','false');$('social-scrim').hidden=false;setTimeout(()=>panel.classList.remove('attention'),800);}
 function closeOnline(){const panel=$('social-panel');panel.classList.remove('open','attention');panel.setAttribute('aria-hidden','true');$('social-scrim').hidden=true;}
 function selectLobbyTab(tab){
  const state=lobbyTabState(tab),tabs=[['lobby-play-toggle','play'],['profile-toggle','outfit'],['character-preview-toggle','character'],['hcs-toggle','hcs']];
@@ -146,7 +146,7 @@ function everyoneReady(){const party=partyProfiles();return party.length>=2&&par
 async function updatePresence(){if(!social)return;try{await social.presence(profile.name,profile.color,currentActivity(),conn?.code||null);}catch(e){if(Date.now()-lastStatusAt>5000)status(e,'error');}}
 async function pollSocial(){
  if(!social||socialBusy)return;socialBusy=true;
- try{await updatePresence();const [players,invites]=await Promise.all([social.online(),social.invites()]);onlinePlayers=players;incomingInvites=invites;renderOnlinePlayers();renderInvites();updateNetworkChip();}
+ try{await updatePresence();if(inMatch()||document.hidden)return;const [players,invites]=await Promise.all([social.online(),social.invites()]);onlinePlayers=players;incomingInvites=invites;renderOnlinePlayers();renderInvites();updateNetworkChip();}
  catch(e){if(Date.now()-lastStatusAt>6000)status(e,'error');}
  finally{socialBusy=false;}
 }
@@ -265,7 +265,7 @@ async function loadSnapshotMap(){
 function applyReadySnapshot(data){
  if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn||!acceptSnapshot(matchId,snapshotFrame,data.id,data.frame,matchEpoch,data.epoch))return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot,phaseChanged=snapshot?.phase!==s.phase,roundChanged=window.Duel.round!==s.round;matchId=data.id;matchEpoch=data.epoch;snapshotFrame=data.frame;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('deployment',s.phase==='deployment');document.body.classList.toggle('dropping',s.phase==='deployment'&&['pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(s.deployment?.stage));if(!$('lobby').hidden)$('lobby').hidden=true;updateDeploymentUI(s,localPlayer);
  if(fresh||roundChanged){const me=s.players.find(p=>p.id===conn.id);game.look(me?.yaw||0);seenEvent=0;window.Duel.round=s.round;showMenu=false;$('match-actions').hidden=true;updatePresence();}
- $('round-banner').textContent=roundBanner(s);for(const e of s.events||[])if(e.id>seenEvent){game.effect(e,conn.id,s);seenEvent=e.id;}
+ const banner=roundBanner(s);if($('round-banner').textContent!==banner)$('round-banner').textContent=banner;for(const e of s.events||[])if(e.id>seenEvent){game.effect(e,conn.id,s);seenEvent=e.id;}
  if(s.phase==='done'){showMenu=true;$('match-actions').hidden=false;$('resume').hidden=true;$('rematch').hidden=false;$('back-lobby').hidden=false;document.exitPointerLock?.();}else if(!showMenu)$('match-actions').hidden=true;if(fresh||phaseChanged||roundChanged)refresh();
 }
 function removePeer(id,reason='left the party'){

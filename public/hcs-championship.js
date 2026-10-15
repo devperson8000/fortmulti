@@ -164,6 +164,10 @@ export class DelayedFeed {
   }
   push(now, snapshot) {
     this.frames.push({ at: now, data: structuredClone(snapshot) });
+    const oldest = now - HCS.delay - 1000;
+    // Retain the complete delay plus a small margin even without viewers.
+    while (this.frames.length > 1 && this.frames[1].at <= oldest)
+      this.frames.shift();
     while (this.frames.length > 750) this.frames.shift();
   }
   at(now) {

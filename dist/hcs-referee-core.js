@@ -45,6 +45,8 @@ export class Referee {
     this.finishedAt = null;
     this.absent = new Map();
     this.feed = new DelayedFeed();
+    this.feedTicks = 0;
+    this.lastFeedPhase = null;
     this.match.beginDeployment();
     if (autoBoard) this.board();
   }
@@ -144,7 +146,15 @@ export class Referee {
       this.seen = Math.max(this.seen, e.id);
     }
     snapshot.tournamentKills = { ...this.kills };
-    if (this.autoBoard) this.feed.push(now, snapshot);
+    // Spectators receive 10 Hz; keep live physics at 30 Hz without cloning
+    // two unused replay frames per broadcast. Phase changes are never delayed.
+    if (
+      this.autoBoard &&
+      (this.feedTicks++ % 3 === 0 || snapshot.phase !== this.lastFeedPhase)
+    ) {
+      this.feed.push(now, snapshot);
+      this.lastFeedPhase = snapshot.phase;
+    }
     return snapshot;
   }
 }

@@ -65,6 +65,11 @@ jobs:
         env:
           GAME_TEST_URL: http://127.0.0.1:4174
           GAME_ARTIFACTS: /tmp/horizon-deployment/variants
+      - name: Verify standings requests, check-in races and reconnect UX
+        run: npm run test:hcs-ux
+        env:
+          GAME_TEST_URL: http://127.0.0.1:4174
+          GAME_ARTIFACTS: /tmp/horizon-deployment/hcs-ux
       - name: Upload browser diagnostics if a test fails
         if: failure()
         uses: actions/upload-artifact@v4

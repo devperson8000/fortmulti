@@ -39,8 +39,13 @@ const context = await browser.newContext({
     viewport: { width: 960, height: 540 },
   }),
   errors = [],
+  socialReads = [],
   checks = [],
   measurements = [];
+context.on("request", (request) => {
+  if (/\/rpc\/(duel_online_players|duel_invites)$/.test(request.url()))
+    socialReads.push(request.url());
+});
 await context.grantPermissions(["local-network-access"], { origin: site });
 await context.route("https://multiplayer-test.supabase.co/**", (r) =>
   r.fulfill({ json: [] }),
@@ -299,6 +304,7 @@ try {
         ];
       }
       await guest.waitForFunction(() => window.Game.pose()?.air === "landed");
+      const socialReadStart = socialReads.length;
       await guest.keyboard.press("1");
       await until(
         () => match.players.find((p) => p.id === "guest").weapon === "ar",
@@ -327,12 +333,25 @@ try {
         window.previousHcsSocket = window.hcsSocket;
         window.hcsSocket.close();
       });
+      await guest.locator("#match-connection").waitFor({ state: "visible" });
+      const connectionHint = await guest
+        .locator("#match-connection")
+        .boundingBox();
+      assert.ok(
+        connectionHint.x >= 0 &&
+          connectionHint.x + connectionHint.width <= 960 &&
+          connectionHint.y + connectionHint.height < 270,
+        "connection hint must fit above the aiming area",
+      );
+      if (map === "facility" && mode === "town")
+        await guest.screenshot({ path: out + "/reconnecting.png" });
       await guest.waitForFunction(
         () =>
           window.hcsSocket !== window.previousHcsSocket &&
           window.hcsSocket.readyState === 1,
       );
       await until(() => match.players.find((p) => p.id === "guest").sprinting);
+      await guest.locator("#match-connection").waitFor({ state: "hidden" });
       assert.equal(
         match.players.find((p) => p.id === "guest").hp,
         100,
@@ -357,11 +376,21 @@ try {
                     (14 * (p.at - trace[i].at)) / 1000 + 0.5,
               );
           let lobbyMutations = 0,
-            hudMutations = 0;
+            hudMutations = 0,
+            scoreMutations = 0;
           const lobby = new MutationObserver(
               (m) => (lobbyMutations += m.length),
             ),
             hud = new MutationObserver((m) => (hudMutations += m.length));
+          const scores = new MutationObserver(
+            (m) => (scoreMutations += m.length),
+          );
+          for (const id of ["score", "remaining", "time", "round-banner"])
+            scores.observe(document.getElementById(id), {
+              childList: true,
+              characterData: true,
+              subtree: true,
+            });
           lobby.observe(document.getElementById("lobby"), {
             subtree: true,
             childList: true,
@@ -377,6 +406,7 @@ try {
           await new Promise((r) => setTimeout(r, 700));
           lobby.disconnect();
           hud.disconnect();
+          scores.disconnect();
           return {
             map,
             mode,
@@ -384,6 +414,7 @@ try {
             motionJumps: motionJumps.length,
             lobbyMutations,
             hudMutations,
+            scoreMutations,
             canvas: window.Game.mapStatus(),
           };
         },
@@ -398,7 +429,21 @@ try {
         measurement.lobbyMutations < 30,
         "hidden lobby must not rebuild on every snapshot",
       );
-      measurements.push({ ...measurement, prepareMs });
+      assert.equal(
+        measurement.scoreMutations,
+        0,
+        "unchanged score, round and alive labels must not be rewritten each frame",
+      );
+      assert.equal(
+        socialReads.length,
+        socialReadStart,
+        "active matches must not keep polling lobby player/invite lists",
+      );
+      measurements.push({
+        ...measurement,
+        prepareMs,
+        socialReadsDuringMatch: socialReads.length - socialReadStart,
+      });
       // Losing browser focus must cancel held movement/fire immediately, not
       // let the referee keep the last input until its stale-input deadline.
       await guest.keyboard.down("w");
