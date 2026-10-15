@@ -20,7 +20,7 @@ export async function createHCSServer({
   const championship = new Championship(await load(), now()),
     clients = new Map(),
     matches = new Map(),
-    startingRooms = new Set();
+    startingRooms = new Map();
   let referee = null,
     finalId = null,
     finalFinishedAt = null,
@@ -146,6 +146,29 @@ export async function createHCSServer({
           fail(res, 403, "PARTY_FORBIDDEN");
           return;
         }
+        const requestId =
+          typeof data.requestId === "string" && data.requestId.length <= 100
+            ? data.requestId
+            : null;
+        const sameRequest = (m) =>
+          requestId &&
+          m?.requestId === requestId &&
+          m.owner === user.id &&
+          m.mapId === data.map &&
+          m.mode === data.mode;
+        const existing = matches.get(data.room);
+        if (
+          sameRequest(existing) &&
+          existing.referee.match.ids.length === roster.length &&
+          roster.every((id) => existing.referee.match.ids.includes(id))
+        ) {
+          res.end(JSON.stringify({ id: existing.id }));
+          return;
+        }
+        if (sameRequest(startingRooms.get(data.room))) {
+          fail(res, 409, "PARTY_CONNECTING");
+          return;
+        }
         if (
           startingRooms.has(data.room) ||
           matches.has(data.room) ||
@@ -177,7 +200,12 @@ export async function createHCSServer({
           fail(res, 409, "PARTY_CONNECTING");
           return;
         }
-        startingRooms.add(data.room);
+        startingRooms.set(data.room, {
+          requestId,
+          owner: user.id,
+          mapId: data.map,
+          mode: data.mode,
+        });
         try {
           const world = await officialWorld(data.map),
             id = randomUUID(),
@@ -194,6 +222,8 @@ export async function createHCSServer({
           matches.set(data.room, {
             id,
             owner: user.id,
+            requestId,
+            mode: data.mode,
             referee: ref,
             mapId: data.map,
             epoch: now(),

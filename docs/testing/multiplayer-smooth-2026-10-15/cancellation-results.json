@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "Leaving while loading releases the new party’s Ready button",
+    "A stale completion cannot ready the player or clear a newer loading operation",
+    "Loading feedback is accessible, respects reduced motion and locks map/profile controls",
+    "The replacement load completes and the current two-player party deploys",
+    "A stale match-service response cannot create a match in the replacement party",
+    "Only the new roster enters deployment after reconnecting",
+    "An abandoned snapshot load cannot clear a new snapshot load or apply the old match"
+  ],
+  "errors": [],
+  "limits": [
+    "Local party transport and deferred boundary responses exercise cancellation; remote hosting and native Mac performance are not tested."
+  ]
+}

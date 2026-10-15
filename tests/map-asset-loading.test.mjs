@@ -154,3 +154,9 @@ test("texture loading honors its configured deadline without a competing earlier
   resolve(texture);
   assert.equal(await pending, texture);
 });
+
+test('successful map downloads use HTTP cache, while retrying a corrupt cached asset forces refresh',async()=>{
+ const policies=[];
+ const data=await fetchMapAsset('/map',r=>r.json(),{delayMs:0,fetchImpl:async(url,options)=>{policies.push(options.cache);return new Response(policies.length===1?'broken':'{"ok":true}');}});
+ assert.deepEqual(data,{ok:true});assert.deepEqual(policies,['default','reload']);
+});

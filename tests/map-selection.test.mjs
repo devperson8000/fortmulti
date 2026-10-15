@@ -14,3 +14,12 @@ test('failed facility load leaves the outdoor map usable and permits retry',asyn
  let tries=0;const maps=createMapSelection(()=>{if(++tries===1)throw new Error('offline');},()=>{});
  await assert.rejects(maps.select('facility'),/offline/);assert.equal(maps.id,'island');await maps.select('facility');assert.equal(maps.id,'facility');await assert.rejects(maps.select('bad'),/Unknown map/);
 });
+
+test('preloading the selected facility shares its download without activating it or cancelling a selection',async()=>{
+ let loads=0,resolve;const applied=[],maps=createMapSelection(()=>{loads++;return new Promise(r=>resolve=r);},id=>applied.push(id));
+ assert.equal(typeof maps.preload,'function');
+ const warm=maps.preload('facility'),selection=maps.select('facility');
+ assert.equal(loads,1);assert.equal(maps.id,'island');assert.deepEqual(applied,[]);
+ resolve();await Promise.all([warm,selection]);assert.equal(maps.id,'facility');assert.deepEqual(applied,['facility']);
+ await maps.preload('facility');assert.equal(loads,1);
+});

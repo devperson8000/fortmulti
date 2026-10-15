@@ -55,6 +55,15 @@ async function open(name) {
     const { Connection } = await import("/network.js"),
       { Match } = await import("/simulation.js"),
       { WebGLRenderer } = await import("three");
+    const preload = window.Game.preloadMap;
+    window.Game.preloadMap = async (id) => {
+      try {
+        return await preload(id);
+      } catch (error) {
+        window.__mapWarmError = error.message;
+        throw error;
+      }
+    };
     window.__mapCompiles = 0;
     const compile = WebGLRenderer.prototype.compileAsync;
     WebGLRenderer.prototype.compileAsync = function (...a) {
@@ -128,6 +137,20 @@ try {
       document.getElementById("map-choice").value === "facility" &&
       document.getElementById("mode").value === "town",
   );
+  await host.waitForFunction(() => Boolean(window.__mapWarmError));
+  assert.equal(
+    collisionRequests,
+    3,
+    "selected-map preloading must stop after three failed module requests",
+  );
+  assert.equal(
+    await host.evaluate(() => window.Game.mapId()),
+    "island",
+    "failed preloading must not activate an incomplete map",
+  );
+  checks.push(
+    "Selected-map preloading starts in the lobby, preserves the active map on failure, and remains retriable with Ready Up",
+  );
   const began = Date.now();
   await host.locator("#ready").click();
   await guest.locator("#ready").click();
@@ -146,17 +169,17 @@ try {
   );
   assert.equal(
     collisionRequests,
-    3,
-    "failed module imports make three distinct requests, then stop",
+    6,
+    "the explicit Ready Up retry makes three more fresh requests after the failed preload, then stops",
   );
   await host.waitForTimeout(1000);
-  assert.equal(collisionRequests, 3);
+  assert.equal(collisionRequests, 6);
   assert.equal(await host.evaluate(() => !!window.__match), false);
   assert.equal(await host.evaluate(() => window.Duel.lobby), true);
   assert.equal(await guest.evaluate(() => window.Duel.lobby), true);
   await host.screenshot({ path: out + "/01-recoverable-map-outage.png" });
   checks.push(
-    "A persistent collision-module outage stops after three fresh attempts; deployment waits for both maps",
+    "Both the background preload and explicit Ready Up retry stop after three fresh attempts; deployment waits for both maps",
   );
   // A server failure must not be reported as a map failure. Readiness is retriable.
   blocked = false;

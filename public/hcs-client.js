@@ -1,4 +1,5 @@
 import { HCS, nextEdition } from "./hcs-rules.js";
+import { neutralInput } from "./network-tuning.js";
 import { rememberIdentity } from "./nickname.js";
 import { createHCSCelebration, hcsHeroState } from "./hcs-presentation.js";
 const $ = (id) => document.getElementById(id);
@@ -51,7 +52,8 @@ export function createHCS({
         "This party or one of its players is already in a match. Return to the lobby or wait for the previous match to close.",
       PARTY_DATABASE_UNAVAILABLE:
         "HCS could not read the party database. Check Northflank’s Supabase credentials and apply the latest supabase.sql to that project.",
-      MATCH_CHANGED: "The party has moved to another match. Refresh the lobby before trying again.",
+      MATCH_CHANGED:
+        "The party has moved to another match. Refresh the lobby before trying again.",
       MATCH_CAPACITY: "All match servers are busy. Please try again shortly.",
       MATCH_WORLD_UNAVAILABLE:
         "The server could not prepare the map. Please try again shortly.",
@@ -72,7 +74,7 @@ export function createHCS({
       { status, code, source: "hcs" },
     );
   };
-  const api = async (path, data) => {
+  const api = async (path, data, { timeoutMs = 8000 } = {}) => {
     const auth = session();
     rememberIdentity(auth);
     const response = await fetch(base + path, {
@@ -84,7 +86,16 @@ export function createHCS({
           : {}),
       },
       body: data ? JSON.stringify(data) : undefined,
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(timeoutMs),
+    }).catch((cause) => {
+      if (cause.name === "TimeoutError" || cause.name === "AbortError")
+        throw Object.assign(
+          new Error(
+            "Online service took too long to respond. Please retry Ready Up.",
+          ),
+          { code: "REQUEST_TIMEOUT", source: "hcs", cause },
+        );
+      throw cause;
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
@@ -243,15 +254,25 @@ export function createHCS({
         identity = data.id;
         retry = 0;
         try {
-          await api("/profile", {
-            name: profile().name,
-            color: profile().color,
-          });
+          await api(
+            "/profile",
+            {
+              name: profile().name,
+              color: profile().color,
+            },
+            { timeoutMs: 20000 },
+          );
         } catch (error) {
           if (socket !== connection || closed) return;
           connectionError = error;
           $("hcs-service").textContent = error.message;
           draw();
+          if (
+            error.code === "REQUEST_TIMEOUT" ||
+            error instanceof TypeError ||
+            error.status >= 500
+          )
+            connection.close(1013, "Retrying profile registration");
           return;
         }
         if (socket !== connection || closed) return;
@@ -362,19 +383,29 @@ export function createHCS({
     if (socket?.readyState === 1 && socket.bufferedAmount < 65536)
       socket.send(JSON.stringify(data));
   }
+  const stopHeldInput = () => {
+    if (!closed && (active || official) && !watching && window.Game)
+      send({ type: "input", input: neutralInput(window.Game.input()) });
+  };
+  const visibilityInput = () => {
+    if (document.hidden) stopHeldInput();
+  };
+  window.addEventListener("blur", stopHeldInput);
+  document.addEventListener("visibilitychange", visibilityInput);
   const timer = setInterval(() => {
       countdown();
       connect();
     }, 1000),
     poller = setInterval(poll, 10000),
     inputTimer = setInterval(() => {
-      if (
-        (active || official) &&
-        !watching &&
-        window.Game &&
-        !document.body.classList.contains("menu")
-      )
-        send({ type: "input", input: window.Game.input() });
+      if ((active || official) && !watching && window.Game)
+        send({
+          type: "input",
+          input:
+            document.hidden || document.body.classList.contains("menu")
+              ? neutralInput(window.Game.input())
+              : window.Game.input(),
+        });
     }, 33);
   $("hcs-checkin").onclick = async () => {
     if (checkingIn) return;
@@ -470,7 +501,8 @@ export function createHCS({
     async startParty(room, map, mode) {
       if (!valid) return false;
       declined = null;
-      const deadline = Date.now() + 10000;
+      const deadline = Date.now() + 45000,
+        requestId = crypto.randomUUID();
       // A public /state response does not prove the player stream or profile is ready.
       while (!streamReady || socket?.readyState !== 1) {
         if (closed) throw new Error("HCS connection was closed.");
@@ -484,13 +516,23 @@ export function createHCS({
       }
       for (;;) {
         try {
-          await api("/party-start", { room, map, mode });
+          await api(
+            "/party-start",
+            { room, map, mode, requestId },
+            {
+              timeoutMs: Math.max(1000, Math.min(30000, deadline - Date.now())),
+            },
+          );
           return true;
         } catch (error) {
-          // Only an explicit pre-creation rejection is safe to retry automatically.
+          // A stable request ID also makes a lost creation response safe to retry: the server reuses that match.
           if (
             closed ||
-            error.code !== "PARTY_CONNECTING" ||
+            !(
+              error.code === "PARTY_CONNECTING" ||
+              error.code === "REQUEST_TIMEOUT" ||
+              error instanceof TypeError
+            ) ||
             Date.now() >= deadline
           )
             throw error;
@@ -529,7 +571,12 @@ export function createHCS({
       );
       if (watching || viewed !== identity)
         window.Game.look(p.yaw, p.pitch || 0);
-      window.Game.apply(final ? hcsHeroState(s,final.cinematic) : s, viewed, colors, dt);
+      window.Game.apply(
+        final ? hcsHeroState(s, final.cinematic) : s,
+        viewed,
+        colors,
+        dt,
+      );
       window.Duel.spectating =
         final || watching || viewed !== identity ? viewed : null;
       if (!disconnected)
@@ -562,6 +609,8 @@ export function createHCS({
       clearInterval(timer);
       clearInterval(poller);
       clearInterval(inputTimer);
+      window.removeEventListener("blur", stopHeldInput);
+      document.removeEventListener("visibilitychange", visibilityInput);
       transition++;
       socket?.close();
     },

@@ -1,0 +1,1 @@
+Real two-player Platform 23 startup: 8.25s host profile, delayed guest profile, lost creation-response retry reuses the match, common snapshots, existing-match rejection and expired-session diagnostics passed.

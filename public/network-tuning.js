@@ -43,21 +43,22 @@ const limitVector=(value,limit)=>{const magnitude=vectorLength(value);return mag
 // Advances rendering between authoritative snapshots without changing gameplay physics.
 // Prediction is intentionally short and bounded so packet jitter stays smooth while
 // collisions, damage, landing and final positions remain owned by the host simulation.
-export function advanceMotionTrack(track,target,{dt=.016,state='landed',velocity=null,sampleId,maxPrediction=.12,snapDistance=45}={}){
+export function advanceMotionTrack(track,target,{dt=.016,state='landed',velocity=null,sampleId,sampleTime=null,maxPrediction=.12,snapDistance=45}={}){
  const sample=vector3(target)||[0,0,0],step=clamp(Number(dt)||0,0,.1),explicitVelocity=vector3(velocity);
- if(!track)return {sample,position:sample.slice(),velocity:limitVector(explicitVelocity||[0,0,0],48),age:0,state,sampleId};
+ if(!track)return {sample,position:sample.slice(),velocity:limitVector(explicitVelocity||[0,0,0],48),age:0,sinceSample:0,sampleTime,state,sampleId};
  const priorSample=vector3(track.sample)||sample,priorPosition=vector3(track.position)||priorSample,priorState=track.state||state,sampleDelta=sample.map((number,index)=>number-priorSample[index]),freshPacket=sampleId!==undefined&&sampleId!==track.sampleId,changed=vectorLength(sampleDelta)>1e-5||state!==priorState||freshPacket,teleported=vectorLength(sample.map((number,index)=>number-priorPosition[index]))>snapDistance;
- let age=clamp(Number(track.age)||0,0,maxPrediction),motion=vector3(track.velocity)||[0,0,0],position=priorPosition;
+ let sinceSample=Math.max(0,Number(track.sinceSample??track.age)||0)+step,age=clamp(Number(track.age)||0,0,maxPrediction),motion=vector3(track.velocity)||[0,0,0],position=priorPosition;
  if(changed){
-  const interval=Math.max(.016,age+step);
+  const sourceInterval=Number.isFinite(sampleTime)&&Number.isFinite(track.sampleTime)?Math.abs(sampleTime-track.sampleTime):0;
+  const interval=Math.max(.016,sourceInterval>0&&sourceInterval<=2?sourceInterval:sinceSample);
   if(state!==priorState&&!explicitVelocity)motion=[0,0,0];
   else motion=limitVector(explicitVelocity||sampleDelta.map(number=>number/interval),state==='landed'?14:48);
-  age=0;
+  age=0;sinceSample=0;
  }else age=Math.min(maxPrediction,age+step);
  if(explicitVelocity)motion=limitVector(explicitVelocity,48);
  const predicted=sample.map((number,index)=>number+motion[index]*age);
  if(teleported)position=sample.slice();else position=smoothPosition(position,predicted,step,snapDistance);
- return {sample,position,velocity:teleported&&!explicitVelocity?[0,0,0]:motion,age,state,sampleId};
+ return {sample,position,velocity:teleported&&!explicitVelocity?[0,0,0]:motion,age,sinceSample,sampleTime,state,sampleId};
 }
 
 export function smoothAngle(current,target,dt=.016){
@@ -86,4 +87,9 @@ export function selectViewPlayer(players=[],localId){
  const self=players.find(player=>player.id===localId);
  if(!self)return null;
  return self.hp>0?self:(players.find(player=>player.hp>0&&player.id!==localId)||self);
+}
+
+// Cancel held actions on blur/menu without changing view angles or loadout.
+export function neutralInput(input={}){
+ return {...input,x:0,z:0,fire:false,firePulse:false,jump:false,sprint:false,aim:false,reload:false,interact:false,drop:false,crouch:false,crouchPress:null,crouchRevision:0,reloadRevision:0,interactRevision:0,dropRevision:0,pickupRequest:null,landing:null};
 }

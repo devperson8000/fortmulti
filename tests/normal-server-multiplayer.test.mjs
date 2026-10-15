@@ -44,12 +44,59 @@ for (const count of [2, 8])
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
+              requestId: `start-${count}-${map}-${mode}`,
               room: map,
               map,
               mode,
             }),
           });
           assert.equal(response.status, 200);
+          const created = await response.json();
+          const retry = await fetch(base + "/party-start", {
+            method: "POST",
+            headers: {
+              Authorization: "Bearer " + ids[0],
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              requestId: `start-${count}-${map}-${mode}`,
+              room: map,
+              map,
+              mode,
+            }),
+          });
+          assert.equal(
+            retry.status,
+            200,
+            "retrying the same creation after a lost response must reuse the match",
+          );
+          assert.equal((await retry.json()).id, created.id);
+          for (const change of [
+            { mode: mode === "town" ? "build" : "town" },
+            { map: map === "facility" ? "island" : "facility" },
+            { requestId: "a-different-start" },
+          ]) {
+            const conflict = await fetch(base + "/party-start", {
+              method: "POST",
+              headers: {
+                Authorization: "Bearer " + ids[0],
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                requestId: `start-${count}-${map}-${mode}`,
+                room: map,
+                map,
+                mode,
+                ...change,
+              }),
+            });
+            assert.equal(
+              conflict.status,
+              409,
+              "changed match settings or a new start must not adopt an existing match",
+            );
+            assert.equal((await conflict.json()).code, "PARTY_IN_MATCH");
+          }
           const snapshots = (c) =>
             c.messages.filter(
               (m) =>

@@ -16,6 +16,7 @@ import {networkCadence,accumulateInput,acceptSnapshot,peerExpired} from './netwo
 const $=id=>document.getElementById(id),game=window.Game;
 let conn=null,peers=new Map(),host=false,ready=false,match=null,snapshot=null,matchId='',seenEvent=0,lastHello=0,lastPing=0,pingCursor=0,lastSnap=0,lastInput=0,pendingInput=null,busy=false,voiceWanted=false,muted=false,showMenu=false,snapshotFrame=-1,matchEpoch=0;
 let officialColors=null;
+let warmedMap='',landingRenderKey='';
 let selectedMap='island',startingMatch=false,preparingMap=false,mapGeneration=0,pendingSnapshot=null,loadingSnapshot=false,failedSnapshot=null;
 const validMap=id=>id==='island'||id==='facility';
 const mapName=id=>id==='facility'?'PLATFORM 23':'IRONWOOD ISLAND';
@@ -120,6 +121,7 @@ function updateNetworkChip(){
  const chip=$('net-ping');if(!conn){chip.textContent=social?'ONLINE · PARTY FINDER READY':'OFFLINE';return;}const vals=[...latencies.values()].filter(Number.isFinite);const ping=vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null;chip.textContent=`${ping===null?'—':ping+' ms'} · ${partyProfiles().length} PLAYERS`;
 }
 function refresh(){
+ if(warmedMap!==selectedMap&&!inMatch()){warmedMap=selectedMap;game?.preloadMap?.(selectedMap)?.catch(()=>{});}
  const party=partyProfiles();window.Duel.myColor=profile.color;window.Duel.party=party;window.Duel.peerColors=colors();
  const preparing=preparingMap||startingMatch||loadingSnapshot,locked=inMatch()||preparing||!!failedSnapshot;
  $('hero-name').textContent=profile.name;$('character-preview-name').textContent=profile.name+' · CURRENT OUTFIT';$('hero-state').textContent=ready?'READY':'NOT READY';$('hero-state').classList.toggle('ready',ready);
@@ -177,7 +179,7 @@ async function respondInvite(inv,accept){
  finally{renderInvites();refresh();}
 }
 
-function invalidatePreparation(){mapGeneration++;pendingSnapshot=null;failedSnapshot=null;startingMatch=false;preparingMap=false;loadingSnapshot=false;}
+function invalidatePreparation(){landingRenderKey='';mapGeneration++;pendingSnapshot=null;failedSnapshot=null;startingMatch=false;preparingMap=false;loadingSnapshot=false;}
 const currentPreparation=(connection,generation)=>conn===connection&&generation===mapGeneration;
 function resetMatchState(){officialColors=null;invalidatePreparation();match=null;snapshot=null;matchId='';snapshotFrame=-1;seenEvent=0;lastSnap=0;lastInput=0;pendingInput=null;showMenu=false;$('match-actions').hidden=true;$('round-banner').textContent='';$('deployment-ui').hidden=true;window.Duel.lobby=true;selectLobbyTab('play');document.body.classList.remove('deployment','dropping','deployment-cinematic');document.body.classList.add('in-lobby','menu');$('lobby').hidden=false;game?.clear({resetInventory:true});document.exitPointerLock?.();}
 function leave(reason='Party left. Invite someone online to start another.',quiet=false){if(window.HorizonHCS?.official)window.HorizonHCS.stop();const wasHost=host;conn?.close();conn=null;peers.clear();latencies.clear();host=false;ready=false;resetMatchState();voice.stop();voiceWanted=false;muted=false;refresh();updatePresence();if(!quiet)status(reason);if(wasHost&&!quiet)say('Party','Party closed.',true);}
@@ -202,6 +204,8 @@ function sendSnapshot(state=match?.snapshot()){if(!match||!host||!state)return;c
 const landingPois=()=>selectedMap==='facility'?REACTOR_POIS:ISLAND_POIS;
 const LANDING_ROADS=militaryLayout().roads.map(islandRoadRibbon);
 function renderLandingMap(s,me){
+ const destNow=window.Game?.landingChoice?.()||me?.destination,key=JSON.stringify([selectedMap,$('landing-map').width,$('landing-map').height,destNow,s.players.map(p=>[p.id,playerName(p.id),p.hp>0,p.deploymentState,p.destination])]);
+ if(key===landingRenderKey)return;landingRenderKey=key;
  const LANDING_POIS=landingPois();renderLandingQuickPicks();
  const canvas=$('landing-map'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,pad=30,extent=selectedMap==='facility'?230:584,scaleX=(w-pad*2)/extent,scaleZ=(h-pad*2)/extent,map=(x,z)=>[w/2+x*scaleX,h/2+z*scaleZ];
  ctx.clearRect(0,0,w,h);const bg=ctx.createLinearGradient(0,0,w,h);bg.addColorStop(0,'#122d43');bg.addColorStop(1,'#081927');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
@@ -215,7 +219,7 @@ function renderLandingMap(s,me){
  const picked=dest&&LANDING_POIS.reduce((best,poi)=>Math.hypot(dest.x-poi.x,dest.z-poi.z)<best.distance?{poi,distance:Math.hypot(dest.x-poi.x,dest.z-poi.z)}:best,{poi:LANDING_POIS[0],distance:Infinity});$('landing-destination').textContent=dest?`${picked.poi.name} · ${Math.round(dest.x)}, ${Math.round(dest.z)}`:'SELECT A DROP ZONE';
  $('landing-roster').textContent=s.players.filter(p=>p.hp>0).map(p=>`${playerName(p.id)} · ${p.deploymentState==='pod_ready'||p.deploymentState==='both_ready'?'POD READY':p.destination?'DESTINATION SET':'CHOOSING'}`).join('   /   ');
 }
-function updateDeploymentUI(s,me){const active=s.phase==='deployment';$('deployment-ui').hidden=!active;if(!active)return;const state=me?.deploymentState||'landing_selection',mapOpen=!me?.pod&&['landing_selection','pod_available'].includes(state);$('landing-picker').hidden=!mapOpen;$('pod-status').textContent=me?.pod?`POD ${me.pod} · ${state.replaceAll('_',' ').toUpperCase()}`:me?.destination?'DESTINATION LOCKED IN · WALK TO A LIT POD':'CHOOSE YOUR DROP ZONE';$('pod-hint').textContent=me?.pod?'Stand by. The sequence begins automatically when every player is sealed.':'Move through the ship · Press E at an available pod';renderLandingMap(s,me);}
+function updateDeploymentUI(s,me){const active=s.phase==='deployment';$('deployment-ui').hidden=!active;if(!active)return;const state=me?.deploymentState||'landing_selection',mapOpen=!me?.pod&&['landing_selection','pod_available'].includes(state);$('landing-picker').hidden=!mapOpen;$('pod-status').textContent=me?.pod?`POD ${me.pod} · ${state.replaceAll('_',' ').toUpperCase()}`:me?.destination?'DESTINATION LOCKED IN · WALK TO A LIT POD':'CHOOSE YOUR DROP ZONE';$('pod-hint').textContent=me?.pod?'Stand by. The sequence begins automatically when every player is sealed.':'Move through the ship · Press E at an available pod';if(mapOpen)renderLandingMap(s,me);}
 function roundBanner(s){
  const me=s.players.find(p=>p.id===conn.id);
  if(s.phase==='deployment'){
@@ -259,10 +263,10 @@ async function loadSnapshotMap(){
  finally{if(currentPreparation(connection,generation)){loadingSnapshot=false;refresh();if(pendingSnapshot)loadSnapshotMap();}}
 }
 function applyReadySnapshot(data){
- if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn||!acceptSnapshot(matchId,snapshotFrame,data.id,data.frame,matchEpoch,data.epoch))return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot;matchId=data.id;matchEpoch=data.epoch;snapshotFrame=data.frame;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('deployment',s.phase==='deployment');document.body.classList.toggle('dropping',s.phase==='deployment'&&['pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(s.deployment?.stage));$('lobby').hidden=true;updateDeploymentUI(s,localPlayer);
- if(fresh||window.Duel.round!==s.round){const me=s.players.find(p=>p.id===conn.id);game.look(me?.yaw||0);seenEvent=0;window.Duel.round=s.round;showMenu=false;$('match-actions').hidden=true;updatePresence();}
+ if(!data?.state?.players||data.state.players.length<1||data.state.players.length>8||!conn||!acceptSnapshot(matchId,snapshotFrame,data.id,data.frame,matchEpoch,data.epoch))return;const s=data.state,localPlayer=s.players.find(p=>p.id===conn.id);if(!localPlayer)return;const fresh=matchId!==data.id||!snapshot,phaseChanged=snapshot?.phase!==s.phase,roundChanged=window.Duel.round!==s.round;matchId=data.id;matchEpoch=data.epoch;snapshotFrame=data.frame;snapshot=s;window.Duel.lobby=false;document.body.classList.remove('in-lobby','menu');document.body.classList.toggle('deployment',s.phase==='deployment');document.body.classList.toggle('dropping',s.phase==='deployment'&&['pod_sealing','launching','transition','landed','pod_opening','exiting'].includes(s.deployment?.stage));if(!$('lobby').hidden)$('lobby').hidden=true;updateDeploymentUI(s,localPlayer);
+ if(fresh||roundChanged){const me=s.players.find(p=>p.id===conn.id);game.look(me?.yaw||0);seenEvent=0;window.Duel.round=s.round;showMenu=false;$('match-actions').hidden=true;updatePresence();}
  $('round-banner').textContent=roundBanner(s);for(const e of s.events||[])if(e.id>seenEvent){game.effect(e,conn.id,s);seenEvent=e.id;}
- if(s.phase==='done'){showMenu=true;$('match-actions').hidden=false;$('resume').hidden=true;$('rematch').hidden=false;$('back-lobby').hidden=false;document.exitPointerLock?.();}else if(!showMenu)$('match-actions').hidden=true;refresh();
+ if(s.phase==='done'){showMenu=true;$('match-actions').hidden=false;$('resume').hidden=true;$('rematch').hidden=false;$('back-lobby').hidden=false;document.exitPointerLock?.();}else if(!showMenu)$('match-actions').hidden=true;if(fresh||phaseChanged||roundChanged)refresh();
 }
 function removePeer(id,reason='left the party'){
  const p=peers.get(id);if(!p)return;peers.delete(id);latencies.delete(id);voice.remove(id);

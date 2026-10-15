@@ -40,10 +40,10 @@ export function fetchMapAsset(
   { fetchImpl = globalThis.fetch, timeoutMs = 15000, ...options } = {},
 ) {
   return retryMapAsset(
-    async () => {
+    async (attempt) => {
       const response = await fetchImpl(url, {
         signal: AbortSignal.timeout(timeoutMs),
-        cache: "no-cache",
+        cache: attempt === 0 ? "default" : "reload",
       });
       if (!response.ok) {
         const error = new Error(`Map asset ${url}: HTTP ${response.status}`);

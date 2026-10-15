@@ -134,3 +134,25 @@ test('silent peers expire after a bounded verification grace and explicit activi
  assert.equal(tuning.peerExpired(peer,25003,33),false);
  assert.equal(tuning.peerExpired(peer,44004,33),false);
 });
+
+test('motion uses authoritative sample time rather than a capped prediction age after packet jitter',()=>{
+ let track=tuning.advanceMotionTrack(null,[0,0,0],{dt:.016,state:'landed',sampleId:1,sampleTime:0});
+ for(let i=0;i<30;i++)track=tuning.advanceMotionTrack(track,[0,0,0],{dt:.016,state:'landed',sampleId:1,sampleTime:0});
+ track=tuning.advanceMotionTrack(track,[1.8,0,0],{dt:.016,state:'landed',sampleId:2,sampleTime:.3});
+ assert.ok(Math.abs(track.velocity[0]-6)<1e-6,'a late packet must not turn a 6 m/s walk into a 14 m/s lunge');
+});
+test('motion keeps packet interval separately from the bounded prediction horizon',()=>{
+ let track=tuning.advanceMotionTrack(null,[0,0,0],{dt:.016,state:'landed',sampleId:1});
+ for(let i=0;i<29;i++)track=tuning.advanceMotionTrack(track,[0,0,0],{dt:.016,state:'landed',sampleId:1});
+ track=tuning.advanceMotionTrack(track,[2.88,0,0],{dt:.016,state:'landed',sampleId:2});
+ assert.ok(Math.abs(track.velocity[0]-6)<1e-6);
+});
+
+test('unfocused input stops movement and actions without resetting look or inventory selection',()=>{
+ assert.equal(typeof tuning.neutralInput,'function');
+ const input={x:1,z:1,yaw:1.2,pitch:.3,slot:2,fire:true,jump:true,sprint:true,aim:true,reload:true,interact:true,drop:true,crouchRevision:3,reloadRevision:4,interactRevision:2,dropRevision:1,pickupRequest:{id:'gun'},landing:{x:3,z:4}};
+ const neutral=tuning.neutralInput(input);
+ assert.equal(neutral.x,0);assert.equal(neutral.z,0);assert.equal(neutral.yaw,1.2);assert.equal(neutral.slot,2);
+ for(const key of ['fire','jump','sprint','aim','reload','interact','drop'])assert.equal(neutral[key],false);
+ assert.equal(neutral.crouchRevision,0);assert.equal(neutral.pickupRequest,null);assert.equal(input.x,1);
+});

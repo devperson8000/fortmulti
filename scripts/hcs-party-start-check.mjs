@@ -18,7 +18,8 @@ const browser = await chromium.launch({
   args: ["--no-sandbox"],
 });
 const errors = [],
-  starts = [];
+  starts = [],
+  startKeys = [];
 const ids = [
   "hcs-countdown",
   "hcs-promo-time",
@@ -62,7 +63,11 @@ async function open(id, holdProfile = false) {
     await route.continue();
   });
   page.on("request", (request) => {
-    if (request.url() === base + "/party-start") starts.push(id);
+    if (request.url() === base + "/party-start") {
+      starts.push(id);
+      const body = request.postDataJSON();
+      if (body.room === "room") startKeys.push(body.requestId);
+    }
   });
   await page.goto(site + "/hcs-party-lab");
   await page.evaluate(
@@ -103,6 +108,16 @@ const until = async (fn) => {
 };
 try {
   const host = await open("host", true);
+  let lostResponse = false;
+  await host.page.route(base + "/party-start", async (route) => {
+    const response = await route.fetch();
+    if (!lostResponse && response.status() === 200) {
+      lostResponse = true;
+      await route.abort("failed");
+      return;
+    }
+    await route.fulfill({ response });
+  });
   await until(host.entered);
   await host.page.evaluate(() => {
     window.startResult = null;
@@ -111,7 +126,12 @@ try {
       (error) => (window.startResult = { error: error.message }),
     );
   });
-  await host.page.waitForTimeout(150);
+  await host.page.waitForTimeout(8250);
+  assert.equal(
+    await host.page.evaluate(() => window.startResult),
+    null,
+    "a cold profile registration must not hit the old eight-second signal deadline",
+  );
   assert.equal(
     starts.length,
     0,
@@ -146,6 +166,14 @@ try {
         snapshot.state.players.length === 2 && snapshot.mapId === "facility",
     ),
   );
+  assert.equal(lostResponse, true);
+  assert.ok(startKeys.length >= 2);
+  assert.equal(
+    new Set(startKeys).size,
+    1,
+    "the lost creation response must retry using the same idempotency key",
+  );
+  await host.page.unroute(base + "/party-start");
   const existing = await host.page.evaluate(async () => {
     try {
       await window.client.startParty("room", "facility", "town");
@@ -214,7 +242,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    "Real two-player Platform 23 startup: delayed host profile, delayed guest profile, common snapshots, existing-match rejection and expired-session diagnostics passed.",
+    "Real two-player Platform 23 startup: 8.25s host profile, delayed guest profile, lost creation-response retry reuses the match, common snapshots, existing-match rejection and expired-session diagnostics passed.",
   );
 } finally {
   await browser.close();

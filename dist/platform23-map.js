@@ -19,7 +19,11 @@ export async function loadPlatformMap(){if(!loading)loading=retryMapAsset(()=>{
 export function platformSupportHeight(x,z,footY,maxRise=.38){let best=-50;for(const entry of supportCells.get(key(x,z))||[]){const y=entry.triangle?triangleHeight(entry.triangle,x,z):nativeSupportHeight(entry,x,z,footY,maxRise);if(y!==null&&y<=footY+maxRise+.001&&y>best)best=y;}return best;}
 export function platformHeight(x,z){return platformSupportHeight(x,z,4.05,0);}
 export function isPlatformLandingAllowed(x,z){return PLATFORM_POIS.some(p=>Math.hypot(x-p.x,z-p.z)<=p.radius);}
-function blockers(box){return nativeColliders.filter(b=>b.type==='solid'&&boundsIntersectCollider(box,b));}
+function blockers(box){
+ const candidates=new Set();
+ for(let x=Math.floor(box.min[0]/size);x<=Math.floor(box.max[0]/size);x++)for(let z=Math.floor(box.min[2]/size);z<=Math.floor(box.max[2]/size);z++)for(const entry of supportCells.get(`${x},${z}`)||[])if(entry.type==='solid')candidates.add(entry);
+ return [...candidates].filter(b=>boundsIntersectCollider(box,b));
+}
 export function platformLandingClear(x,z,y,radius=PLATFORM_CINEMATIC_RADIUS){if(blockers({min:[x-radius-.1,y+.035,z-radius-.1],max:[x+radius+.1,y+4.4,z+radius+.1]}).length)return false;for(let i=0;i<16;i++){const a=i*Math.PI/8,h=platformSupportHeight(x+Math.cos(a)*2.9,z+Math.sin(a)*2.9,y,.05);if(Math.abs(h-y)>.3)return false;}return true;}
 export function platformLayout(){if(!data)throw Error('Platform 23 collision data must finish loading before activation.');if(layout)return layout;
  const obstacles=nativeColliders.map(b=>({...b,surface:'metal',supportOnlyNative:true})),chests=[],candidates=[];

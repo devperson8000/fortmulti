@@ -1,0 +1,314 @@
+{
+  "baseline": "9ca380f",
+  "before": {
+    "runsMs": [
+      883,
+      840,
+      846
+    ],
+    "medianMs": 846,
+    "obstacles": 18693,
+    "chests": [
+      {
+        "x": -84,
+        "y": -0.505,
+        "z": -48,
+        "id": "chest:platform23:0"
+      },
+      {
+        "x": 84,
+        "y": -0.505,
+        "z": 48,
+        "id": "chest:platform23:1"
+      },
+      {
+        "x": -28,
+        "y": -0.505,
+        "z": 48,
+        "id": "chest:platform23:2"
+      },
+      {
+        "x": 28,
+        "y": -0.505,
+        "z": -48,
+        "id": "chest:platform23:3"
+      },
+      {
+        "x": -84,
+        "y": -0.505,
+        "z": 16,
+        "id": "chest:platform23:4"
+      },
+      {
+        "x": 28,
+        "y": 1.5,
+        "z": 16,
+        "id": "chest:platform23:5"
+      },
+      {
+        "x": 84,
+        "y": -0.505,
+        "z": -16,
+        "id": "chest:platform23:6"
+      },
+      {
+        "x": -28,
+        "y": 1.5000000000000002,
+        "z": -20,
+        "id": "chest:platform23:7"
+      },
+      {
+        "x": -48,
+        "y": -0.505,
+        "z": 12,
+        "id": "chest:platform23:8"
+      },
+      {
+        "x": -8,
+        "y": 1.4849999999999999,
+        "z": 12,
+        "id": "chest:platform23:9"
+      },
+      {
+        "x": -64,
+        "y": -0.505,
+        "z": 48,
+        "id": "chest:platform23:10"
+      },
+      {
+        "x": 48,
+        "y": -0.505,
+        "z": 48,
+        "id": "chest:platform23:11"
+      },
+      {
+        "x": 64,
+        "y": -0.505,
+        "z": -48,
+        "id": "chest:platform23:12"
+      },
+      {
+        "x": 12,
+        "y": -0.25,
+        "z": 48,
+        "id": "chest:platform23:13"
+      },
+      {
+        "x": 44,
+        "y": -0.505,
+        "z": -16,
+        "id": "chest:platform23:14"
+      },
+      {
+        "x": 64,
+        "y": 4,
+        "z": 16,
+        "id": "chest:platform23:15"
+      },
+      {
+        "x": -68,
+        "y": -0.505,
+        "z": -16,
+        "id": "chest:platform23:16"
+      },
+      {
+        "x": -48,
+        "y": -0.505,
+        "z": -48,
+        "id": "chest:platform23:17"
+      },
+      {
+        "x": -12,
+        "y": -0.505,
+        "z": -48,
+        "id": "chest:platform23:18"
+      },
+      {
+        "x": 8,
+        "y": -0.125,
+        "z": -16,
+        "id": "chest:platform23:19"
+      },
+      {
+        "x": -28,
+        "y": 1.4849999999999999,
+        "z": 24,
+        "id": "chest:platform23:20"
+      },
+      {
+        "x": -8,
+        "y": 0.2910246896670344,
+        "z": 36,
+        "id": "chest:platform23:21"
+      },
+      {
+        "x": -84,
+        "y": -0.505,
+        "z": 40,
+        "id": "chest:platform23:22"
+      },
+      {
+        "x": 8,
+        "y": -0.505,
+        "z": -40,
+        "id": "chest:platform23:23"
+      }
+    ]
+  },
+  "after": {
+    "runsMs": [
+      461,
+      432,
+      400
+    ],
+    "medianMs": 432,
+    "obstacles": 18693,
+    "chests": [
+      {
+        "x": -84,
+        "y": -0.505,
+        "z": -48,
+        "id": "chest:platform23:0"
+      },
+      {
+        "x": 84,
+        "y": -0.505,
+        "z": 48,
+        "id": "chest:platform23:1"
+      },
+      {
+        "x": -28,
+        "y": -0.505,
+        "z": 48,
+        "id": "chest:platform23:2"
+      },
+      {
+        "x": 28,
+        "y": -0.505,
+        "z": -48,
+        "id": "chest:platform23:3"
+      },
+      {
+        "x": -84,
+        "y": -0.505,
+        "z": 16,
+        "id": "chest:platform23:4"
+      },
+      {
+        "x": 28,
+        "y": 1.5,
+        "z": 16,
+        "id": "chest:platform23:5"
+      },
+      {
+        "x": 84,
+        "y": -0.505,
+        "z": -16,
+        "id": "chest:platform23:6"
+      },
+      {
+        "x": -28,
+        "y": 1.5000000000000002,
+        "z": -20,
+        "id": "chest:platform23:7"
+      },
+      {
+        "x": -48,
+        "y": -0.505,
+        "z": 12,
+        "id": "chest:platform23:8"
+      },
+      {
+        "x": -8,
+        "y": 1.4849999999999999,
+        "z": 12,
+        "id": "chest:platform23:9"
+      },
+      {
+        "x": -64,
+        "y": -0.505,
+        "z": 48,
+        "id": "chest:platform23:10"
+      },
+      {
+        "x": 48,
+        "y": -0.505,
+        "z": 48,
+        "id": "chest:platform23:11"
+      },
+      {
+        "x": 64,
+        "y": -0.505,
+        "z": -48,
+        "id": "chest:platform23:12"
+      },
+      {
+        "x": 12,
+        "y": -0.25,
+        "z": 48,
+        "id": "chest:platform23:13"
+      },
+      {
+        "x": 44,
+        "y": -0.505,
+        "z": -16,
+        "id": "chest:platform23:14"
+      },
+      {
+        "x": 64,
+        "y": 4,
+        "z": 16,
+        "id": "chest:platform23:15"
+      },
+      {
+        "x": -68,
+        "y": -0.505,
+        "z": -16,
+        "id": "chest:platform23:16"
+      },
+      {
+        "x": -48,
+        "y": -0.505,
+        "z": -48,
+        "id": "chest:platform23:17"
+      },
+      {
+        "x": -12,
+        "y": -0.505,
+        "z": -48,
+        "id": "chest:platform23:18"
+      },
+      {
+        "x": 8,
+        "y": -0.125,
+        "z": -16,
+        "id": "chest:platform23:19"
+      },
+      {
+        "x": -28,
+        "y": 1.4849999999999999,
+        "z": 24,
+        "id": "chest:platform23:20"
+      },
+      {
+        "x": -8,
+        "y": 0.2910246896670344,
+        "z": 36,
+        "id": "chest:platform23:21"
+      },
+      {
+        "x": -84,
+        "y": -0.505,
+        "z": 40,
+        "id": "chest:platform23:22"
+      },
+      {
+        "x": 8,
+        "y": -0.505,
+        "z": -40,
+        "id": "chest:platform23:23"
+      }
+    ]
+  },
+  "limits": "Three fresh local Node processes per revision. Includes collision import, spatial indexing and chest layout; excludes browser download, shaders, production server and internet latency."
+}

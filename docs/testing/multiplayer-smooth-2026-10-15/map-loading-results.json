@@ -1,0 +1,40 @@
+{
+  "checks": [
+    "Selected-map preloading starts in the lobby, preserves the active map on failure, and remains retriable with Ready Up",
+    "Both the background preload and explicit Ready Up retry stop after three fresh attempts; deployment waits for both maps",
+    "A recovered module loads without refreshing Chrome; multiplayer service errors are identified separately",
+    "Two real party pages enter Platform 23 Town Royale after automatic manifest, geometry and texture recovery",
+    "Ready-up again starts the next match without downloading or compiling the map again",
+    "Both players render the loaded native map and weapons through real party snapshots",
+    "An exhausted snapshot load stops retry storms and Retry Map rejoins the latest match without recreating the party"
+  ],
+  "errors": [],
+  "collisionRequests": 7,
+  "manifestRequests": 2,
+  "geometryRequests": 2,
+  "textureRequests": 2,
+  "totalAssetRequests": 145,
+  "elapsedSeconds": 28.064,
+  "render": [
+    {
+      "id": "facility",
+      "render": {
+        "calls": 38,
+        "colorCalls": 38,
+        "triangles": 6485
+      }
+    },
+    {
+      "id": "facility",
+      "render": {
+        "calls": 9,
+        "colorCalls": 9,
+        "triangles": 735
+      }
+    }
+  ],
+  "limits": [
+    "Injected local HTTP outages exercise recovery; external Vercel/Northflank access is blocked in this cloud workspace.",
+    "Chromium uses software WebGL here; this is not a Mac M3 performance benchmark."
+  ]
+}

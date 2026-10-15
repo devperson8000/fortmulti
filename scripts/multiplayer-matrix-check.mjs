@@ -7,7 +7,7 @@ import { safeLandingPoint } from "../public/deployment-sequence.js";
 const site = process.env.GAME_TEST_URL || "http://127.0.0.1:4173";
 const out =
   process.env.GAME_ARTIFACTS ||
-  "/workspace/fortmulti-artifacts/multiplayer-2026-10-13";
+  "/workspace/fortmulti-artifacts/multiplayer-smooth-2026-10-15";
 await mkdir(out, { recursive: true });
 const started = [],
   nativeBegin = Match.prototype.beginDeployment;
@@ -39,7 +39,8 @@ const context = await browser.newContext({
     viewport: { width: 960, height: 540 },
   }),
   errors = [],
-  checks = [];
+  checks = [],
+  measurements = [];
 await context.grantPermissions(["local-network-access"], { origin: site });
 await context.route("https://multiplayer-test.supabase.co/**", (r) =>
   r.fulfill({ json: [] }),
@@ -61,6 +62,28 @@ async function open(id) {
     ({ id, backend }) => {
       const NativeSocket = window.WebSocket;
       window.WebSocket = class extends NativeSocket {
+        set onmessage(handler) {
+          super.onmessage = (event) => {
+            let snapshot = false;
+            try {
+              snapshot = JSON.parse(event.data).type === "snapshot";
+            } catch {}
+            if (!snapshot) {
+              handler(event);
+              return;
+            }
+            // Preserve TCP order while delivering snapshots in jittered batches.
+            const delay =
+              (this.__packetCount = (this.__packetCount || 0) + 1) % 8 === 0
+                ? 220
+                : 60;
+            this.__due = Math.max(this.__due || 0, performance.now() + delay);
+            setTimeout(
+              () => handler(event),
+              Math.max(0, this.__due - performance.now()),
+            );
+          };
+        }
         constructor(...args) {
           super(...args);
           if (String(args[0]).endsWith("/stream")) window.hcsSocket = this;
@@ -137,6 +160,7 @@ const until = async (fn) => {
   }
 };
 async function ready() {
+  const began = performance.now();
   await host.locator("#ready").click();
   await guest.locator("#ready").click();
   await Promise.all(
@@ -148,6 +172,7 @@ async function ready() {
       ),
     ),
   );
+  return Math.round(performance.now() - began);
 }
 async function lobby(from = host) {
   await from.evaluate(() => window.Duel.menu());
@@ -237,7 +262,7 @@ try {
           document.getElementById("mode").value === mode,
         { map, mode },
       );
-      await ready();
+      const prepareMs = await ready();
       const match = started.at(-1);
       assert.equal(match.mode, mode);
       assert.equal(await guest.evaluate(() => window.Game.mapId()), map);
@@ -274,9 +299,30 @@ try {
         ];
       }
       await guest.waitForFunction(() => window.Game.pose()?.air === "landed");
+      await guest.keyboard.press("1");
+      await until(
+        () => match.players.find((p) => p.id === "guest").weapon === "ar",
+      );
+      await guest.evaluate(() => {
+        window.__motionTrace = [];
+        window.__traceMotion = true;
+        const sample = () => {
+          if (!window.__traceMotion) return;
+          const p = window.Game.pose();
+          window.__motionTrace.push({
+            at: performance.now(),
+            p: p.p.slice(),
+            id: p.id,
+            hp: p.hp,
+          });
+          requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+      });
       await guest.keyboard.down("w");
       await guest.keyboard.down("ShiftLeft");
       await until(() => match.players.find((p) => p.id === "guest").sprinting);
+      await guest.waitForTimeout(2000);
       await guest.evaluate(() => {
         window.previousHcsSocket = window.hcsSocket;
         window.hcsSocket.close();
@@ -292,9 +338,88 @@ try {
         100,
         "reconnecting must not eliminate or replace the competitor",
       );
+      await guest.waitForTimeout(1500);
       await guest.keyboard.up("w");
       await guest.keyboard.up("ShiftLeft");
       await until(() => !match.players.find((p) => p.id === "guest").sprinting);
+      await guest.waitForTimeout(400);
+      const measurement = await guest.evaluate(
+        async ({ map, mode }) => {
+          window.__traceMotion = false;
+          const trace = window.__motionTrace || [],
+            motionJumps = trace
+              .slice(1)
+              .filter(
+                (p, i) =>
+                  p.id === trace[i].id &&
+                  p.hp > 0 &&
+                  Math.hypot(...p.p.map((x, k) => x - trace[i].p[k])) >
+                    (14 * (p.at - trace[i].at)) / 1000 + 0.5,
+              );
+          let lobbyMutations = 0,
+            hudMutations = 0;
+          const lobby = new MutationObserver(
+              (m) => (lobbyMutations += m.length),
+            ),
+            hud = new MutationObserver((m) => (hudMutations += m.length));
+          lobby.observe(document.getElementById("lobby"), {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            characterData: true,
+          });
+          hud.observe(document.getElementById("inventory"), {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            characterData: true,
+          });
+          await new Promise((r) => setTimeout(r, 700));
+          lobby.disconnect();
+          hud.disconnect();
+          return {
+            map,
+            mode,
+            motionSamples: trace.length,
+            motionJumps: motionJumps.length,
+            lobbyMutations,
+            hudMutations,
+            canvas: window.Game.mapStatus(),
+          };
+        },
+        { map, mode },
+      );
+      assert.equal(
+        measurement.motionJumps,
+        0,
+        "jittered authoritative snapshots must not cause uncommanded position jumps",
+      );
+      assert.ok(
+        measurement.lobbyMutations < 30,
+        "hidden lobby must not rebuild on every snapshot",
+      );
+      measurements.push({ ...measurement, prepareMs });
+      // Losing browser focus must cancel held movement/fire immediately, not
+      // let the referee keep the last input until its stale-input deadline.
+      await guest.keyboard.down("w");
+      await guest.mouse.move(480, 270);
+      await guest.mouse.down();
+      await until(() => {
+        const p = match.players.find((p) => p.id === "guest");
+        return p.input.z === 1 && p.input.fire;
+      });
+      const blurredAt = performance.now();
+      await guest.evaluate(() => window.dispatchEvent(new Event("blur")));
+      await until(() => {
+        const p = match.players.find((p) => p.id === "guest");
+        return p.input.z === 0 && !p.input.fire;
+      });
+      assert.ok(
+        performance.now() - blurredAt < 1000,
+        "blur must clear held input before the stale-input deadline",
+      );
+      await guest.mouse.up();
+      await guest.keyboard.up("w");
       await guest.keyboard.press("Tab");
       await guest.locator("#inventory-menu").waitFor({ state: "visible" });
       const a = await guest
@@ -324,7 +449,7 @@ try {
         "early lobby returns must not award qualification stats",
       );
       checks.push(
-        `${map}/${mode}: actual map, server gameplay, stream reconnect, sprint release, inventory drag, ${mode === "town" ? "leader" : "guest"} lobby return and rematch`,
+        `${map}/${mode}: actual map, server gameplay, 60–220ms snapshot jitter, stream reconnect, sprint release, blur cancels movement/fire, inventory drag, ${mode === "town" ? "leader" : "guest"} lobby return and rematch`,
       );
     }
   await ready();
@@ -372,8 +497,10 @@ try {
       {
         checks,
         errors,
+        measurements,
         limits: [
-          "Real two-browser rendering and referee WebSockets.",
+          "Real two-browser rendering and referee WebSockets; snapshot delivery delayed by 60–220ms in ordered batches.",
+          "Ready-to-ship timings include browser automation and local rendering; they are not production load-time guarantees.",
           "Supabase presence and party transport are local fixtures; production credentials and internet latency are not tested.",
           "Gameplay positions are set by the test after verifying the ship stage; native pod entry has a separate regression test.",
           "Software rendering is not a Mac M3 performance benchmark.",

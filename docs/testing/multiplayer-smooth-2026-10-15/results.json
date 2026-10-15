@@ -1,0 +1,90 @@
+{
+  "checks": [
+    "Rejected-session reason reaches the actual lobby",
+    "Old-mode ready messages are rejected",
+    "facility/town: actual map, server gameplay, 60–220ms snapshot jitter, stream reconnect, sprint release, blur cancels movement/fire, inventory drag, leader lobby return and rematch",
+    "facility/build: actual map, server gameplay, 60–220ms snapshot jitter, stream reconnect, sprint release, blur cancels movement/fire, inventory drag, guest lobby return and rematch",
+    "island/town: actual map, server gameplay, 60–220ms snapshot jitter, stream reconnect, sprint release, blur cancels movement/fire, inventory drag, leader lobby return and rematch",
+    "island/build: actual map, server gameplay, 60–220ms snapshot jitter, stream reconnect, sprint release, blur cancels movement/fire, inventory drag, guest lobby return and rematch",
+    "Forfeit closes both the party and HCS match client",
+    "Leader leaving closes the party on both clients; former players can rejoin and start again"
+  ],
+  "errors": [],
+  "measurements": [
+    {
+      "map": "facility",
+      "mode": "town",
+      "motionSamples": 61,
+      "motionJumps": 0,
+      "lobbyMutations": 4,
+      "hudMutations": 16,
+      "canvas": {
+        "id": "facility",
+        "render": {
+          "calls": 6,
+          "colorCalls": 6,
+          "triangles": 1182
+        }
+      },
+      "prepareMs": 11672
+    },
+    {
+      "map": "facility",
+      "mode": "build",
+      "motionSamples": 52,
+      "motionJumps": 0,
+      "lobbyMutations": 4,
+      "hudMutations": 22,
+      "canvas": {
+        "id": "facility",
+        "render": {
+          "calls": 6,
+          "colorCalls": 6,
+          "triangles": 1182
+        }
+      },
+      "prepareMs": 3930
+    },
+    {
+      "map": "island",
+      "mode": "town",
+      "motionSamples": 146,
+      "motionJumps": 0,
+      "lobbyMutations": 0,
+      "hudMutations": 42,
+      "canvas": {
+        "id": "island",
+        "render": {
+          "calls": 6,
+          "colorCalls": 6,
+          "triangles": 1182
+        }
+      },
+      "prepareMs": 2341
+    },
+    {
+      "map": "island",
+      "mode": "build",
+      "motionSamples": 143,
+      "motionJumps": 0,
+      "lobbyMutations": 14,
+      "hudMutations": 42,
+      "canvas": {
+        "id": "island",
+        "render": {
+          "calls": 6,
+          "colorCalls": 6,
+          "triangles": 1182
+        }
+      },
+      "prepareMs": 2936
+    }
+  ],
+  "limits": [
+    "Real two-browser rendering and referee WebSockets; snapshot delivery delayed by 60–220ms in ordered batches.",
+    "Ready-to-ship timings include browser automation and local rendering; they are not production load-time guarantees.",
+    "Supabase presence and party transport are local fixtures; production credentials and internet latency are not tested.",
+    "Gameplay positions are set by the test after verifying the ship stage; native pod entry has a separate regression test.",
+    "Software rendering is not a Mac M3 performance benchmark."
+  ]
+}
