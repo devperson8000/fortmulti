@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
+import { existsSync } from "node:fs";
 const browser = await chromium.launch({
-  executablePath: "/usr/bin/chromium",
+  executablePath: process.env.CHROMIUM_EXECUTABLE || (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined),
   headless: true,
   args: ["--no-sandbox"],
 });
@@ -10,10 +11,10 @@ try {
   await page.route("**/hcs-client-lab", (route) =>
     route.fulfill({
       contentType: "text/html",
-      body: `<body>${["hcs-countdown", "hcs-promo-time", "hcs-date", "hcs-promo", "hcs-empty", "hcs-personal", "hcs-invite-notice", "hcs-checkin", "hcs-watch", "hcs-champion", "hcs-service", "hcs-broadcast", "hcs-broadcast-label", "hcs-watch-stats", "hcs-return", "lobby", "net-ping"].map((id) => '<div id="' + id + '"></div>').join("")}<table><tbody id="hcs-ranks"></tbody></table><select id="hcs-view-player"></select></body>`,
+      body: `<body>${["hcs-countdown", "hcs-promo-time", "hcs-date", "hcs-promo", "hcs-empty", "hcs-personal", "hcs-invite-notice", "hcs-checkin", "hcs-retry-map", "hcs-watch", "hcs-champion", "hcs-service", "hcs-broadcast", "hcs-broadcast-label", "hcs-watch-stats", "hcs-return", "lobby", "net-ping"].map((id) => '<div id="' + id + '"></div>').join("")}<table><tbody id="hcs-ranks"></tbody></table><select id="hcs-view-player"></select></body>`,
     }),
   );
-  await page.goto("http://127.0.0.1:4173/hcs-client-lab");
+  await page.goto((process.env.GAME_TEST_URL || "http://127.0.0.1:4173") + "/hcs-client-lab");
   await page.evaluate(async () => {
     window.fetch = async () => ({
       ok: true,
@@ -43,7 +44,7 @@ try {
       setMap: async () => {},
       clear() {},
       look() {},
-      apply() {},
+      apply(state) { window.__appliedState = state; },
       effect() {},
       input: () => ({}),
     };
@@ -56,6 +57,7 @@ try {
       leaveParty: async () => {},
       returnLobby() {},
       applyOfficial() {},
+      onMapError() { window.__mapErrorShown = true; },
     });
     window.__socket.onmessage({
       data: JSON.stringify({ type: "authenticated", id: "viewer" }),
@@ -233,9 +235,92 @@ try {
     false,
     "leaving during map loading cannot reopen the final",
   );
-  console.log(
-    "HCS selector, elimination, reconnect, cancelled load and input stability passed",
-  );
+  const failed = await page.evaluate(async () => {
+    window.Game.setMap = async () => { throw new Error('Temporary asset failure'); };
+    let unhandled = null;
+    try { await window.__socket.onmessage({data: JSON.stringify({
+      ...window.__snapshot, matchId: 'retry-final', spectator: false,
+    })}); } catch (error) { unhandled = error.message; }
+    return {unhandled, active: window.__client.active, shown: Boolean(window.__mapErrorShown),
+      message: document.getElementById('hcs-service').textContent,
+      retry: !document.getElementById('hcs-retry-map').hidden};
+  });
+  assert.equal(failed.unhandled, null, 'map failure must not reject the socket handler');
+  assert.equal(failed.active, false);
+  assert.equal(failed.shown, true, 'map error must be presented in the lobby');
+  assert.match(failed.message, /retry map/i);
+  assert.equal(failed.retry, true);
+  await page.evaluate(async () => {
+    window.__mapRetries = 0;
+    window.Game.setMap = async () => { window.__mapRetries++; };
+    window.__snapshot.state.players[0].hp = 78;
+    await window.__socket.onmessage({data: JSON.stringify({
+      ...window.__snapshot, matchId: 'retry-final', spectator: false,
+    })});
+  });
+  assert.equal(await page.evaluate(() => window.__mapRetries), 0,
+    'new snapshots must not hammer the failed map loader');
+  await page.locator('#hcs-retry-map').click();
+  await page.waitForFunction(() => window.__client.active);
+  assert.equal(await page.evaluate(() => window.__mapRetries), 1);
+  assert.equal(await page.locator('#hcs-retry-map').isHidden(), true);
+  assert.equal(await page.locator('#lobby').isHidden(), true);
+  const idleMutations = await page.evaluate(async () => {
+    window.__client.render(.016);
+    let mutations = 0;
+    const observer = new MutationObserver(entries => mutations += entries.length);
+    observer.observe(document.getElementById('hcs-broadcast-label'), {childList: true});
+    for (let n = 0; n < 60; n++) window.__client.render(.016);
+    await Promise.resolve(); observer.disconnect(); return mutations;
+  });
+  assert.equal(idleMutations, 0, 'unchanged broadcast labels must not be rebuilt each render');
+  assert.equal(await page.evaluate(() => window.__appliedState.players[0].hp), 78,
+    'retry must use the newest snapshot received during the failed load');
+  const selectedView = await page.evaluate(async () => {
+    window.__client.stop();
+    window.__snapshot.state.players.forEach(p => p.hp = 100);
+    for (const matchId of ['view-final-one', 'view-final-two']) {
+      document.getElementById('hcs-watch').onclick();
+      await window.__socket.onmessage({data: JSON.stringify({
+        ...window.__snapshot, matchId, spectator: true,
+      })});
+      if (matchId === 'view-final-one') {
+        document.getElementById('hcs-view-player').value = 'b';
+        document.getElementById('hcs-view-player').onchange();
+        window.__client.stop();
+      }
+    }
+    window.__client.render(.016);
+    return {selected: document.getElementById('hcs-view-player').value, viewed: window.Duel.spectating};
+  });
+  assert.equal(selectedView.selected, selectedView.viewed,
+    'rejoining a broadcast must align the selected operator and actual camera');
+  for (const pending of [false, true]) {
+    const replacement = await page.evaluate(async pending => {
+      window.__client.stop();
+      window.Game.setMap = async () => {throw new Error('Asset unavailable');};
+      await window.__socket.onmessage({data: JSON.stringify({
+        ...window.__snapshot, matchId: 'replaced-final', spectator: false,
+      })});
+      let retry, rejectLoad;
+      if (pending) {
+        window.Game.setMap = () => new Promise((resolve, reject) => {rejectLoad = reject;});
+        retry = document.getElementById('hcs-retry-map').onclick();
+        await Promise.resolve(); await Promise.resolve();
+      }
+      await window.__socket.onmessage({data: JSON.stringify({
+        ...window.__snapshot, matchId: pending ? 'new-ordinary-match' : 'ordinary-match', spectator: false, tournament: false,
+      })});
+      if (pending) { rejectLoad(new Error('Stale asset failure')); await retry; }
+      return {official: window.__client.official,
+        retryHidden: document.getElementById('hcs-retry-map').hidden,
+        message: document.getElementById('hcs-service').textContent};
+    }, pending);
+    assert.equal(replacement.official, true);
+    assert.equal(replacement.retryHidden, true, 'ordinary match must clear settled and late final map failures');
+    assert.doesNotMatch(replacement.message, /could not load|retry map/i);
+  }
+  console.log('HCS selector, elimination, reconnect, cancelled load, retry recovery, idle HUD and input stability passed');
 } finally {
   await browser.close();
 }

@@ -126,7 +126,7 @@ function refresh(){
  const preparing=preparingMap||startingMatch||loadingSnapshot,locked=inMatch()||preparing||!!failedSnapshot;
  $('hero-name').textContent=profile.name;$('character-preview-name').textContent=profile.name+' · CURRENT OUTFIT';$('hero-state').textContent=ready?'READY':'NOT READY';$('hero-state').classList.toggle('ready',ready);
  $('ready').textContent=preparing?'PREPARING MATCH…':failedSnapshot?'RETRY MAP':ready?'CANCEL READY':'READY UP';$('ready').disabled=!conn||party.length<2||!game||!!match||preparing;$('ready').classList.toggle('is-preparing',preparing);$('ready').setAttribute('aria-busy',String(preparing));
- $('map-choice').value=selectedMap;$('map-choice').disabled=(!!conn&&!host)||locked;$('map-description').textContent=selectedMap==='facility'?'Military platform · eight landing zones':'Open terrain · six military outposts';$('mode').disabled=(!!conn&&!host)||locked;$('room-actions').hidden=!conn;$('connect').hidden=!!conn;
+ $('mode').querySelector('option[value="build"]').textContent=selectedMap==='facility'?'Gun skirmish · rounds & eliminations':'Build skirmish · harvest & build';$('map-choice').value=selectedMap;$('map-choice').disabled=(!!conn&&!host)||locked;$('map-description').textContent=selectedMap==='facility'?'Military platform · eight landing zones':'Open terrain · six military outposts';$('mode').disabled=(!!conn&&!host)||locked;$('room-actions').hidden=!conn;$('connect').hidden=!!conn;
  if(conn){$('room-code').textContent=host?'PRIVATE PARTY · YOU ARE LEADER':'PRIVATE PARTY · MEMBER';$('invite-more').disabled=inMatch()||party.length>=(conn.maxPlayers||8);}
  $('outfit').disabled=locked;$('name').disabled=locked;$('local').disabled=!!conn;drawPartyCards();renderOnlinePlayers();renderInvites();updateNetworkChip();
 }
@@ -389,5 +389,5 @@ setInterval(()=>{
 },33);
 
 window.HorizonTestLab=installTestLab({game,profile:()=>profile,leaveParty:()=>leave('',true),returnLobby:()=>resetToLobby(false)});
-renderVoice();refresh();startSocial().finally(()=>{window.HorizonHCS=createHCS({config,session:()=>social?.session||conn?.session,profile:()=>profile,leaveParty:()=>{if(window.HorizonTestLab?.active)window.HorizonTestLab.stop(false);leave('',true);},returnLobby:()=>resetToLobby(false),applyOfficial:data=>{officialColors=Object.fromEntries((data.profiles||[]).map(p=>[p.id,p.color]));apply(data);}});});
+renderVoice();refresh();startSocial().finally(()=>{window.HorizonHCS=createHCS({config,session:()=>social?.session||conn?.session,profile:()=>profile,leaveParty:()=>{if(window.HorizonTestLab?.active)window.HorizonTestLab.stop(false);leave('',true);},returnLobby:()=>resetToLobby(false),onMapError:message=>{selectLobbyTab('hcs');status(message,'error');},applyOfficial:data=>{officialColors=Object.fromEntries((data.profiles||[]).map(p=>[p.id,p.color]));apply(data);}});});
 if(!game){const warning=document.createElement('div');warning.id='graphics-warning';warning.textContent='3D graphics are unavailable. Enable graphics acceleration in Chrome and restart it. Lobby, invites and chat are still available.';document.body.append(warning);}

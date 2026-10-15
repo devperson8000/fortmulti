@@ -7,7 +7,7 @@ const out = process.env.GAME_ARTIFACTS || "/workspace/fortmulti-artifacts/hcs";
 await mkdir(out, { recursive: true });
 let clock = Date.now(),
   offset = 0;
-const site = "http://127.0.0.1:4173",
+const site = process.env.GAME_TEST_URL || "http://127.0.0.1:4173",
   ids = ["alpha", "bravo", "charlie", "delta", "echo"];
 const service = await createHCSServer({
   authenticate: async (token) => (token ? { id: token } : null),
@@ -18,7 +18,8 @@ const service = await createHCSServer({
 });
 await new Promise((r) => service.server.listen(0, "127.0.0.1", r));
 const backend = `http://127.0.0.1:${service.server.address().port}`;
-service.championship.state.at = clock + 5000;
+// Keep check-in open until both native browser clients are ready.
+service.championship.state.at = clock + 600000;
 service.championship.state.phase = "checkin";
 service.championship.state.ranks = ids.map((id, i) => ({
   id,
@@ -127,7 +128,21 @@ try {
   }
   const viewer = await open("spectator");
   await player.screenshot({ path: out + "/hcs-qualified.png" });
-  offset += 5000;
+  await player.evaluate(() => {
+    const setMap = window.Game.setMap;
+    let failOnce = true;
+    window.Game.setMap = async id => {
+      if (failOnce) {failOnce = false; throw new Error('Test asset failure');}
+      return setMap(id);
+    };
+  });
+  offset += 600000;
+  await player.locator('#hcs-retry-map').waitFor({state:'visible',timeout:45000});
+  assert.equal(await player.locator('#hcs-panel').isVisible(),true);
+  assert.match(await player.locator('#hcs-service').textContent(),/retry map/i);
+  assert.equal(await player.evaluate(()=>window.HorizonHCS.active),false);
+  await player.screenshot({path:out+'/hcs-map-retry.png'});
+  await player.locator('#hcs-retry-map').click();
   await player.waitForFunction(
     () => window.HorizonHCS.active,
     {},
@@ -200,6 +215,7 @@ try {
       {
         checks: [
           "real authenticated check-in UI",
+          "failed map retries into the same live championship",
           "five-player automatic native deployment",
           "separate delayed spectator stream",
           "five selectable competitors",

@@ -10,6 +10,7 @@ export function createHCS({
   leaveParty,
   returnLobby,
   applyOfficial,
+  onMapError = () => {},
 }) {
   let state = { ...nextEdition(), phase: "qualifying", ranks: [] },
     socket = null,
@@ -35,7 +36,8 @@ export function createHCS({
     ranksKey = "",
     reconnectAt = 0,
     reconnectTimer = null,
-    lastSnapshotAt = 0;
+    lastSnapshotAt = 0,
+    mapFailure = null;
   const base = String(config.hcsUrl || "").replace(/\/$/, "");
   const celebration = createHCSCelebration({
     id: "hcs-official-finale",
@@ -228,6 +230,15 @@ export function createHCS({
     $("hcs-champion").textContent = state.champion
       ? `REIGNING CHAMPION · ${state.champion.name}`
       : "";
+    const retryMap = $("hcs-retry-map");
+    if (retryMap) {
+      retryMap.hidden = !mapFailure;
+      retryMap.disabled = loading || !streamReady;
+      retryMap.textContent = loading ? "LOADING MAP…" : "RETRY MAP";
+    }
+    if (mapFailure) setText("hcs-service", loading
+      ? "Retrying map… Your match will resume when loading finishes."
+      : mapFailure.message);
     updateConnectionUI();
   }
   function poll() {
@@ -241,7 +252,7 @@ export function createHCS({
         state = next;
         setText(
           "hcs-service",
-          connectionError?.message ||
+          mapFailure?.message || connectionError?.message ||
             (!streamReady
               ? "Standings connected · connecting your player to HCS…"
               : watching && !active
@@ -253,13 +264,67 @@ export function createHCS({
         if (!closed && revision === stateRevision)
           setText(
             "hcs-service",
-            "HCS is temporarily offline. Your ordinary games remain available.",
+            mapFailure?.message || "Standings could not refresh. Retrying automatically…",
           );
       }
     })().finally(() => {
       pendingPoll = null;
     });
     return pendingPoll;
+  }
+  function syncRoster() {
+    const profiles = frame?.profiles || [],
+      nextRoster = JSON.stringify(profiles.map(p => [p.id, p.name]));
+    if (nextRoster !== rosterKey) {
+      rosterKey = nextRoster;
+      $("hcs-view-player").replaceChildren(...profiles.map(p => {
+        const option = document.createElement("option");
+        option.value = p.id;
+        option.textContent = p.name;
+        return option;
+      }));
+    }
+    if ($("hcs-view-player").value !== viewed)
+      $("hcs-view-player").value = viewed;
+    $("hcs-view-player").hidden = !watching;
+  }
+  async function prepareFinal(connection, retryMap = false) {
+    if (active || loading || !frame || frame.tournament === false ||
+        (mapFailure?.matchId === frame.matchId && !retryMap)) return;
+    const data = frame, version = transition;
+    loading = true;
+    draw();
+    try {
+      await leaveParty();
+      if (version !== transition || socket !== connection || closed) return;
+      const selected = await window.Game.setMap(data.mapId);
+      if (version !== transition || socket !== connection || closed ||
+          frame?.matchId !== data.matchId) return;
+      if (selected === false) throw new Error("Map selection was superseded");
+      active = true;
+      mapFailure = null;
+      window.Duel.lobby = false;
+      document.body.classList.remove("in-lobby", "menu", "hcs-open",
+        "profile-open", "character-preview-open");
+      $("lobby").hidden = true;
+      document.body.classList.add("hcs-match");
+      $("hcs-broadcast").hidden = false;
+      // Use the newest frame received while assets were loading.
+      viewed = frame.spectator ? frame.state.players[0]?.id : identity;
+      syncRoster();
+      window.Game.look(frame.state.players.find(p => p.id === viewed)?.yaw || 0);
+      setText("hcs-broadcast-label", frame.spectator
+        ? "20 SECOND DELAY" : "CHAMPIONSHIP FINAL");
+    } catch (error) {
+      if (version !== transition || socket !== connection || closed ||
+          frame?.matchId !== data.matchId || frame?.tournament === false) return;
+      mapFailure = {matchId: data.matchId,
+        message: "HCS map could not load. Press Retry Map to rejoin. The match may continue while you reconnect."};
+      onMapError(mapFailure.message);
+    } finally {
+      loading = false;
+      if (!closed && version === transition) draw();
+    }
   }
   function connect() {
     if (
@@ -339,6 +404,11 @@ export function createHCS({
       if (data.type === "snapshot") {
         if (data.matchId === declined) return;
         if (data.tournament === false) {
+          if (mapFailure) {
+            mapFailure = null;
+            if ($("hcs-retry-map")) $("hcs-retry-map").hidden = true;
+            setText("hcs-service", "Official standings · 20-second broadcast delay");
+          }
           official = true;
           disconnected = false;
           lastSnapshotAt = Date.now();
@@ -358,62 +428,8 @@ export function createHCS({
         disconnected = false;
         lastSnapshotAt = Date.now();
         frame = data;
-        if (!active && !loading) {
-          loading = true;
-          const version = transition;
-          try {
-            await leaveParty();
-            if (version !== transition || socket !== connection || closed)
-              return;
-            await window.Game.setMap(data.mapId);
-            if (version !== transition || socket !== connection || closed)
-              return;
-            active = true;
-            window.Duel.lobby = false;
-            document.body.classList.remove(
-              "in-lobby",
-              "menu",
-              "hcs-open",
-              "profile-open",
-              "character-preview-open",
-            );
-            $("lobby").hidden = true;
-            document.body.classList.add("hcs-match");
-            $("hcs-broadcast").hidden = false;
-            viewed = data.spectator ? data.state.players[0].id : identity;
-            window.Game.look(
-              data.state.players.find((p) => p.id === viewed)?.yaw || 0,
-            );
-            $("hcs-broadcast-label").textContent = data.spectator
-              ? "20 SECOND DELAY"
-              : "CHAMPIONSHIP FINAL";
-          } finally {
-            loading = false;
-          }
-        }
-        if (active) {
-          const nextRoster = JSON.stringify(
-            data.profiles.map((p) => [p.id, p.name]),
-          );
-          if (nextRoster !== rosterKey) {
-            rosterKey = nextRoster;
-            const previous = $("hcs-view-player").value;
-            $("hcs-view-player").replaceChildren(
-              ...data.profiles.map((p) => {
-                const option = document.createElement("option");
-                option.value = p.id;
-                option.textContent = p.name;
-                return option;
-              }),
-            );
-            $("hcs-view-player").value = data.profiles.some(
-              (p) => p.id === previous,
-            )
-              ? previous
-              : viewed;
-          }
-          $("hcs-view-player").hidden = !watching;
-        }
+        await prepareFinal(connection);
+        if (active) syncRoster();
         updateConnectionUI();
       }
     };
@@ -490,6 +506,10 @@ export function createHCS({
       if (!closed) draw();
     }
   };
+  if ($("hcs-retry-map")) $("hcs-retry-map").onclick = async () => {
+    if (!mapFailure || loading || !streamReady) return;
+    await prepareFinal(socket, true);
+  };
   $("hcs-watch").onclick = () => {
     if (watching && !active) {
       stop();
@@ -518,6 +538,8 @@ export function createHCS({
     official = false;
     watching = false;
     frame = null;
+    mapFailure = null;
+    if ($("hcs-retry-map")) $("hcs-retry-map").hidden = true;
     lastSnapshotAt = 0;
     updateConnectionUI();
     seen = 0;
@@ -651,11 +673,11 @@ export function createHCS({
       window.Duel.spectating =
         final || watching || viewed !== identity ? viewed : null;
       if (!disconnected)
-        $("hcs-broadcast-label").textContent = watching
+        setText("hcs-broadcast-label", watching
           ? "20 SECOND DELAY"
           : viewed !== identity
             ? "ELIMINATED · SPECTATING"
-            : "CHAMPIONSHIP FINAL";
+            : "CHAMPIONSHIP FINAL");
       for (const event of s.events || []) {
         if (event.id > seen) window.Game.effect(event, viewed, s);
         seen = Math.max(seen, event.id);

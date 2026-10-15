@@ -70,6 +70,13 @@ jobs:
         env:
           GAME_TEST_URL: http://127.0.0.1:4174
           GAME_ARTIFACTS: /tmp/horizon-deployment/hcs-ux
+      - name: Verify championship recovery, selector and keyboard aim HUD
+        run: |
+          node scripts/hcs-client-browser-check.mjs
+          npm run test:aim-hud-browser
+        env:
+          GAME_TEST_URL: http://127.0.0.1:4174
+          GAME_ARTIFACTS: /tmp/horizon-deployment/hud-recovery
       - name: Upload browser diagnostics if a test fails
         if: failure()
         uses: actions/upload-artifact@v4
