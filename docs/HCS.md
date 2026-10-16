@@ -8,6 +8,8 @@ Standings freeze 48 hours before. The top five receive invitations, and ranks si
 
 The final is one gun-only Town Royale round on Platform 23, with five distinct pod landings and a map-sized shrinking storm. The last survivor becomes champion. Reconnects have 60 seconds; disconnected bodies stay vulnerable. Spectators watch in third person using a separate authenticated stream, never occupy contestant slots, cannot send controls, and can switch players. Competitors retain first-person gameplay. When the viewed competitor is eliminated, the camera, player selector and stats move together to a living competitor. Reconnect notices appear directly in the broadcast controls; stale sockets and cancelled map loads cannot reopen a departed final. Failed final maps show Retry Map in the HCS tab. Retry uses the newest received state while the server match continues; switching matches discards stale load failures as well as stale completions. Snapshots and public results are delayed 20 seconds. Previous champions remain in the service history.
 
+The winner’s return salute starts on “Big” and reaches the full-hand pose on “stepper”, with an audio-clocked camera push, tighter framing and a brief settling recoil. [Timing checks and native screenshots](testing/hcs-stepper-2026-10-17/README.md).
+
 ## Activate online
 
 The static Vercel site cannot run the continuous referee. Deploy `server/Dockerfile` from the repository root to a host supporting persistent Node processes, HTTPS and WebSockets (one replica). The service starts with `node server/hcs-server.mjs`, normally port 4201. Apply `supabase/migrations/20261009120000_hcs_state.sql` to the existing Supabase project first, and keep anonymous sign-in enabled.

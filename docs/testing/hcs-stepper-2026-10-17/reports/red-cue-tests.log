@@ -1,0 +1,54 @@
+✔ the original start-game pod still lands on its bass cue and keeps its original release timing (1.24088ms)
+✖ the HCS winner raises on Big and lands the full salute on stepper (1.810617ms)
+✔ HCS preserves the existing excerpt, dock, walkout and championship deadlines (0.364782ms)
+✖ the hero camera tightens on the same stepper cue and then settles (0.814415ms)
+✔ salute camera recoil stays small, continuous and deterministic when frames arrive late (4.950561ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 3
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 105.352588
+
+✖ failing tests:
+
+test at tests/hcs-victory-salute-beat.test.mjs:32:1
+✖ the HCS winner raises on Big and lands the full salute on stepper (1.810617ms)
+  AssertionError [ERR_ASSERTION]: the hand starts rising on Big, rather than already being held
+      at TestContext.<anonymous> (file:///workspace/fortmulti/tests/hcs-victory-salute-beat.test.mjs:37:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/hcs-victory-salute-beat.test.mjs:56:1
+✖ the hero camera tightens on the same stepper cue and then settles (0.814415ms)
+  AssertionError [ERR_ASSERTION]: the camera must not peak before the lyric
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///workspace/fortmulti/tests/hcs-victory-salute-beat.test.mjs:61:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -29,39 +29,53 @@ test("the original start-game pod still lands on its bass cue and keeps its orig
   );
   assert.equal(DEPLOYMENT_MUSIC_END, 29.835);
 });
-test("the HCS winner is planted on the spaceship and fully saluting on Big stepper", () => {
-  const full = atMusic(DEPLOYMENT_CUES.bigStart),
+test("the HCS winner raises on Big and lands the full salute on stepper", () => {
+  const big = atMusic(DEPLOYMENT_CUES.bigStart),
+    middle = atMusic((DEPLOYMENT_CUES.bigStart + DEPLOYMENT_CUES.stepperStart) / 2),
     stepper = atMusic(DEPLOYMENT_CUES.stepperStart);
-  assert.equal(full.scene, "ship");
-  assert.equal(full.stage, "salute");
-  assert.ok(full.salute > 0.999);
-  assert.equal(full.moveSpeed, 0);
-  assert.equal(full.animationState, "idle");
-  assert.ok(full.actorVisible > 0.999);
-  assert.ok(full.actor[1] >= 240);
-  assert.ok(stepper.salute > 0.999);
+  assert.equal(big.scene, "ship");
+  assert.ok(big.salute < 0.01, "the hand starts rising on Big, rather than already being held");
+  assert.ok(middle.salute > 0.3 && middle.salute < 0.7);
+  assert.ok(stepper.salute > 0.999, "the hand reaches the forehead on stepper");
+  assert.equal(stepper.moveSpeed, 0);
+  assert.equal(stepper.animationState, "idle");
+  assert.ok(stepper.actorVisible > 0.999);
+  assert.ok(stepper.actor[1] >= 240);
   assert.equal(stepper.showResults, false);
-  assert.deepEqual(stepper.actor, full.actor);
+  assert.deepEqual(stepper.actor, big.actor);
+  assert.ok(atMusic(DEPLOYMENT_CUES.stepperStart + 0.4).salute > 0.999);
 });
-test("HCS keeps the existing pod return pace and raises the whole hand in 200 ms", () => {
+test("HCS preserves the existing excerpt, dock, walkout and championship deadlines", () => {
   assert.equal(HCS_VICTORY_MUSIC.start, 6.5);
+  assert.ok(Math.abs(HCS_VICTORY_MUSIC.offset - 18.98) < 1e-8);
   assert.ok(Math.abs(HCS_VICTORY_DOCK - 10.95) < 1e-8);
   assert.ok(Math.abs(HCS_VICTORY_DURATION - 14.05) < 1e-8);
   assert.equal(hcsVictoryCinematic(HCS_VICTORY_DOCK).stage, "opening");
-  assert.ok(atMusic(DEPLOYMENT_CUES.bigStart - 0.18).salute < 0.2);
-  assert.ok(atMusic(DEPLOYMENT_CUES.bigStart - 0.08).salute > 0.5);
   assert.ok(hcsVictoryCinematic(HCS_VICTORY_DURATION).salute > 0.999);
 });
-test("the HCS hero camera punches on the bass hit and holds through the stepper lyric", () => {
-  const before = atMusic(DEPLOYMENT_CUES.impact - 0.001),
-    hit = atMusic(DEPLOYMENT_CUES.impact + 0.05),
+test("the hero camera tightens on the same stepper cue and then settles", () => {
+  const before = atMusic(DEPLOYMENT_CUES.bigStart - 0.001),
     word = atMusic(DEPLOYMENT_CUES.stepperStart),
-    end = atMusic(DEPLOYMENT_CUES.stepperStart + 0.4);
-  assert.equal(before.salutePunch, 0);
-  assert.ok(hit.salutePunch > 0.99);
+    end = atMusic(DEPLOYMENT_CUES.stepperStart + 0.7),
+    distance = f => Math.hypot(...f.eye.map((v, i) => v - f.target[i]));
+  assert.equal(before.salutePunch, 0, "the camera must not peak before the lyric");
   assert.ok(word.salutePunch > 0.99);
   assert.equal(end.salutePunch, 0);
-  assert.ok(Math.hypot(...hit.eye.map((v, i) => v - before.eye[i])) > 0.15);
-  assert.ok(Math.hypot(...hit.eye.map((v, i) => v - before.eye[i])) < 0.7);
-  assert.ok(hit.fov > before.fov);
+  assert.ok(word.fov < before.fov - 3 * Math.PI / 180, "the beat tightens the lens instead of widening it");
+  assert.ok(distance(word) < distance(before) - 0.15, "a short dolly moves toward the champion");
+  assert.ok(Math.abs(end.fov - before.fov) < 0.001);
+});
+test("salute camera recoil stays small, continuous and deterministic when frames arrive late", () => {
+  const word = atMusic(DEPLOYMENT_CUES.stepperStart),
+    after = atMusic(DEPLOYMENT_CUES.stepperStart + 0.045);
+  assert.ok(Math.hypot(...after.eye.map((v, i) => v - word.eye[i])) > 0.005);
+  let previous = atMusic(DEPLOYMENT_CUES.bigStart - 0.05);
+  for(let t=DEPLOYMENT_CUES.bigStart - 0.05; t<DEPLOYMENT_CUES.stepperStart + 0.8; t+=1/120){
+    const next=atMusic(t);
+    assert.ok(Math.hypot(...next.eye.map((v,i)=>v-previous.eye[i])) < 0.06);
+    assert.ok(Math.abs(next.fov-previous.fov) < Math.PI/180);
+    previous=next;
+  }
+  atMusic(29);
+  assert.deepEqual(atMusic(DEPLOYMENT_CUES.stepperStart + 0.045),after);
 });

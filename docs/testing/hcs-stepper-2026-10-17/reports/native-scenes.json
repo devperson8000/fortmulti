@@ -1,0 +1,138 @@
+{
+  "checks": [
+    {
+      "stage": "pickup",
+      "time": 0.3,
+      "actorVisible": 1,
+      "weapon": null,
+      "musicTime": 12.779999999999998,
+      "salute": 0,
+      "punch": 0,
+      "fovError": 0
+    },
+    {
+      "stage": "landed",
+      "time": 2.65,
+      "actorVisible": 1,
+      "weapon": null,
+      "musicTime": 15.129999999999995,
+      "salute": 0,
+      "punch": 0,
+      "fovError": 0
+    },
+    {
+      "stage": "boarding",
+      "time": 4.3,
+      "actorVisible": 1,
+      "weapon": null,
+      "musicTime": 16.779999999999998,
+      "salute": 0,
+      "punch": 0,
+      "fovError": 0
+    },
+    {
+      "stage": "launch",
+      "time": 6.8,
+      "actorVisible": 0,
+      "weapon": null,
+      "musicTime": 19.279999999999998,
+      "salute": 0,
+      "punch": 0,
+      "fovError": 0
+    },
+    {
+      "stage": "launch",
+      "time": 7.7,
+      "actorVisible": 0,
+      "weapon": null,
+      "musicTime": 20.179999999999996,
+      "salute": 0,
+      "punch": 0,
+      "fovError": 0
+    },
+    {
+      "stage": "docking",
+      "time": 10.5,
+      "actorVisible": 0,
+      "weapon": null,
+      "musicTime": 22.979999999999997,
+      "salute": 0,
+      "punch": 0,
+      "fovError": 0
+    },
+    {
+      "stage": "opening",
+      "time": 11.25,
+      "actorVisible": 0,
+      "weapon": null,
+      "musicTime": 23.729999999999997,
+      "salute": 0,
+      "punch": 0,
+      "fovError": 0
+    },
+    {
+      "stage": "exit",
+      "time": 12.1,
+      "actorVisible": 1,
+      "weapon": null,
+      "musicTime": 24.58,
+      "salute": 0,
+      "punch": 0,
+      "fovError": 0
+    },
+    {
+      "stage": "salute",
+      "time": 13.100000000000001,
+      "actorVisible": 1,
+      "weapon": null,
+      "musicTime": 25.58,
+      "salute": 2.6222523165240876e-28,
+      "punch": 0,
+      "fovError": 0
+    },
+    {
+      "stage": "salute",
+      "time": 13.195,
+      "actorVisible": 1,
+      "weapon": null,
+      "musicTime": 25.674999999999997,
+      "salute": 0.5,
+      "punch": 0.499999999999986,
+      "fovError": 0
+    },
+    {
+      "stage": "salute",
+      "time": 13.29,
+      "actorVisible": 1,
+      "weapon": null,
+      "musicTime": 25.769999999999996,
+      "salute": 1,
+      "punch": 1,
+      "fovError": 0
+    },
+    {
+      "stage": "salute",
+      "time": 13.335,
+      "actorVisible": 1,
+      "weapon": null,
+      "musicTime": 25.814999999999998,
+      "salute": 1,
+      "punch": 1,
+      "fovError": 0
+    },
+    {
+      "stage": "salute",
+      "time": 13.990000000000002,
+      "actorVisible": 1,
+      "weapon": null,
+      "musicTime": 26.47,
+      "salute": 1,
+      "punch": 0,
+      "fovError": 0
+    },
+    {
+      "audio": "late result seeks into the verse; clearing inputs preserves one playing voice; lobby exit cancels it"
+    }
+  ],
+  "errors": []
+}

@@ -10,14 +10,15 @@ export const HCS_VICTORY_LANDING = 2.5;
 // Preserve the rescue, dock and walkout pace; align the music excerpt to the salute.
 export const HCS_VICTORY_DOCK = 10.95;
 export const HCS_VICTORY_SALUTE = Object.freeze({
-  start: HCS_VICTORY_DOCK + 0.65 + 1.3,
-  raise: 0.2,
+  // Plant the feet after walkout, raise on "Big", hit the forehead on "stepper".
+  start: HCS_VICTORY_DOCK + 0.65 + 1.3 + 0.2,
+  raise: DEPLOYMENT_CUES.stepperStart - DEPLOYMENT_CUES.bigStart,
 });
 export const HCS_VICTORY_MUSIC = Object.freeze({
   start: 6.5,
   offset:
     DEPLOYMENT_CUES.bigStart -
-    (HCS_VICTORY_SALUTE.start + HCS_VICTORY_SALUTE.raise) +
+    HCS_VICTORY_SALUTE.start +
     6.5,
   end: 30,
   fade: 0.5,
@@ -145,7 +146,7 @@ export function hcsVictoryCinematic(
     moveSpeed = (6 * q * (1 - q) * 2.35) / 1.3;
     animationState = "pod-exit";
   }
-  if (t >= saluteAt) {
+  if (t >= exitAt + 1.3) {
     stage = "salute";
     salute = ease((t - saluteAt) / HCS_VICTORY_SALUTE.raise);
     moveSpeed = 0;
@@ -158,8 +159,13 @@ export function hcsVictoryCinematic(
       if (age >= 0 && age < 0.3) beat = Math.max(beat, Math.exp(-age * 18));
     }
   const salutePunch =
-    ease((musicTime - DEPLOYMENT_CUES.impact) / 0.045) *
-    (1 - ease((musicTime - DEPLOYMENT_CUES.stepperStart) / 0.28));
+    ease((musicTime - DEPLOYMENT_CUES.bigStart) / HCS_VICTORY_SALUTE.raise) *
+    (1 - ease((musicTime - DEPLOYMENT_CUES.stepperStart - 0.16) / 0.42));
+  const recoilAge = musicTime - DEPLOYMENT_CUES.stepperStart,
+    saluteRecoil = recoilAge >= 0 && recoilAge < 0.32
+      ? Math.sin(recoilAge * Math.PI * 2 / 0.16) * Math.exp(-recoilAge * 14) *
+        (1 - ease(recoilAge / 0.32))
+      : 0;
   const landingAge = t - HCS_VICTORY_LANDING,
     impact = landingAge >= 0 ? Math.exp(-landingAge * 10) : 0,
     dockKick =
@@ -183,7 +189,7 @@ export function hcsVictoryCinematic(
     ];
     eye[1] -= impact * 0.06;
   } else {
-    const front = ease((t - exitAt) / (saluteAt - exitAt));
+    const front = ease((t - exitAt) / 1.3);
     eye = [
       mix(shipBase[0] + 2.6, actor[0] + 0.85, front),
       shipBase[1] + mix(2.25, 1.55, front) - dockKick * 0.06,
@@ -196,9 +202,11 @@ export function hcsVictoryCinematic(
     ];
   }
   if (scene === "ship") {
-    eye[0] -= (eye[0] - target[0]) * salutePunch * 0.12;
-    eye[1] -= salutePunch * 0.025;
-    eye[2] -= salutePunch * 0.34;
+    // A short dolly and tighter lens meet the hand's hit, followed by a small,
+    // deterministic recoil. No random shake or frame-rate-dependent springs.
+    for (let i = 0; i < 3; i++) eye[i] -= (eye[i] - target[i]) * salutePunch * 0.09;
+    eye[0] += saluteRecoil * 0.012;
+    eye[1] += saluteRecoil * 0.035;
   }
   return {
     musicTime,
@@ -224,7 +232,7 @@ export function hcsVictoryCinematic(
     eye,
     target,
     fov:
-      ((58 + salutePunch * 3) * Math.PI) / 180 +
+      ((58 - salutePunch * 4) * Math.PI) / 180 +
       impact * 0.018 +
       dockKick * 0.018,
     showResults: t >= HCS_VICTORY_DURATION,

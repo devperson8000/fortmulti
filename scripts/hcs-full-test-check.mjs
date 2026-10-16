@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
+import { DEPLOYMENT_CUES } from "../public/deployment-cues.js";
 const out =
   process.env.GAME_ARTIFACTS || "/workspace/fortmulti-artifacts/hcs-full-test";
 await mkdir(out, { recursive: true });
@@ -39,12 +40,25 @@ async function setup(page) {
     };
     window.__victoryFrames = [];
     const sampleVictory = () => {
-      const v = window.Game?.victoryView?.();
+      const v = window.Game?.victoryView?.(), now = performance.now(),
+        voice = window.__songVoices.at(-1);
+      let audioSample = null;
+      if(v?.stage === "launch" && voice){
+        const stamp=voice.context.getOutputTimestamp();
+        const audible=stamp?.performanceTime>0
+          ? Math.min(voice.context.currentTime,stamp.contextTime+Math.max(0,now-stamp.performanceTime)/1000)
+          : voice.context.currentTime;
+        const atFrame=audible-(now-v.sampledAt)/1000-voice.when+voice.offset;
+        audioSample={voice:{offset:voice.offset,loop:voice.loop},atFrame,stamp,
+          difference:Math.abs(atFrame-v.musicTime)};
+      }
       if (v)
         window.__victoryFrames.push({
           ...v,
-          observedAt: performance.now(),
+          observedAt: now,
+          audioSample,
           nativeSalute: window.Game.pose().saluteProgress,
+          renderedFov: window.Game.deploymentView().cameraFov,
           weapon: window.Game.pose().weapon,
         });
       requestAnimationFrame(sampleVictory);
@@ -92,6 +106,9 @@ try {
     await p.locator("#lab-viewer-panel").click();
     const v = await popup;
     await setup(v);
+    // Two real viewers still render, with a smaller software-GPU pixel budget.
+    // Keep the player's full-size view and every clock/delay assertion intact.
+    await v.setViewportSize({width:640,height:400});
     await v.waitForFunction(() => window.HorizonTestLab);
     await v.locator("#lab-password").fill("12345");
     await v.locator("#lab-unlock").click();
@@ -157,33 +174,18 @@ try {
   await p.locator("#lab-finish").click();
   await p.locator("#lab-resume").click();
   await p.waitForFunction(
-    () => window.Game.victoryView()?.stage === "launch",
+    () => window.__victoryFrames.some(f=>f.stage === "launch" && f.audioSample),
     {},
     { timeout: 30000 },
   );
   const beatSync = await p.evaluate(async () => {
     const { HCS_VICTORY_MUSIC: music } =
       await import("/hcs-victory-cinematic.js");
-    const voice = window.__songVoices.at(-1),
-      frame = window.Game.victoryView(),
-      now = performance.now(),
-      stamp = voice?.context.getOutputTimestamp();
-    let audible = voice?.context.currentTime;
-    if (stamp?.performanceTime > 0)
-      audible = Math.min(
-        audible,
-        stamp.contextTime + Math.max(0, now - stamp.performanceTime) / 1000,
-      );
-    const atFrame =
-      audible - (now - frame.sampledAt) / 1000 - voice.when + voice.offset;
-    return {
-      voice: voice && { offset: voice.offset, loop: voice.loop },
-      excerptOffset: music.offset,
-      difference: Math.abs(atFrame - (music.offset + frame.time - music.start)),
-      atFrame,
-      frame,
-      stamp,
-    };
+    // The real stage may already have passed while Playwright was closing
+    // the controls on a software GPU. Read the audio sample recorded on that
+    // native launch frame, rather than waiting for the live camera to rewind.
+    const frame=window.__victoryFrames.find(f=>f.stage==='launch'&&f.audioSample);
+    return {...frame.audioSample,excerptOffset:music.offset,frame};
   });
   await writeFile(out + "/beat-sync.json", JSON.stringify(beatSync, null, 2));
   assert.ok(
@@ -193,7 +195,8 @@ try {
   assert.equal(beatSync.voice.loop, false);
   assert.ok(beatSync.difference < 0.3);
   assert.equal(beatSync.frame.actorVisible, 0);
-  await p.screenshot({ path: out + "/05a-victory-launch.png" });
+  if(await p.evaluate(()=>window.Game.victoryView()?.stage === "launch"))
+    await p.screenshot({ path: out + "/05a-victory-launch.png" });
   checks.push(
     "native AudioContext output drives the champion launch and camera; one forward-playing victory excerpt",
   );
@@ -214,17 +217,19 @@ try {
       frameGapMs:
         index > 0 ? first.observedAt - frames[index - 1].observedAt : 0,
       peakPunch: Math.max(...frames.map((f) => f.salutePunch || 0)),
+      maxFovError: Math.max(...frames.map(f=>Math.abs(f.renderedFov-f.fov))),
     };
   });
   assert.equal(saluteSync.first.scene, "ship");
   assert.equal(saluteSync.first.weapon, null);
   assert.ok(saluteSync.first.nativeSalute > 0.999);
-  assert.ok(saluteSync.first.musicTime >= 25.58 - 0.006);
+  assert.ok(saluteSync.first.musicTime >= DEPLOYMENT_CUES.stepperStart - 0.006);
   assert.ok(
-    saluteSync.first.musicTime - 25.58 <
+    saluteSync.first.musicTime - DEPLOYMENT_CUES.stepperStart <
       Math.max(0.25, saluteSync.frameGapMs / 1000 + 0.05),
   );
   assert.ok(saluteSync.peakPunch > 0.8);
+  assert.ok(saluteSync.maxFovError < 1e-7, "native lens follows the audio-clocked camera on every sampled frame");
   await writeFile(
     out + "/victory-salute-sync.json",
     JSON.stringify(saluteSync, null, 2),
@@ -322,7 +327,7 @@ try {
   );
   console.log("Full HCS browser checks passed");
 } catch (e) {
-  for (const page of context.pages()) {
+  for (const [index,page] of context.pages().entries()) {
     if (page.url().includes("4173")) {
       await page
         .screenshot({
@@ -336,10 +341,11 @@ try {
         })
         .catch(() => {});
       await writeFile(
-        out + "/failure-state.json",
+        out + "/failure-state-"+index+".json",
         JSON.stringify(
           await page
             .evaluate(() => ({
+              frames: window.__victoryFrames,
               status: window.HorizonTestLab?.status(),
               pose: window.Game?.pose(),
             }))

@@ -1,0 +1,72 @@
+{
+  "voice": {
+    "offset": 19.362999999999996,
+    "loop": false
+  },
+  "atFrame": 19.142815346944726,
+  "stamp": {
+    "contextTime": 110.420048,
+    "performanceTime": 130927.70000000298
+  },
+  "difference": 0.18037299999105372,
+  "excerptOffset": 18.979999999999997,
+  "frame": {
+    "musicTime": 19.32318834693578,
+    "salutePunch": 0,
+    "time": 6.843188346935783,
+    "scene": "match",
+    "stage": "launch",
+    "fade": 0.5419292885916897,
+    "doorOpen": 0,
+    "hatchOpen": 0,
+    "boost": 1,
+    "beat": 0,
+    "impact": 1.3733229274004717e-19,
+    "landingAge": 4.343188346935783,
+    "pod": [
+      -0.32,
+      3.780911069241577,
+      -12.05
+    ],
+    "podYaw": 0,
+    "actor": [
+      -0.32,
+      -0.125,
+      -12.05
+    ],
+    "actorVisible": 0,
+    "yaw": 0,
+    "salute": 0,
+    "moveSpeed": 0,
+    "animationState": "idle",
+    "eye": [
+      2.48,
+      3.296773320772473,
+      -1.8500000000000005
+    ],
+    "target": [
+      -0.32,
+      5.580911069241577,
+      -12.05
+    ],
+    "fov": 1.0122909661567112,
+    "showResults": false,
+    "sampledAt": 130289.10000000894,
+    "observedAt": 130936.90000000596,
+    "audioSample": {
+      "voice": {
+        "offset": 19.362999999999996,
+        "loop": false
+      },
+      "atFrame": 19.142815346944726,
+      "stamp": {
+        "contextTime": 110.420048,
+        "performanceTime": 130927.70000000298
+      },
+      "difference": 0.18037299999105372
+    },
+    "nativeSalute": 0,
+    "renderedFov": 1.0122909661567112,
+    "weapon": null
+  }
+}

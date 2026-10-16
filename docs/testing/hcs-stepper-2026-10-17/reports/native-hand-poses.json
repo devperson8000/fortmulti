@@ -1,0 +1,25 @@
+{
+  "checks": [
+    {
+      "name": "whole-hand",
+      "palmForward": 1.0000000663118898
+    },
+    {
+      "name": "palm-close",
+      "palmForward": 1.0000000329563261
+    },
+    {
+      "name": "heading-right",
+      "palmForward": 0.9999999964375481
+    },
+    {
+      "name": "heading-left",
+      "palmForward": 1.000000005549639
+    },
+    {
+      "name": "raise-mid",
+      "palmForward": 0.25125758618294936
+    }
+  ],
+  "errors": []
+}

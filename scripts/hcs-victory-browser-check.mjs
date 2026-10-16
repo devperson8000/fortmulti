@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { HCS_VICTORY_MUSIC } from "../public/hcs-victory-cinematic.js";
+import { DEPLOYMENT_CUES } from "../public/deployment-cues.js";
+const atMusic=s=>HCS_VICTORY_MUSIC.start+s-HCS_VICTORY_MUSIC.offset;
 const out =
   process.env.GAME_ARTIFACTS ||
   "/workspace/fortmulti-artifacts/hcs-pickup-2026-10-12";
@@ -109,22 +112,33 @@ try {
     ["docking", "06-ship-docking", 10.5],
     ["opening", "07-doors-open", 11.25],
     ["exit", "08-walk-out", 12.1],
-    ["salute", "09-salute", 13.1],
-    ["salute", "09b-stepper-salute", 13.29],
+    ["salute", "09-big-raise", atMusic(DEPLOYMENT_CUES.bigStart)],
+    ["salute", "09a-raise-mid", atMusic((DEPLOYMENT_CUES.bigStart+DEPLOYMENT_CUES.stepperStart)/2)],
+    ["salute", "09b-stepper-salute", atMusic(DEPLOYMENT_CUES.stepperStart)],
+    ["salute", "09c-recoil", atMusic(DEPLOYMENT_CUES.stepperStart+.045)],
+    ["salute", "09d-settled", atMusic(DEPLOYMENT_CUES.stepperStart+.7)],
   ]) {
     await page.evaluate((at) => (window.__state.victoryElapsed = at), at);
     await page.waitForFunction(
-      (stage) => window.Game.victoryView()?.stage === stage,
-      stage,
+      ({stage,at}) => {const v=window.Game.victoryView();return v?.stage===stage&&Math.abs(v.time-at)<.001;},
+      {stage,at},
       { timeout: 30000 },
     );
     const v = await page.evaluate(() => ({
       frame: window.Game.victoryView(),
       pose: window.Game.pose(),
       view: document.body.dataset.camera,
+      renderedFov: window.Game.deploymentView().cameraFov,
     }));
+    if(stage==="salute")assert.ok(Math.abs(v.renderedFov-v.frame.fov)<1e-7,"the rendered victory lens must follow the audible cue without gameplay smoothing lag");
     assert.equal(v.pose.weapon, null);
     assert.equal(v.pose.slot, 0);
+    if(filename==='09-big-raise')assert.ok(v.pose.saluteProgress<.01);
+    if(filename==='09a-raise-mid')assert.ok(v.pose.saluteProgress>.3&&v.pose.saluteProgress<.7);
+    if(filename==='09b-stepper-salute'){
+      assert.ok(v.pose.saluteProgress>.999);
+      assert.ok(v.frame.salutePunch>.999);
+    }
     if (["launch", "docking"].includes(stage))
       assert.equal(v.frame.actorVisible, 0);
     if (stage === "landed") {
@@ -163,6 +177,10 @@ try {
       time: v.frame.time,
       actorVisible: v.frame.actorVisible,
       weapon: v.pose.weapon,
+      musicTime: v.frame.musicTime,
+      salute: v.pose.saluteProgress,
+      punch: v.frame.salutePunch,
+      fovError: Math.abs(v.renderedFov-v.frame.fov),
     });
   }
   await page.evaluate(() => (window.__state.victoryElapsed = 18));
